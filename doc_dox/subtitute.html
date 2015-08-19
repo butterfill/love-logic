@@ -1,0 +1,723 @@
+<html>
+	<head>
+		<title>Dont forget to use --title to specify me!</title>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+		<style>body {
+    margin: 0;
+    padding: 0;
+    font: 14px/1.5 'Palatino Linotype', 'Book Antiqua', Palatino, FreeSerif, serif;
+    color: #252519;
+}
+a {
+    color: #252519;
+}
+a:hover {
+    text-decoration: underline;
+    color: #19469D;
+}
+p {
+    margin: 12px 0;
+}
+h1, h2, h3 {
+    margin: 0;
+    padding: 0;
+}
+table#source {
+    width: 100%;
+    border-collapse: collapse;
+}
+table#source td:first-child {
+    padding: 30px 40px 30px 40px;
+    vertical-align: top;
+}
+table#source td:first-child,
+table#source td:first-child pre {
+    width: 450px;
+}
+table#source td:last-child {
+    padding: 30px 0 30px 40px;
+    border-left: 1px solid #E5E5EE;
+    background: #F5F5FF;
+}
+table#source tr {
+    border-bottom: 1px solid #E5E5EE;
+}
+table#source tr.filename {
+    padding-top: 40px;
+    border-top: 1px solid #E5E5EE;
+}
+table#source tr.filename td:first-child {
+    text-transform: capitalize;
+}
+table#source tr.filename td:last-child {
+    font-size: 12px;
+}
+table#source tr.filename h2 {
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+}
+table#source tr.code h1,
+table#source tr.code h2,
+table#source tr.code h3 {
+    margin-top: 30px;
+    font-family: "Lucida Grande", "Helvetica Nueue", Arial, sans-serif;
+    font-size: 18px;
+}
+table#source tr.code h2 {
+    font-size: 16px;
+}
+table#source tr.code h3 {
+    font-size: 14px;
+}
+table#source tr.code ul {
+    margin: 15px 0 15px 35px;
+    padding: 0;
+}
+table#source tr.code ul li {
+    margin: 0;
+    padding: 1px 0;
+}
+table#source tr.code ul li p {
+    margin: 0;
+    padding: 0;
+}
+table#source tr.code td:first-child pre {
+    padding: 20px;
+}
+#ribbon {
+    position: fixed;
+    top: 0;
+    right: 0;
+}
+code .string { color: #219161; }
+code .regexp { color: #219161; }
+code .keyword { color: #954121; }
+code .number { color: #19469D; }
+code .comment { color: #bbb; }
+code .this { color: #19469D; }</style>
+		<script>
+			$(function(){
+				$('tr.code').hide();
+				$('tr.filename').toggle(function(){
+					$(this).nextUntil('.filename').fadeIn();
+				}, function(){
+					$(this).nextUntil('.filename').fadeOut();
+				});
+			});
+		</script>
+	</head>
+	<body>
+<table id="source"><tbody><tr><td><h1>Dont forget to use --title to specify me!</h1></td><td></td></tr><tr class="filename"><td><h2 id="substitute.js"><a href="#">substitute</a></h2></td><td>substitute.js</td></tr><tr class="code">
+<td class="docs">
+<p>apply substitutions to formulae like
+['not', ['not', '$1']] &gt; '$1'
+['not', ['and', '$1', '$2' ]] &gt; ['or', ['not','$1'], ['not','$2']]</p>
+
+<p>terminology for parameter values:
+ - a phrase is a piece of parsed FOL (e.g. ['not', ['not', 'P']])
+ - a variable is a string prefixed with $, e.g. '$1'
+ - a match is a piece of parsed FOL with zero or more elements replaced by
+     variables (e.g. ['not', ['not', '$1']])
+ - a substitution is a map with .from and .to keys whose values are both matches</p>
+
+<p> </p>
+</td>
+<td class="code">
+
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>testing only (TODO: remove) --- expose parser as fol (global var)
+ </p>
+</td>
+<td class="code">
+<pre><code><span class="variable">require</span>([<span class="string">'parse/test_boolean2'</span>],<span class="keyword">function</span>(){
+    <span class="variable">window</span>.<span class="variable">fol</span> = <span class="variable">test_boolean2</span>;
+    <span class="comment">//use like fol.parse(&quot;not true&quot;)</span>
+});
+
+<span class="variable">require</span>([<span class="string">'lib/underscore'</span>], <span class="keyword">function</span>(){
+    
+    <span class="comment">//underscore just adds to globals</span>
+    
+    <span class="keyword">function</span> <span class="variable">is_var</span>(<span class="variable">elm</span>) {
+        <span class="keyword">return</span> <span class="keyword">typeof</span> <span class="variable">elm</span> === <span class="string">'string'</span> &<span class="variable">amp</span>;&<span class="variable">amp</span>; <span class="variable">elm</span>[<span class="number integer">0</span>] === <span class="string">'$'</span>;
+    }</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<ul><li><strong>returns</strong>: <em>true</em>
+iff the two phrases are the same
+[Because phrases are arrays, this is just a deep array comparitor]
+ </li></ul>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">are_identical_phrases</span>(<span class="variable">p1</span>, <span class="variable">p2</span>) {
+        <span class="keyword">if</span>( ! <span class="variable">_</span>.<span class="variable">isArray</span>(<span class="variable">p1</span>) || ! <span class="variable">_</span>.<span class="variable">isArray</span>(<span class="variable">p2</span>) ) {
+            <span class="keyword">return</span> <span class="variable">p1</span>===<span class="variable">p2</span>;
+        }
+        <span class="keyword">if</span>( <span class="variable">p1</span>.<span class="variable">length</span> !== <span class="variable">p2</span>.<span class="variable">length</span> ) {
+            <span class="keyword">return</span> <span class="variable">false</span>;
+        }
+        <span class="keyword">return</span> <span class="variable">_</span>.<span class="variable">all</span>(<span class="variable">p1</span>, <span class="keyword">function</span>(<span class="variable">p1_elm</span>, <span class="variable">idx</span>){
+            <span class="keyword">var</span> <span class="variable">p2_elm</span> = <span class="variable">p2</span>[<span class="variable">idx</span>];
+            <span class="keyword">return</span> <span class="variable">are_identical_phrases</span>(<span class="variable">p1_elm</span>, <span class="variable">p2_elm</span>);
+        });
+    }</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<ul><li><strong>param</strong>: <em>phrase</em>
+is like ['not', 'P']</li><li><strong>param</strong>: <em>match</em>
+is like  ['not', ['not', '$1']] where '$.+' is a variable</li><li><strong>return</strong>: <em>false</em>
+if no match, otherwise a map with each variable's match
+Only considers the top node of phrase (not recursive)
+ </li></ul>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">is_match</span>(<span class="variable">phrase</span>, <span class="variable">match</span>, <span class="variable">matches_</span>) {
+        <span class="variable">matches_</span> = <span class="variable">matches_</span> || {};   <span class="comment">//stores $1 etc</span>
+        <span class="keyword">if</span>( ! <span class="variable">_</span>.<span class="variable">isArray</span>(<span class="variable">phrase</span>) || ! <span class="variable">_</span>.<span class="variable">isArray</span>(<span class="variable">match</span>) ) {
+            <span class="keyword">return</span> <span class="variable">phrase</span> === <span class="variable">match</span>;
+        }
+        <span class="keyword">if</span>( <span class="variable">phrase</span>.<span class="variable">length</span> !== <span class="variable">match</span>.<span class="variable">length</span> ) {
+            <span class="keyword">return</span> <span class="variable">false</span>;
+        }
+        <span class="keyword">var</span> <span class="variable">success</span> = <span class="variable">_</span>.<span class="variable">all</span>(<span class="variable">match</span>, <span class="keyword">function</span>(<span class="variable">match_elm</span>, <span class="variable">idx</span>) {
+            <span class="keyword">var</span> <span class="variable">phrase_elm</span> = <span class="variable">phrase</span>[<span class="variable">idx</span>];
+            <span class="keyword">if</span>( <span class="variable">is_var</span>(<span class="variable">match_elm</span>) ) {
+                <span class="keyword">var</span> <span class="variable">key</span> = <span class="variable">match_elm</span>;
+                <span class="keyword">if</span>( <span class="variable">key</span> <span class="keyword">in</span> <span class="variable">matches_</span> ) {
+                    <span class="comment">//every instance of a variable must match the same thing</span>
+                    <span class="keyword">if</span>( !<span class="variable">are_identical_phrases</span>( <span class="variable">matches_</span>[<span class="variable">key</span>], <span class="variable">phrase_elm</span> ) ) {
+                        <span class="keyword">return</span> <span class="variable">false</span>;
+                    }
+                }
+                <span class="variable">matches_</span>[<span class="variable">key</span>] = <span class="variable">phrase_elm</span>;
+                <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'matched '</span>+<span class="variable">key</span>+<span class="string">' = '</span>+<span class="variable">matches_</span>[<span class="variable">key</span>]);
+                <span class="keyword">return</span> <span class="variable">true</span>;
+            }
+            <span class="keyword">if</span>( <span class="variable">match_elm</span> === <span class="variable">phrase_elm</span> ) {
+                <span class="keyword">return</span> <span class="variable">true</span>;
+            }
+            <span class="keyword">if</span>( <span class="variable">_</span>.<span class="variable">isArray</span>(<span class="variable">match_elm</span>) &<span class="variable">amp</span>;&<span class="variable">amp</span>; <span class="variable">_</span>.<span class="variable">isArray</span>(<span class="variable">match_elm</span>) ) {
+                <span class="keyword">return</span> <span class="variable">is_match</span>(<span class="variable">phrase_elm</span>, <span class="variable">match_elm</span>, <span class="variable">matches_</span>);
+            }
+            <span class="keyword">return</span> <span class="variable">false</span>;
+        });
+        <span class="keyword">return</span> ( <span class="variable">success</span> ? <span class="variable">matches_</span> : <span class="variable">false</span> );
+    }</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<ul><li><strong>param</strong>: <em>match</em>
+is like  ['not', ['not', '$1']] where '$.+' is a variable</li><li><strong>param</strong>: <em>matches</em>
+is like {$1:['not','P']}</li><li><strong>return</strong>: <em>a</em>
+phrase with variables replaced by their matches
+ </li></ul>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">replace</span>(<span class="variable">match</span>, <span class="variable">matches</span>) {
+        <span class="keyword">if</span>(  <span class="variable">_</span>.<span class="variable">isArray</span>(<span class="variable">match</span>) ) {
+            <span class="comment">//apply replace to each element of the array and return result</span>
+            <span class="keyword">return</span> <span class="variable">_</span>.<span class="variable">map</span>(
+                <span class="variable">match</span>,
+                <span class="keyword">function</span>(<span class="variable">elm</span>) {
+                    <span class="keyword">return</span> <span class="variable">replace</span>(<span class="variable">elm</span>, <span class="variable">matches</span>);
+                } 
+            );
+        }
+        <span class="comment">// match is a leaf (not an arrayl.)</span>
+        <span class="keyword">var</span> <span class="variable">leaf</span> = <span class="variable">match</span>;
+        <span class="keyword">if</span>( <span class="variable">is_var</span>(<span class="variable">leaf</span>) ) {
+            <span class="keyword">return</span> <span class="variable">matches</span>[<span class="variable">leaf</span>];
+        }
+        <span class="keyword">return</span> <span class="variable">leaf</span>;
+    }</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>recursively substitute all instances of from<em>match with to</em>match
+ - <strong>param</strong>: <em>sub</em>
+ is a map containing .from and .to, which are both matches
+     </p>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">substitute</span>(<span class="variable">phrase</span>, <span class="variable">sub</span>) {
+        <span class="keyword">var</span> <span class="variable">matches</span> = <span class="variable">is_match</span>(<span class="variable">phrase</span>, <span class="variable">sub</span>.<span class="variable">from</span>);
+        <span class="keyword">if</span>( <span class="variable">matches</span> ) {
+            <span class="variable">phrase</span> = <span class="variable">replace</span>(<span class="variable">sub</span>.<span class="variable">to</span>, <span class="variable">matches</span>);
+        }
+        <span class="keyword">if</span>( ! <span class="variable">_</span>.<span class="variable">isArray</span>(<span class="variable">phrase</span>) ) {
+            <span class="keyword">return</span> <span class="variable">phrase</span>;
+        }
+        <span class="keyword">return</span> <span class="variable">_</span>.<span class="variable">map</span>(<span class="variable">phrase</span>, <span class="keyword">function</span>(<span class="variable">elm</span>){
+            <span class="keyword">return</span> <span class="variable">substitute</span>(<span class="variable">elm</span>, <span class="variable">sub</span>);
+        });
+    }
+    
+    <span class="keyword">var</span> <span class="class">True</span> = [<span class="string">'VAL'</span>, <span class="variable">true</span>];
+    <span class="keyword">var</span> <span class="class">False</span> = [<span class="string">'VAL'</span>, <span class="variable">false</span>];</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>These get us to disjunctive normal form, with some simplifications
+involving things like (True or $1) &gt; $1
+All of these substitutions leave the connectives as binary
+     </p>
+</td>
+<td class="code">
+<pre><code><span class="keyword">var</span> <span class="variable">substitutions</span> = {
+        <span class="variable">dbl_neg</span> : {
+            <span class="variable">from</span> : [<span class="string">'not'</span>,[<span class="string">'not'</span>,<span class="string">'$1'</span>]],
+            <span class="variable">to</span> : <span class="string">'$1'</span>
+        },
+        <span class="variable">demorgan1</span> : {
+            <span class="variable">from</span> : [<span class="string">'not'</span>, [<span class="string">'and'</span>, <span class="string">'$1'</span>, <span class="string">'$2'</span> ]],
+            <span class="variable">to</span> : [<span class="string">'or'</span>, [<span class="string">'not'</span>,<span class="string">'$1'</span>], [<span class="string">'not'</span>,<span class="string">'$2'</span>]]
+        },
+        <span class="variable">demorgan2</span> : {
+            <span class="variable">from</span> : [<span class="string">'not'</span>, [<span class="string">'or'</span>, <span class="string">'$1'</span>, <span class="string">'$2'</span> ]],
+            <span class="variable">to</span> : [<span class="string">'and'</span>, [<span class="string">'not'</span>,<span class="string">'$1'</span>], [<span class="string">'not'</span>,<span class="string">'$2'</span>]]
+        },
+        <span class="variable">arrow</span> : {
+            <span class="variable">from</span> : [<span class="string">'arrow'</span>, <span class="string">'$1'</span>, <span class="string">'$2'</span>],
+            <span class="variable">to</span> : [<span class="string">'or'</span>, [<span class="string">'not'</span>, <span class="string">'$1'</span>], <span class="string">'$2'</span>]
+        },
+        <span class="variable">not_false</span> : {
+            <span class="variable">from</span> : [<span class="string">'not'</span>, <span class="class">False</span>],
+            <span class="variable">to</span> : <span class="class">True</span>
+        },
+        <span class="variable">not_true</span> : {
+            <span class="variable">from</span> : [<span class="string">'not'</span>, <span class="class">True</span>],
+            <span class="variable">to</span> : <span class="class">False</span>
+        },
+        <span class="variable">lem_left</span> : {
+            <span class="variable">from</span> : [<span class="string">'or'</span>, [<span class="string">'not'</span>, <span class="string">'$1'</span>], <span class="string">'$1'</span>],
+            <span class="variable">to</span> : <span class="class">True</span>
+        },
+        <span class="variable">lem_right</span> : {
+            <span class="variable">from</span> : [<span class="string">'or'</span>, <span class="string">'$1'</span>, [<span class="string">'not'</span>, <span class="string">'$1'</span>]],
+            <span class="variable">to</span> : <span class="class">True</span>
+        },
+        <span class="variable">contra_left</span> : {
+            <span class="variable">from</span> : [<span class="string">'and'</span>, [<span class="string">'not'</span>, <span class="string">'$1'</span>], <span class="string">'$1'</span>],
+            <span class="variable">to</span> : <span class="class">False</span>
+        },
+        <span class="variable">contra_right</span> : {
+            <span class="variable">from</span> : [<span class="string">'and'</span>, <span class="string">'$1'</span>, [<span class="string">'not'</span>, <span class="string">'$1'</span>]],
+            <span class="variable">to</span> : <span class="class">False</span>
+        },
+        <span class="comment">// false or true ... etc</span>
+        <span class="variable">or_true_left</span> : {
+            <span class="variable">from</span> : [<span class="string">'or'</span>, <span class="class">True</span>, <span class="string">'$1'</span>],
+            <span class="variable">to</span> : <span class="class">True</span>
+        },
+        <span class="variable">or_true_right</span> : {
+            <span class="variable">from</span> : [<span class="string">'or'</span>, <span class="string">'$1'</span>, <span class="class">True</span>],
+            <span class="variable">to</span> : <span class="class">True</span>
+        },
+        <span class="variable">or_false_left</span> : {
+            <span class="variable">from</span> : [<span class="string">'or'</span>, <span class="string">'$1'</span>, <span class="class">False</span>],
+            <span class="variable">to</span> : <span class="string">'$1'</span>
+        },
+        <span class="variable">or_false_right</span> : {
+            <span class="variable">from</span> : [<span class="string">'or'</span>, <span class="class">False</span>, <span class="string">'$1'</span>],
+            <span class="variable">to</span> : <span class="string">'$1'</span>
+        },
+        <span class="variable">and_false_left</span> : {
+            <span class="variable">from</span> : [<span class="string">'and'</span>, <span class="class">False</span>, <span class="string">'$1'</span>],
+            <span class="variable">to</span> : <span class="class">False</span>
+        },
+        <span class="variable">and_false_right</span> : {
+            <span class="variable">from</span> : [<span class="string">'and'</span>, <span class="string">'$1'</span>, <span class="class">False</span>],
+            <span class="variable">to</span>: <span class="class">False</span>
+        },
+        <span class="variable">and_true_left</span> : {
+            <span class="variable">from</span> : [<span class="string">'and'</span>, <span class="class">True</span>, <span class="string">'$1'</span>],
+            <span class="variable">to</span> : <span class="string">'$1'</span>
+        },
+        <span class="variable">and_true_right</span> : {
+            <span class="variable">from</span> : [<span class="string">'and'</span>, <span class="string">'$1'</span>, <span class="class">True</span>],
+            <span class="variable">to</span> : <span class="string">'$1'</span>
+        },
+        <span class="comment">//disjunctive normal form</span>
+        <span class="variable">dnf_left</span> : {
+            <span class="variable">from</span> : [<span class="string">'and'</span>, [<span class="string">'or'</span>, <span class="string">'$1'</span>, <span class="string">'$2'</span>], <span class="string">'$3'</span>],
+            <span class="variable">to</span> : [<span class="string">'or'</span>, [<span class="string">'and'</span>, <span class="string">'$1'</span>, <span class="string">'$3'</span>], [<span class="string">'and'</span>, <span class="string">'$2'</span>, <span class="string">'$3'</span>]]
+        },
+        <span class="variable">dnf_right</span> : {
+            <span class="variable">from</span> : [<span class="string">'and'</span>, <span class="string">'$3'</span>, [<span class="string">'or'</span>, <span class="string">'$1'</span>, <span class="string">'$2'</span>]],
+            <span class="variable">to</span> : [<span class="string">'or'</span>, [<span class="string">'and'</span>, <span class="string">'$1'</span>, <span class="string">'$3'</span>], [<span class="string">'and'</span>, <span class="string">'$2'</span>, <span class="string">'$3'</span>]]
+        }
+    };</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>repeatedly apply fn to obj until the value fails to change according
+to comparitor.
+## Caution may cause hang if not used with care (nb. check comparitor)
+     </p>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">exhaust</span>(<span class="variable">fn</span>, <span class="variable">obj</span>, <span class="variable">comparitor</span>) {
+        <span class="variable">comparitor</span> = <span class="variable">comparitor</span> || <span class="variable">are_identical_phrases</span>; <span class="comment">// function(a,b) { return a === b; };</span>
+        <span class="keyword">var</span> <span class="variable">pre</span> = <span class="keyword">null</span>;
+        <span class="keyword">var</span> <span class="variable">post</span> = <span class="variable">obj</span>;
+        <span class="keyword">while</span>( !<span class="variable">comparitor</span>(<span class="variable">pre</span>, <span class="variable">post</span>) ) {
+            <span class="variable">pre</span> = <span class="variable">post</span>;
+            <span class="variable">post</span> = <span class="variable">fn</span>(<span class="variable">pre</span>);
+        }
+        <span class="keyword">return</span> <span class="variable">post</span>;
+    }</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<ul><li><strong>param</strong>: <em>subs</em>
+is an array of subsitutions 
+apply all subs to phrase in sequence, returning the result
+ </li></ul>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">substitute_reduce</span>(<span class="variable">phrase</span>, <span class="variable">subs</span>) {
+        <span class="keyword">return</span> <span class="variable">_</span>.<span class="variable">reduce</span>(
+            <span class="variable">subs</span>,
+            <span class="keyword">function</span>(<span class="variable">phrase</span>, <span class="variable">sub</span>){  <span class="comment">//could replace with simply subsititute</span>
+                <span class="keyword">return</span> <span class="variable">substitute</span>(<span class="variable">phrase</span>,<span class="variable">sub</span>);
+            },
+            <span class="variable">phrase</span>
+        );
+    }</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>like substitute_reduce but keeps cycling through subs until none
+yeild a change
+     </p>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">substitute_exhaust</span>(<span class="variable">phrase</span>, <span class="variable">subs</span>) {
+        <span class="keyword">var</span> <span class="variable">pre</span> = <span class="keyword">null</span>;
+        <span class="keyword">var</span> <span class="variable">post</span> = <span class="variable">phrase</span>;
+        <span class="keyword">while</span>( !<span class="variable">are_identical_phrases</span>(<span class="variable">pre</span>, <span class="variable">post</span>) ) {
+            <span class="variable">pre</span> = <span class="variable">post</span>;
+            <span class="variable">post</span> = <span class="variable">substitute_reduce</span>(<span class="variable">pre</span>, <span class="variable">subs</span>);
+        }
+        <span class="keyword">return</span> <span class="variable">post</span>;
+    }
+    
+
+    <span class="comment">// -- renaming PROP variables</span></code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<ul><li><strong>returns</strong>: <em>true</em>
+iff phrase is a PROP variable like P
+ </li></ul>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">is_PROP</span>(<span class="variable">phrase</span>) {
+        <span class="keyword">return</span> <span class="variable">_</span>.<span class="variable">isArray</span>(<span class="variable">phrase</span>) &<span class="variable">amp</span>;&<span class="variable">amp</span>; <span class="variable">phrase</span>[<span class="number integer">0</span>]===<span class="string">'PROP'</span>;
+    }</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<ul><li><strong>returns</strong>: <em>an</em>
+array with the named PROP variables in a canoical order
+(used to replace PROP variables for canonical representation)
+ </li></ul>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">list_PROPs</span>(<span class="variable">phrase</span>) {
+        <span class="keyword">if</span>( <span class="variable">is_PROP</span>(<span class="variable">phrase</span>) ) {
+            <span class="keyword">return</span> [<span class="variable">phrase</span>[<span class="number integer">1</span>]];
+        }
+        <span class="keyword">if</span>( <span class="variable">_</span>.<span class="variable">isArray</span>(<span class="variable">phrase</span>) ) {
+            <span class="keyword">return</span> <span class="variable">_</span>.<span class="variable">reduce</span>(
+                <span class="variable">phrase</span>,
+                <span class="keyword">function</span>(<span class="variable">list</span>, <span class="variable">elm</span>){
+                    <span class="keyword">return</span> <span class="variable">_</span>.<span class="variable">union</span>(<span class="variable">list</span>, <span class="variable">list_PROPs</span>(<span class="variable">elm</span>) );
+                },
+                []
+            );
+        }
+        <span class="keyword">return</span> [];
+    }
+    
+    <span class="keyword">function</span> <span class="variable">substitute_PROP</span>(<span class="variable">phrase</span>, <span class="variable">sub</span>) {
+        <span class="keyword">return</span> <span class="variable">substitute</span>(<span class="variable">phrase</span>, {
+            <span class="variable">from</span> : [<span class="string">'PROP'</span>, <span class="variable">sub</span>.<span class="variable">from</span>],
+            <span class="variable">to</span> : [<span class="string">'PROP'</span>, <span class="variable">sub</span>.<span class="variable">to</span>]
+        });
+    }</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>provides a canonical renaming of propositional variables
+     </p>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">rename_PROPs</span>(<span class="variable">phrase</span>) {
+        <span class="keyword">var</span> <span class="class">PROPs</span> = <span class="variable">list_PROPs</span>(<span class="variable">phrase</span>);
+        <span class="keyword">var</span> <span class="variable">intermediate</span> = <span class="variable">_</span>.<span class="variable">reduce</span>(
+            <span class="class">PROPs</span>,
+            <span class="keyword">function</span>( <span class="variable">phrase</span>, <span class="class">PROP</span>, <span class="variable">idx</span> ){
+                <span class="keyword">return</span> <span class="variable">substitute_PROP</span>(<span class="variable">phrase</span>, {
+                    <span class="variable">from</span> : <span class="class">PROP</span>,
+                    <span class="variable">to</span> : <span class="string">'_'</span>+<span class="variable">idx</span>    <span class="comment">//not a legal PROP variable name</span>
+                });
+            },
+            <span class="variable">phrase</span>
+        )
+        <span class="keyword">return</span> <span class="variable">_</span>.<span class="variable">reduce</span>(
+            <span class="class">PROPs</span>,
+            <span class="keyword">function</span>( <span class="variable">phrase</span>, <span class="variable">_ignore</span>, <span class="variable">idx</span> ){
+                <span class="keyword">return</span> <span class="variable">substitute_PROP</span>(<span class="variable">phrase</span>, {
+                   <span class="variable">from</span> : <span class="string">'_'</span> + <span class="variable">idx</span>,
+                   <span class="variable">to</span> : <span class="string">'P'</span> + (<span class="variable">idx</span>+<span class="number integer">1</span>)
+                });
+            },
+            <span class="variable">intermediate</span>
+        );
+    }
+    
+    
+    
+    <span class="comment">// -- stuff that involves n-ary connectives</span></code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>convert binary connectives into n-ary connectives, flattening disjunctive
+normal form into a tree with minimal depth
+     </p>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">flatten</span>(<span class="variable">phrase</span>) {
+        <span class="keyword">if</span>( ! <span class="variable">_</span>.<span class="variable">isArray</span>(<span class="variable">phrase</span>) ) {
+            <span class="keyword">return</span> <span class="variable">phrase</span>;
+        }
+        <span class="keyword">if</span>( <span class="variable">phrase</span>[<span class="number integer">0</span>] === <span class="string">'and'</span> || <span class="variable">phrase</span>[<span class="number integer">0</span>] === <span class="string">'or'</span> ) {
+            <span class="comment">//check whether any children are same connective</span>
+            <span class="keyword">var</span> <span class="variable">idx</span> = <span class="number integer">1</span>;
+            <span class="keyword">while</span>( <span class="variable">idx</span> &<span class="variable">lt</span>; <span class="variable">phrase</span>.<span class="variable">length</span> ) {
+                <span class="keyword">var</span> <span class="variable">child</span> = <span class="variable">phrase</span>[<span class="variable">idx</span>];
+                <span class="keyword">if</span>( <span class="variable">child</span>[<span class="number integer">0</span>] === <span class="variable">phrase</span>[<span class="number integer">0</span>] ) {
+                    <span class="comment">//connectives match: add child's con/disjuncts to parent phrase and remove child</span>
+                    <span class="variable">phrase</span> = <span class="variable">phrase</span>.<span class="variable">concat</span>(<span class="variable">child</span>.<span class="variable">slice</span>(<span class="number integer">1</span>));
+                    <span class="variable">phrase</span>.<span class="variable">splice</span>(<span class="variable">idx</span>,<span class="number integer">1</span>);
+                } <span class="keyword">else</span> {
+                    <span class="comment">//only increase idx in this case because otherwise the splice counts as moving on</span>
+                    <span class="variable">idx</span> += <span class="number integer">1</span>;
+                }
+            }
+        }
+        <span class="keyword">return</span> <span class="variable">_</span>.<span class="variable">map</span>(<span class="variable">phrase</span>, <span class="keyword">function</span>(<span class="variable">elem</span>){
+            <span class="keyword">return</span> <span class="variable">flatten</span>(<span class="variable">elem</span>);
+        });
+    }</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>return phrase involving only binary connectives
+     </p>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">unflatten</span>(<span class="variable">phrase</span>) {
+        <span class="keyword">if</span>( ! <span class="variable">_</span>.<span class="variable">isArray</span>(<span class="variable">phrase</span>) ) {
+            <span class="keyword">return</span> <span class="variable">phrase</span>;
+        }
+        <span class="keyword">if</span>( <span class="variable">phrase</span>.<span class="variable">length</span> &<span class="variable">gt</span>; <span class="number integer">3</span> ) {
+            <span class="comment">//needs work</span>
+            <span class="keyword">var</span> <span class="variable">connective</span> = <span class="variable">phrase</span>[<span class="number integer">0</span>];
+            <span class="keyword">var</span> <span class="variable">first_child</span> = <span class="variable">phrase</span>[<span class="number integer">1</span>];
+            <span class="keyword">var</span> <span class="variable">other_children</span> = <span class="variable">phrase</span>.<span class="variable">slice</span>(<span class="number integer">2</span>);
+            <span class="variable">phrase</span> = [ <span class="variable">connective</span>, [<span class="variable">connective</span>].<span class="variable">concat</span>(<span class="variable">other_children</span>), <span class="variable">first_child</span> ];
+        }
+        <span class="keyword">return</span> <span class="variable">_</span>.<span class="variable">map</span>(<span class="variable">phrase</span>, <span class="keyword">function</span>(<span class="variable">elem</span>){
+            <span class="keyword">return</span> <span class="variable">unflatten</span>(<span class="variable">elem</span>);
+        });
+    }
+    
+    <span class="keyword">function</span> <span class="variable">replace_children</span>( <span class="variable">phrase</span>, <span class="variable">new_children</span> ) {
+        <span class="keyword">return</span> [<span class="variable">phrase</span>[<span class="number integer">0</span>]].<span class="variable">concat</span>(<span class="variable">new_children</span>);
+    }
+    
+    <span class="comment">// much of what follows is concerned with getting to the point where</span>
+    <span class="comment">// we have DNF where the conjuncts contain no duplicates and do not</span>
+    <span class="comment">// contain a sentence letter and its negation</span></code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>remove any duplicate conjuncts in 'and' and 'or'
+     </p>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">remove_duplicates</span>(<span class="variable">phrase</span>) {
+        <span class="keyword">if</span>( ! <span class="variable">_</span>.<span class="variable">isArray</span>(<span class="variable">phrase</span>) ) {
+            <span class="keyword">return</span> <span class="variable">phrase</span>;
+        }
+        <span class="keyword">if</span>( <span class="variable">phrase</span>[<span class="number integer">0</span>] === <span class="string">'and'</span> || <span class="variable">phrase</span>[<span class="number integer">0</span>] === <span class="string">'or'</span> ) {
+            <span class="comment">//check whether any children are same</span>
+            <span class="variable">actual_children</span> = <span class="variable">phrase</span>.<span class="variable">slice</span>(<span class="number integer">1</span>);
+            <span class="variable">unique_children</span> = [];
+            <span class="keyword">while</span>( <span class="variable">actual_children</span>.<span class="variable">length</span> &<span class="variable">gt</span>; <span class="number integer">0</span> ) {
+                <span class="variable">child</span> = <span class="variable">actual_children</span>.<span class="variable">pop</span>();
+                <span class="keyword">var</span> <span class="variable">is_new</span> = <span class="variable">_</span>.<span class="variable">all</span>(<span class="variable">unique_children</span>, <span class="keyword">function</span>(<span class="variable">old_child</span>){
+                    <span class="keyword">return</span> !<span class="variable">are_identical_phrases</span>(<span class="variable">old_child</span>, <span class="variable">child</span>);
+                });
+                <span class="keyword">if</span>(<span class="variable">is_new</span>) {
+                    <span class="variable">unique_children</span>.<span class="variable">push</span>(<span class="variable">child</span>);
+                }
+            }
+            <span class="variable">phrase</span> = <span class="variable">replace_children</span>(<span class="variable">phrase</span>, <span class="variable">unique_children</span>);
+        }
+        <span class="keyword">return</span> <span class="variable">_</span>.<span class="variable">map</span>(<span class="variable">phrase</span>, <span class="keyword">function</span>(<span class="variable">elem</span>){
+            <span class="keyword">return</span> <span class="variable">remove_duplicates</span>(<span class="variable">elem</span>);
+        });
+    }
+    
+    <span class="keyword">function</span> <span class="variable">remove_double_negations</span>( <span class="variable">phrase</span> ) {
+        <span class="keyword">return</span> <span class="variable">substitute_exhaust</span>(<span class="variable">phrase</span>, [<span class="variable">substitutions</span>.<span class="variable">dbl_neg</span>] );
+    }</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<ul><li><strong>returns</strong>: <em>true</em>
+if list<em>of</em>phrases contains a formula and its negation
+ </li></ul>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">contains_fmla_and_its_neg</span>(<span class="variable">list_of_phrases</span>) {
+        <span class="keyword">var</span> <span class="variable">not_negated</span> = [];
+        <span class="keyword">var</span> <span class="variable">negated</span> = [];
+        <span class="variable">_</span>.<span class="variable">each</span>(<span class="variable">list_of_phrases</span>, <span class="keyword">function</span>(<span class="variable">phrase</span>) {
+            <span class="keyword">if</span>( ! <span class="variable">_</span>.<span class="variable">isArray</span>(<span class="variable">phrase</span>) ) {
+                <span class="variable">not_negated</span>.<span class="variable">push</span>(<span class="variable">phrase</span>);
+                <span class="keyword">return</span>;
+            }
+            <span class="variable">phrase</span> = <span class="variable">remove_double_negations</span>(<span class="variable">phrase</span>);
+            <span class="keyword">if</span>( <span class="variable">phrase</span>[<span class="number integer">0</span>] === <span class="string">'not'</span> ) {
+                <span class="variable">negated</span>.<span class="variable">push</span>(<span class="variable">phrase</span>[<span class="number integer">1</span>]);    <span class="comment">//nb we add the non-negated phrase!</span>
+            } <span class="keyword">else</span> {
+                <span class="variable">not_negated</span>.<span class="variable">push</span>(<span class="variable">phrase</span>);
+            }
+        });
+        <span class="comment">//are any of the negated phrases identical to a not_negated phrase?</span>
+        <span class="keyword">return</span> <span class="variable">_</span>.<span class="variable">any</span>(<span class="variable">negated</span>, <span class="keyword">function</span>(<span class="variable">negated_phrase</span>){
+            <span class="keyword">return</span> <span class="variable">_</span>.<span class="variable">any</span>(<span class="variable">not_negated</span>, <span class="keyword">function</span>(<span class="variable">phrase</span>) {
+                <span class="keyword">return</span> <span class="variable">are_identical_phrases</span>(<span class="variable">negated_phrase</span>, <span class="variable">phrase</span>);
+            });
+        });
+    }</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>spots formulae and their negations in conjunctions and disjunctions
+     </p>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">simplify</span>( <span class="variable">phrase</span> ) {
+        <span class="keyword">if</span>( ! <span class="variable">_</span>.<span class="variable">isArray</span>(<span class="variable">phrase</span>) ) {
+            <span class="keyword">return</span> <span class="variable">phrase</span>;
+        }
+        <span class="keyword">if</span>( <span class="variable">phrase</span>[<span class="number integer">0</span>] === <span class="string">'and'</span> || <span class="variable">phrase</span>[<span class="number integer">0</span>] === <span class="string">'or'</span> ) {
+            <span class="keyword">var</span> <span class="variable">juncts</span> = <span class="variable">phrase</span>.<span class="variable">slice</span>(<span class="number integer">1</span>);
+            <span class="keyword">if</span>( <span class="variable">contains_fmla_and_its_neg</span>(<span class="variable">juncts</span>) ) {
+                <span class="keyword">return</span> ( <span class="variable">phrase</span>[<span class="number integer">0</span>] === <span class="string">'and'</span> ? <span class="class">False</span> : <span class="class">True</span> )
+            }
+        }
+        <span class="keyword">return</span> <span class="variable">_</span>.<span class="variable">map</span>(<span class="variable">phrase</span>, <span class="keyword">function</span>(<span class="variable">elem</span>){
+            <span class="keyword">return</span> <span class="variable">simplify</span>(<span class="variable">elem</span>);
+        })
+    }</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>disjunctive normal form with no repeted <em>juncts and no </em>junct containg
+a formula and its negation
+     </p>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">canonical</span>(<span class="variable">phrase</span>) {
+        <span class="keyword">var</span> <span class="variable">do_substitutions</span> = <span class="keyword">function</span>(<span class="variable">phrase</span>) {
+            <span class="keyword">return</span> <span class="variable">substitute_exhaust</span>(<span class="variable">phrase</span>, <span class="variable">substitutions</span>);
+        }
+        <span class="keyword">return</span> <span class="variable">do_substitutions</span>(
+            <span class="variable">unflatten</span>(
+                <span class="variable">simplify</span>(
+                    <span class="variable">flatten</span>(
+                        <span class="variable">do_substitutions</span>(<span class="variable">phrase</span>)
+                    )
+                )
+            )
+        );
+    }
+    
+    
+    <span class="comment">//TODO write function that will compare phrases irrespective of order of *juncts</span>
+    <span class="comment">// (requires being able to interscet two lists with a custom comparator --- then</span>
+    <span class="comment">//  just compare their lengths to their intersection)</span>
+    
+    
+    
+    <span class="comment">// -- testing only -- config for browser console</span>
+    
+    <span class="variable">window</span>.<span class="variable">l</span> = {
+        <span class="variable">are_identical_phrases</span> : <span class="variable">are_identical_phrases</span>,
+        <span class="variable">is_match</span> : <span class="variable">is_match</span>,
+        <span class="variable">replace</span> : <span class="variable">replace</span>,
+        <span class="variable">substitute</span> : <span class="variable">substitute</span>,
+        <span class="variable">substitutions</span> : <span class="variable">substitutions</span>,
+        <span class="variable">substitute_reduce</span> : <span class="variable">substitute_reduce</span>,
+        <span class="variable">substitute_exhaust</span> : <span class="variable">substitute_exhaust</span>,
+        <span class="variable">flatten</span> : <span class="variable">flatten</span>,
+        <span class="variable">unflatten</span> : <span class="variable">unflatten</span>,
+        <span class="variable">remove_duplicates</span> : <span class="variable">remove_duplicates</span>,
+        <span class="variable">exhaust</span> : <span class="variable">exhaust</span>,
+        <span class="variable">canonical</span> : <span class="variable">canonical</span>,
+        <span class="variable">list_PROPs</span> : <span class="variable">list_PROPs</span>,
+        <span class="variable">rename_PROPs</span> : <span class="variable">rename_PROPs</span>,
+        <span class="variable">contains_fmla_and_its_neg</span> : <span class="variable">contains_fmla_and_its_neg</span>,
+        <span class="variable">simplify</span> : <span class="variable">simplify</span>,
+        <span class="variable">dm</span> : {
+            <span class="variable">from</span>: [<span class="string">'not'</span>, [<span class="string">'and'</span>, <span class="string">'$1'</span>, <span class="string">'$2'</span> ]],
+            <span class="variable">to</span> : [<span class="string">'or'</span>, [<span class="string">'not'</span>,<span class="string">'$1'</span>], [<span class="string">'not'</span>,<span class="string">'$2'</span>]]
+        },
+        <span class="variable">dm_phrase</span> : [<span class="string">'and'</span>,[<span class="string">'not'</span>,<span class="string">'Q'</span>],[<span class="string">'not'</span>, [<span class="string">'and'</span>, <span class="string">'P'</span>, [<span class="string">'not'</span>, <span class="string">'Q'</span>] ]]]
+    };
+    <span class="comment">//test</span>
+    <span class="variable">window</span>.<span class="variable">res</span> = {
+        <span class="variable">are_identical_phrases</span> : <span class="variable">are_identical_phrases</span>([<span class="number integer">1</span>,[<span class="number integer">2</span>,<span class="number integer">3</span>]],[<span class="number integer">1</span>,[<span class="number integer">2</span>,<span class="number integer">3</span>]]),
+        <span class="variable">substitute</span> : <span class="variable">substitute</span>(<span class="variable">l</span>.<span class="variable">dm_phrase</span>,<span class="variable">l</span>.<span class="variable">dm</span>),
+        <span class="variable">substitute2</span> : <span class="variable">substitute</span>([<span class="string">'not'</span>,[<span class="string">'not'</span>,<span class="string">'P'</span>]],<span class="variable">l</span>.<span class="variable">substitutions</span>.<span class="variable">dbl_neg</span>),
+        <span class="variable">substitute_exhaust</span> : <span class="variable">substitute_exhaust</span>(<span class="variable">l</span>.<span class="variable">dm_phrase</span>, <span class="variable">substitutions</span>),
+        <span class="variable">canonical_test</span>: <span class="variable">are_identical_phrases</span>( <span class="variable">l</span>.<span class="variable">canonical</span>(<span class="variable">fol</span>.<span class="variable">parse</span>(<span class="string">'P or (Q arrow false)'</span>)), <span class="variable">l</span>.<span class="variable">canonical</span>(<span class="variable">fol</span>.<span class="variable">parse</span>(<span class="string">'not (not P and Q)'</span>)) )
+        
+
+    };
+
+});
+
+</code></pre>
+</td>
+</tr>	</body>
+</html></tbody></table>

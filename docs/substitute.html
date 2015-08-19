@@ -1,0 +1,486 @@
+<!DOCTYPE html>  <html> <head>   <title>substitute.js</title>   <meta http-equiv="content-type" content="text/html; charset=UTF-8">   <link rel="stylesheet" media="all" href="docco.css" /> </head> <body>   <div id="container">     <div id="background"></div>          <table cellpadding="0" cellspacing="0">       <thead>         <tr>           <th class="docs">             <h1>               substitute.js             </h1>           </th>           <th class="code">           </th>         </tr>       </thead>       <tbody>                               <tr id="section-1">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-1">&#182;</a>               </div>                            </td>             <td class="code">               <div class="highlight"><pre><span class="cm">/**</span>
+<span class="cm"> * apply substitutions to formulae like</span>
+<span class="cm"> * [&#39;not&#39;, [&#39;not&#39;, &#39;$1&#39;]] &gt; &#39;$1&#39;</span>
+<span class="cm"> * [&#39;not&#39;, [&#39;and&#39;, &#39;$1&#39;, &#39;$2&#39; ]] &gt; [&#39;or&#39;, [&#39;not&#39;,&#39;$1&#39;], [&#39;not&#39;,&#39;$2&#39;]]</span>
+<span class="cm"> *</span>
+<span class="cm"> *</span>
+<span class="cm"> * terminology for parameter values:</span>
+<span class="cm"> *  - a phrase is a piece of parsed FOL (e.g. [&#39;not&#39;, [&#39;not&#39;, &#39;P&#39;]])</span>
+<span class="cm"> *  - a variable is a string prefixed with $, e.g. &#39;$1&#39;</span>
+<span class="cm"> *  - a match is a piece of parsed FOL with zero or more elements replaced by</span>
+<span class="cm"> *      variables (e.g. [&#39;not&#39;, [&#39;not&#39;, &#39;$1&#39;]])</span>
+<span class="cm"> *  - a substitution is a map with .from and .to keys whose values are both matches</span>
+<span class="cm"> *</span>
+<span class="cm"> */</span>
+
+<span class="cm">/**</span>
+<span class="cm"> * testing only (TODO: remove) --- expose parser as fol (global var)</span>
+<span class="cm"> */</span>
+<span class="nx">require</span><span class="p">([</span><span class="s1">&#39;parse/test_boolean2&#39;</span><span class="p">],</span><span class="kd">function</span><span class="p">(){</span>
+    <span class="nb">window</span><span class="p">.</span><span class="nx">fol</span> <span class="o">=</span> <span class="nx">test_boolean2</span><span class="p">;</span></pre></div>             </td>           </tr>                               <tr id="section-2">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-2">&#182;</a>               </div>               <p>use like fol.parse("not true")</p>             </td>             <td class="code">               <div class="highlight"><pre><span class="p">});</span>
+
+<span class="nx">require</span><span class="p">([</span><span class="s1">&#39;lib/underscore&#39;</span><span class="p">],</span> <span class="kd">function</span><span class="p">(){</span>
+    </pre></div>             </td>           </tr>                               <tr id="section-3">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-3">&#182;</a>               </div>               <p>underscore just adds to globals</p>             </td>             <td class="code">               <div class="highlight"><pre>    
+    <span class="kd">function</span> <span class="nx">is_var</span><span class="p">(</span><span class="nx">elm</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="k">typeof</span> <span class="nx">elm</span> <span class="o">===</span> <span class="s1">&#39;string&#39;</span> <span class="o">&amp;&amp;</span> <span class="nx">elm</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">===</span> <span class="s1">&#39;$&#39;</span><span class="p">;</span>
+    <span class="p">}</span>
+    
+    <span class="cm">/**</span>
+<span class="cm">     * @returns true iff the two phrases are the same</span>
+<span class="cm">     * [Because phrases are arrays, this is just a deep array comparitor]</span>
+<span class="cm">     */</span>
+    <span class="kd">function</span> <span class="nx">are_identical_phrases</span><span class="p">(</span><span class="nx">p1</span><span class="p">,</span> <span class="nx">p2</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span> <span class="o">!</span> <span class="nx">_</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">p1</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span> <span class="nx">_</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">p2</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">p1</span><span class="o">===</span><span class="nx">p2</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">if</span><span class="p">(</span> <span class="nx">p1</span><span class="p">.</span><span class="nx">length</span> <span class="o">!==</span> <span class="nx">p2</span><span class="p">.</span><span class="nx">length</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">_</span><span class="p">.</span><span class="nx">all</span><span class="p">(</span><span class="nx">p1</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">p1_elm</span><span class="p">,</span> <span class="nx">idx</span><span class="p">){</span>
+            <span class="kd">var</span> <span class="nx">p2_elm</span> <span class="o">=</span> <span class="nx">p2</span><span class="p">[</span><span class="nx">idx</span><span class="p">];</span>
+            <span class="k">return</span> <span class="nx">are_identical_phrases</span><span class="p">(</span><span class="nx">p1_elm</span><span class="p">,</span> <span class="nx">p2_elm</span><span class="p">);</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+    
+    <span class="cm">/**</span>
+<span class="cm">     * @param phrase is like [&#39;not&#39;, &#39;P&#39;]</span>
+<span class="cm">     * @param match is like  [&#39;not&#39;, [&#39;not&#39;, &#39;$1&#39;]] where &#39;$.+&#39; is a variable</span>
+<span class="cm">     * @return false if no match, otherwise a map with each variable&#39;s match</span>
+<span class="cm">     * Only considers the top node of phrase (not recursive)</span>
+<span class="cm">     */</span>
+    <span class="kd">function</span> <span class="nx">is_match</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="nx">match</span><span class="p">,</span> <span class="nx">matches_</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">matches_</span> <span class="o">=</span> <span class="nx">matches_</span> <span class="o">||</span> <span class="p">{};</span>   <span class="c1">//stores $1 etc</span>
+        <span class="k">if</span><span class="p">(</span> <span class="o">!</span> <span class="nx">_</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span> <span class="nx">_</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">match</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">phrase</span> <span class="o">===</span> <span class="nx">match</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">if</span><span class="p">(</span> <span class="nx">phrase</span><span class="p">.</span><span class="nx">length</span> <span class="o">!==</span> <span class="nx">match</span><span class="p">.</span><span class="nx">length</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="kd">var</span> <span class="nx">success</span> <span class="o">=</span> <span class="nx">_</span><span class="p">.</span><span class="nx">all</span><span class="p">(</span><span class="nx">match</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">match_elm</span><span class="p">,</span> <span class="nx">idx</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">phrase_elm</span> <span class="o">=</span> <span class="nx">phrase</span><span class="p">[</span><span class="nx">idx</span><span class="p">];</span>
+            <span class="k">if</span><span class="p">(</span> <span class="nx">is_var</span><span class="p">(</span><span class="nx">match_elm</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+                <span class="kd">var</span> <span class="nx">key</span> <span class="o">=</span> <span class="nx">match_elm</span><span class="p">;</span>
+                <span class="k">if</span><span class="p">(</span> <span class="nx">key</span> <span class="k">in</span> <span class="nx">matches_</span> <span class="p">)</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-4">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-4">&#182;</a>               </div>               <p>every instance of a variable must match the same thing</p>             </td>             <td class="code">               <div class="highlight"><pre>                    <span class="k">if</span><span class="p">(</span> <span class="o">!</span><span class="nx">are_identical_phrases</span><span class="p">(</span> <span class="nx">matches_</span><span class="p">[</span><span class="nx">key</span><span class="p">],</span> <span class="nx">phrase_elm</span> <span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+                        <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+                <span class="nx">matches_</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span> <span class="o">=</span> <span class="nx">phrase_elm</span><span class="p">;</span>
+                <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;matched &#39;</span><span class="o">+</span><span class="nx">key</span><span class="o">+</span><span class="s1">&#39; = &#39;</span><span class="o">+</span><span class="nx">matches_</span><span class="p">[</span><span class="nx">key</span><span class="p">]);</span>
+                <span class="k">return</span> <span class="kc">true</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="k">if</span><span class="p">(</span> <span class="nx">match_elm</span> <span class="o">===</span> <span class="nx">phrase_elm</span> <span class="p">)</span> <span class="p">{</span>
+                <span class="k">return</span> <span class="kc">true</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="k">if</span><span class="p">(</span> <span class="nx">_</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">match_elm</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="nx">_</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">match_elm</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+                <span class="k">return</span> <span class="nx">is_match</span><span class="p">(</span><span class="nx">phrase_elm</span><span class="p">,</span> <span class="nx">match_elm</span><span class="p">,</span> <span class="nx">matches_</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
+        <span class="p">});</span>
+        <span class="k">return</span> <span class="p">(</span> <span class="nx">success</span> <span class="o">?</span> <span class="nx">matches_</span> <span class="o">:</span> <span class="kc">false</span> <span class="p">);</span>
+    <span class="p">}</span>
+    
+    <span class="cm">/**</span>
+<span class="cm">     * @param match is like  [&#39;not&#39;, [&#39;not&#39;, &#39;$1&#39;]] where &#39;$.+&#39; is a variable</span>
+<span class="cm">     * @param matches is like {$1:[&#39;not&#39;,&#39;P&#39;]}</span>
+<span class="cm">     * @return a phrase with variables replaced by their matches</span>
+<span class="cm">     */</span>
+    <span class="kd">function</span> <span class="nx">replace</span><span class="p">(</span><span class="nx">match</span><span class="p">,</span> <span class="nx">matches</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span>  <span class="nx">_</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">match</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-5">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-5">&#182;</a>               </div>               <p>apply replace to each element of the array and return result</p>             </td>             <td class="code">               <div class="highlight"><pre>            <span class="k">return</span> <span class="nx">_</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span>
+                <span class="nx">match</span><span class="p">,</span>
+                <span class="kd">function</span><span class="p">(</span><span class="nx">elm</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="k">return</span> <span class="nx">replace</span><span class="p">(</span><span class="nx">elm</span><span class="p">,</span> <span class="nx">matches</span><span class="p">);</span>
+                <span class="p">}</span> 
+            <span class="p">);</span>
+        <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-6">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-6">&#182;</a>               </div>               <p>match is a leaf (not an arrayl.)</p>             </td>             <td class="code">               <div class="highlight"><pre>        <span class="kd">var</span> <span class="nx">leaf</span> <span class="o">=</span> <span class="nx">match</span><span class="p">;</span>
+        <span class="k">if</span><span class="p">(</span> <span class="nx">is_var</span><span class="p">(</span><span class="nx">leaf</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">matches</span><span class="p">[</span><span class="nx">leaf</span><span class="p">];</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">leaf</span><span class="p">;</span>
+    <span class="p">}</span>
+    
+    <span class="cm">/**</span>
+<span class="cm">     * recursively substitute all instances of from_match with to_match</span>
+<span class="cm">     * @param sub is a map containing .from and .to, which are both matches</span>
+<span class="cm">     */</span>
+    <span class="kd">function</span> <span class="nx">substitute</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="nx">sub</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">matches</span> <span class="o">=</span> <span class="nx">is_match</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="nx">sub</span><span class="p">.</span><span class="nx">from</span><span class="p">);</span>
+        <span class="k">if</span><span class="p">(</span> <span class="nx">matches</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="nx">phrase</span> <span class="o">=</span> <span class="nx">replace</span><span class="p">(</span><span class="nx">sub</span><span class="p">.</span><span class="nx">to</span><span class="p">,</span> <span class="nx">matches</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">if</span><span class="p">(</span> <span class="o">!</span> <span class="nx">_</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">phrase</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">_</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">elm</span><span class="p">){</span>
+            <span class="k">return</span> <span class="nx">substitute</span><span class="p">(</span><span class="nx">elm</span><span class="p">,</span> <span class="nx">sub</span><span class="p">);</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+    
+    <span class="kd">var</span> <span class="nx">True</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;VAL&#39;</span><span class="p">,</span> <span class="kc">true</span><span class="p">];</span>
+    <span class="kd">var</span> <span class="nx">False</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;VAL&#39;</span><span class="p">,</span> <span class="kc">false</span><span class="p">];</span>
+    
+    <span class="cm">/**</span>
+<span class="cm">     * These get us to disjunctive normal form, with some simplifications</span>
+<span class="cm">     * involving things like (True or $1) &gt; $1</span>
+<span class="cm">     * All of these substitutions leave the connectives as binary</span>
+<span class="cm">     */</span>
+    <span class="kd">var</span> <span class="nx">substitutions</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="nx">dbl_neg</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span><span class="s1">&#39;$1&#39;</span><span class="p">]],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="s1">&#39;$1&#39;</span>
+        <span class="p">},</span>
+        <span class="nx">demorgan1</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">,</span> <span class="s1">&#39;$2&#39;</span> <span class="p">]],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span><span class="s1">&#39;$1&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span><span class="s1">&#39;$2&#39;</span><span class="p">]]</span>
+        <span class="p">},</span>
+        <span class="nx">demorgan2</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">,</span> <span class="s1">&#39;$2&#39;</span> <span class="p">]],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span><span class="s1">&#39;$1&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span><span class="s1">&#39;$2&#39;</span><span class="p">]]</span>
+        <span class="p">},</span>
+        <span class="nx">arrow</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;arrow&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">,</span> <span class="s1">&#39;$2&#39;</span><span class="p">],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">],</span> <span class="s1">&#39;$2&#39;</span><span class="p">]</span>
+        <span class="p">},</span>
+        <span class="nx">not_false</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span> <span class="nx">False</span><span class="p">],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="nx">True</span>
+        <span class="p">},</span>
+        <span class="nx">not_true</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span> <span class="nx">True</span><span class="p">],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="nx">False</span>
+        <span class="p">},</span>
+        <span class="nx">lem_left</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">],</span> <span class="s1">&#39;$1&#39;</span><span class="p">],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="nx">True</span>
+        <span class="p">},</span>
+        <span class="nx">lem_right</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">]],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="nx">True</span>
+        <span class="p">},</span>
+        <span class="nx">contra_left</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">],</span> <span class="s1">&#39;$1&#39;</span><span class="p">],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="nx">False</span>
+        <span class="p">},</span>
+        <span class="nx">contra_right</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">]],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="nx">False</span>
+        <span class="p">},</span></pre></div>             </td>           </tr>                               <tr id="section-7">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-7">&#182;</a>               </div>               <p>false or true ... etc</p>             </td>             <td class="code">               <div class="highlight"><pre>        <span class="nx">or_true_left</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="nx">True</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="nx">True</span>
+        <span class="p">},</span>
+        <span class="nx">or_true_right</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">,</span> <span class="nx">True</span><span class="p">],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="nx">True</span>
+        <span class="p">},</span>
+        <span class="nx">or_false_left</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">,</span> <span class="nx">False</span><span class="p">],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="s1">&#39;$1&#39;</span>
+        <span class="p">},</span>
+        <span class="nx">or_false_right</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="nx">False</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="s1">&#39;$1&#39;</span>
+        <span class="p">},</span>
+        <span class="nx">and_false_left</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="nx">False</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="nx">False</span>
+        <span class="p">},</span>
+        <span class="nx">and_false_right</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">,</span> <span class="nx">False</span><span class="p">],</span>
+            <span class="nx">to</span><span class="o">:</span> <span class="nx">False</span>
+        <span class="p">},</span>
+        <span class="nx">and_true_left</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="nx">True</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="s1">&#39;$1&#39;</span>
+        <span class="p">},</span>
+        <span class="nx">and_true_right</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">,</span> <span class="nx">True</span><span class="p">],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="s1">&#39;$1&#39;</span>
+        <span class="p">},</span></pre></div>             </td>           </tr>                               <tr id="section-8">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-8">&#182;</a>               </div>               <p>disjunctive normal form</p>             </td>             <td class="code">               <div class="highlight"><pre>        <span class="nx">dnf_left</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">,</span> <span class="s1">&#39;$2&#39;</span><span class="p">],</span> <span class="s1">&#39;$3&#39;</span><span class="p">],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">,</span> <span class="s1">&#39;$3&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="s1">&#39;$2&#39;</span><span class="p">,</span> <span class="s1">&#39;$3&#39;</span><span class="p">]]</span>
+        <span class="p">},</span>
+        <span class="nx">dnf_right</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="s1">&#39;$3&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">,</span> <span class="s1">&#39;$2&#39;</span><span class="p">]],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">,</span> <span class="s1">&#39;$3&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="s1">&#39;$2&#39;</span><span class="p">,</span> <span class="s1">&#39;$3&#39;</span><span class="p">]]</span>
+        <span class="p">}</span>
+    <span class="p">};</span>
+    
+    <span class="cm">/**</span>
+<span class="cm">     * repeatedly apply fn to obj until the value fails to change according</span>
+<span class="cm">     * to comparitor.</span>
+<span class="cm">     * Caution: may cause hang if not used with care (nb. check comparitor)</span>
+<span class="cm">     */</span>
+    <span class="kd">function</span> <span class="nx">exhaust</span><span class="p">(</span><span class="nx">fn</span><span class="p">,</span> <span class="nx">obj</span><span class="p">,</span> <span class="nx">comparitor</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">comparitor</span> <span class="o">=</span> <span class="nx">comparitor</span> <span class="o">||</span> <span class="nx">are_identical_phrases</span><span class="p">;</span> <span class="c1">// function(a,b) { return a === b; };</span>
+        <span class="kd">var</span> <span class="nx">pre</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
+        <span class="kd">var</span> <span class="nx">post</span> <span class="o">=</span> <span class="nx">obj</span><span class="p">;</span>
+        <span class="k">while</span><span class="p">(</span> <span class="o">!</span><span class="nx">comparitor</span><span class="p">(</span><span class="nx">pre</span><span class="p">,</span> <span class="nx">post</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="nx">pre</span> <span class="o">=</span> <span class="nx">post</span><span class="p">;</span>
+            <span class="nx">post</span> <span class="o">=</span> <span class="nx">fn</span><span class="p">(</span><span class="nx">pre</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">post</span><span class="p">;</span>
+    <span class="p">}</span>
+    
+    <span class="cm">/**</span>
+<span class="cm">     * @param subs is an array of subsitutions </span>
+<span class="cm">     * apply all subs to phrase in sequence, returning the result</span>
+<span class="cm">     */</span>
+    <span class="kd">function</span> <span class="nx">substitute_reduce</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="nx">subs</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">_</span><span class="p">.</span><span class="nx">reduce</span><span class="p">(</span>
+            <span class="nx">subs</span><span class="p">,</span>
+            <span class="kd">function</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="nx">sub</span><span class="p">){</span>  <span class="c1">//could replace with simply subsititute</span>
+                <span class="k">return</span> <span class="nx">substitute</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span><span class="nx">sub</span><span class="p">);</span>
+            <span class="p">},</span>
+            <span class="nx">phrase</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+    
+    <span class="cm">/**</span>
+<span class="cm">     * like substitute_reduce but keeps cycling through subs until none</span>
+<span class="cm">     * yeild a change</span>
+<span class="cm">     */</span>
+    <span class="kd">function</span> <span class="nx">substitute_exhaust</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="nx">subs</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">pre</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
+        <span class="kd">var</span> <span class="nx">post</span> <span class="o">=</span> <span class="nx">phrase</span><span class="p">;</span>
+        <span class="k">while</span><span class="p">(</span> <span class="o">!</span><span class="nx">are_identical_phrases</span><span class="p">(</span><span class="nx">pre</span><span class="p">,</span> <span class="nx">post</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="nx">pre</span> <span class="o">=</span> <span class="nx">post</span><span class="p">;</span>
+            <span class="nx">post</span> <span class="o">=</span> <span class="nx">substitute_reduce</span><span class="p">(</span><span class="nx">pre</span><span class="p">,</span> <span class="nx">subs</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">post</span><span class="p">;</span>
+    <span class="p">}</span>
+    </pre></div>             </td>           </tr>                               <tr id="section-9">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-9">&#182;</a>               </div>               <p>-- renaming PROP variables</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="cm">/**</span>
+<span class="cm">     * @returns true iff phrase is a PROP variable like P</span>
+<span class="cm">     */</span>
+    <span class="kd">function</span> <span class="nx">is_PROP</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">_</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="nx">phrase</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">===</span><span class="s1">&#39;PROP&#39;</span><span class="p">;</span>
+    <span class="p">}</span>
+    
+    <span class="cm">/**</span>
+<span class="cm">     * @returns an array with the named PROP variables in a canoical order</span>
+<span class="cm">     * (used to replace PROP variables for canonical representation)</span>
+<span class="cm">     */</span>
+    <span class="kd">function</span> <span class="nx">list_PROPs</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span> <span class="nx">is_PROP</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="p">[</span><span class="nx">phrase</span><span class="p">[</span><span class="mi">1</span><span class="p">]];</span>
+        <span class="p">}</span>
+        <span class="k">if</span><span class="p">(</span> <span class="nx">_</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">_</span><span class="p">.</span><span class="nx">reduce</span><span class="p">(</span>
+                <span class="nx">phrase</span><span class="p">,</span>
+                <span class="kd">function</span><span class="p">(</span><span class="nx">list</span><span class="p">,</span> <span class="nx">elm</span><span class="p">){</span>
+                    <span class="k">return</span> <span class="nx">_</span><span class="p">.</span><span class="nx">union</span><span class="p">(</span><span class="nx">list</span><span class="p">,</span> <span class="nx">list_PROPs</span><span class="p">(</span><span class="nx">elm</span><span class="p">)</span> <span class="p">);</span>
+                <span class="p">},</span>
+                <span class="p">[]</span>
+            <span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="p">[];</span>
+    <span class="p">}</span>
+    
+    <span class="kd">function</span> <span class="nx">substitute_PROP</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="nx">sub</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">substitute</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="p">{</span>
+            <span class="nx">from</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;PROP&#39;</span><span class="p">,</span> <span class="nx">sub</span><span class="p">.</span><span class="nx">from</span><span class="p">],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;PROP&#39;</span><span class="p">,</span> <span class="nx">sub</span><span class="p">.</span><span class="nx">to</span><span class="p">]</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+    
+    <span class="cm">/**</span>
+<span class="cm">     * provides a canonical renaming of propositional variables</span>
+<span class="cm">     */</span>
+    <span class="kd">function</span> <span class="nx">rename_PROPs</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">PROPs</span> <span class="o">=</span> <span class="nx">list_PROPs</span><span class="p">(</span><span class="nx">phrase</span><span class="p">);</span>
+        <span class="kd">var</span> <span class="nx">intermediate</span> <span class="o">=</span> <span class="nx">_</span><span class="p">.</span><span class="nx">reduce</span><span class="p">(</span>
+            <span class="nx">PROPs</span><span class="p">,</span>
+            <span class="kd">function</span><span class="p">(</span> <span class="nx">phrase</span><span class="p">,</span> <span class="nx">PROP</span><span class="p">,</span> <span class="nx">idx</span> <span class="p">){</span>
+                <span class="k">return</span> <span class="nx">substitute_PROP</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="p">{</span>
+                    <span class="nx">from</span> <span class="o">:</span> <span class="nx">PROP</span><span class="p">,</span>
+                    <span class="nx">to</span> <span class="o">:</span> <span class="s1">&#39;_&#39;</span><span class="o">+</span><span class="nx">idx</span>    <span class="c1">//not a legal PROP variable name</span>
+                <span class="p">});</span>
+            <span class="p">},</span>
+            <span class="nx">phrase</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="nx">_</span><span class="p">.</span><span class="nx">reduce</span><span class="p">(</span>
+            <span class="nx">PROPs</span><span class="p">,</span>
+            <span class="kd">function</span><span class="p">(</span> <span class="nx">phrase</span><span class="p">,</span> <span class="nx">_ignore</span><span class="p">,</span> <span class="nx">idx</span> <span class="p">){</span>
+                <span class="k">return</span> <span class="nx">substitute_PROP</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="p">{</span>
+                   <span class="nx">from</span> <span class="o">:</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="nx">idx</span><span class="p">,</span>
+                   <span class="nx">to</span> <span class="o">:</span> <span class="s1">&#39;P&#39;</span> <span class="o">+</span> <span class="p">(</span><span class="nx">idx</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+                <span class="p">});</span>
+            <span class="p">},</span>
+            <span class="nx">intermediate</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+    
+    
+    </pre></div>             </td>           </tr>                               <tr id="section-10">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-10">&#182;</a>               </div>               <p>-- stuff that involves n-ary connectives</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="cm">/**</span>
+<span class="cm">     * convert binary connectives into n-ary connectives, flattening disjunctive</span>
+<span class="cm">     * normal form into a tree with minimal depth</span>
+<span class="cm">     */</span>
+    <span class="kd">function</span> <span class="nx">flatten</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span> <span class="o">!</span> <span class="nx">_</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">phrase</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">if</span><span class="p">(</span> <span class="nx">phrase</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">===</span> <span class="s1">&#39;and&#39;</span> <span class="o">||</span> <span class="nx">phrase</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">===</span> <span class="s1">&#39;or&#39;</span> <span class="p">)</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-11">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-11">&#182;</a>               </div>               <p>check whether any children are same connective</p>             </td>             <td class="code">               <div class="highlight"><pre>            <span class="kd">var</span> <span class="nx">idx</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+            <span class="k">while</span><span class="p">(</span> <span class="nx">idx</span> <span class="o">&lt;</span> <span class="nx">phrase</span><span class="p">.</span><span class="nx">length</span> <span class="p">)</span> <span class="p">{</span>
+                <span class="kd">var</span> <span class="nx">child</span> <span class="o">=</span> <span class="nx">phrase</span><span class="p">[</span><span class="nx">idx</span><span class="p">];</span>
+                <span class="k">if</span><span class="p">(</span> <span class="nx">child</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">===</span> <span class="nx">phrase</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">)</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-12">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-12">&#182;</a>               </div>               <p>connectives match: add child's con/disjuncts to parent phrase and remove child</p>             </td>             <td class="code">               <div class="highlight"><pre>                    <span class="nx">phrase</span> <span class="o">=</span> <span class="nx">phrase</span><span class="p">.</span><span class="nx">concat</span><span class="p">(</span><span class="nx">child</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="mi">1</span><span class="p">));</span>
+                    <span class="nx">phrase</span><span class="p">.</span><span class="nx">splice</span><span class="p">(</span><span class="nx">idx</span><span class="p">,</span><span class="mi">1</span><span class="p">);</span>
+                <span class="p">}</span> <span class="k">else</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-13">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-13">&#182;</a>               </div>               <p>only increase idx in this case because otherwise the splice counts as moving on</p>             </td>             <td class="code">               <div class="highlight"><pre>                    <span class="nx">idx</span> <span class="o">+=</span> <span class="mi">1</span><span class="p">;</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">_</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">elem</span><span class="p">){</span>
+            <span class="k">return</span> <span class="nx">flatten</span><span class="p">(</span><span class="nx">elem</span><span class="p">);</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+    
+    <span class="cm">/**</span>
+<span class="cm">     * return phrase involving only binary connectives</span>
+<span class="cm">     */</span>
+    <span class="kd">function</span> <span class="nx">unflatten</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span> <span class="o">!</span> <span class="nx">_</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">phrase</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">if</span><span class="p">(</span> <span class="nx">phrase</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">3</span> <span class="p">)</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-14">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-14">&#182;</a>               </div>               <p>needs work</p>             </td>             <td class="code">               <div class="highlight"><pre>            <span class="kd">var</span> <span class="nx">connective</span> <span class="o">=</span> <span class="nx">phrase</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+            <span class="kd">var</span> <span class="nx">first_child</span> <span class="o">=</span> <span class="nx">phrase</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+            <span class="kd">var</span> <span class="nx">other_children</span> <span class="o">=</span> <span class="nx">phrase</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+            <span class="nx">phrase</span> <span class="o">=</span> <span class="p">[</span> <span class="nx">connective</span><span class="p">,</span> <span class="p">[</span><span class="nx">connective</span><span class="p">].</span><span class="nx">concat</span><span class="p">(</span><span class="nx">other_children</span><span class="p">),</span> <span class="nx">first_child</span> <span class="p">];</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">_</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">elem</span><span class="p">){</span>
+            <span class="k">return</span> <span class="nx">unflatten</span><span class="p">(</span><span class="nx">elem</span><span class="p">);</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+    
+    <span class="kd">function</span> <span class="nx">replace_children</span><span class="p">(</span> <span class="nx">phrase</span><span class="p">,</span> <span class="nx">new_children</span> <span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="p">[</span><span class="nx">phrase</span><span class="p">[</span><span class="mi">0</span><span class="p">]].</span><span class="nx">concat</span><span class="p">(</span><span class="nx">new_children</span><span class="p">);</span>
+    <span class="p">}</span>
+    </pre></div>             </td>           </tr>                               <tr id="section-15">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-15">&#182;</a>               </div>               <p>much of what follows is concerned with getting to the point where
+we have DNF where the conjuncts contain no duplicates and do not
+contain a sentence letter and its negation</p>             </td>             <td class="code">               <div class="highlight"><pre>    
+    <span class="cm">/**</span>
+<span class="cm">     * remove any duplicate conjuncts in &#39;and&#39; and &#39;or&#39;</span>
+<span class="cm">     */</span>
+    <span class="kd">function</span> <span class="nx">remove_duplicates</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span> <span class="o">!</span> <span class="nx">_</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">phrase</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">if</span><span class="p">(</span> <span class="nx">phrase</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">===</span> <span class="s1">&#39;and&#39;</span> <span class="o">||</span> <span class="nx">phrase</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">===</span> <span class="s1">&#39;or&#39;</span> <span class="p">)</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-16">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-16">&#182;</a>               </div>               <p>check whether any children are same</p>             </td>             <td class="code">               <div class="highlight"><pre>            <span class="nx">actual_children</span> <span class="o">=</span> <span class="nx">phrase</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+            <span class="nx">unique_children</span> <span class="o">=</span> <span class="p">[];</span>
+            <span class="k">while</span><span class="p">(</span> <span class="nx">actual_children</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="p">)</span> <span class="p">{</span>
+                <span class="nx">child</span> <span class="o">=</span> <span class="nx">actual_children</span><span class="p">.</span><span class="nx">pop</span><span class="p">();</span>
+                <span class="kd">var</span> <span class="nx">is_new</span> <span class="o">=</span> <span class="nx">_</span><span class="p">.</span><span class="nx">all</span><span class="p">(</span><span class="nx">unique_children</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">old_child</span><span class="p">){</span>
+                    <span class="k">return</span> <span class="o">!</span><span class="nx">are_identical_phrases</span><span class="p">(</span><span class="nx">old_child</span><span class="p">,</span> <span class="nx">child</span><span class="p">);</span>
+                <span class="p">});</span>
+                <span class="k">if</span><span class="p">(</span><span class="nx">is_new</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="nx">unique_children</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">child</span><span class="p">);</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="nx">phrase</span> <span class="o">=</span> <span class="nx">replace_children</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="nx">unique_children</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">_</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">elem</span><span class="p">){</span>
+            <span class="k">return</span> <span class="nx">remove_duplicates</span><span class="p">(</span><span class="nx">elem</span><span class="p">);</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+    
+    <span class="kd">function</span> <span class="nx">remove_double_negations</span><span class="p">(</span> <span class="nx">phrase</span> <span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">substitute_exhaust</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="p">[</span><span class="nx">substitutions</span><span class="p">.</span><span class="nx">dbl_neg</span><span class="p">]</span> <span class="p">);</span>
+    <span class="p">}</span>
+    
+    <span class="cm">/**</span>
+<span class="cm">     * @returns true if list_of_phrases contains a formula and its negation</span>
+<span class="cm">     */</span>
+    <span class="kd">function</span> <span class="nx">contains_fmla_and_its_neg</span><span class="p">(</span><span class="nx">list_of_phrases</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">not_negated</span> <span class="o">=</span> <span class="p">[];</span>
+        <span class="kd">var</span> <span class="nx">negated</span> <span class="o">=</span> <span class="p">[];</span>
+        <span class="nx">_</span><span class="p">.</span><span class="nx">each</span><span class="p">(</span><span class="nx">list_of_phrases</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span><span class="p">(</span> <span class="o">!</span> <span class="nx">_</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+                <span class="nx">not_negated</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">phrase</span><span class="p">);</span>
+                <span class="k">return</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="nx">phrase</span> <span class="o">=</span> <span class="nx">remove_double_negations</span><span class="p">(</span><span class="nx">phrase</span><span class="p">);</span>
+            <span class="k">if</span><span class="p">(</span> <span class="nx">phrase</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">===</span> <span class="s1">&#39;not&#39;</span> <span class="p">)</span> <span class="p">{</span>
+                <span class="nx">negated</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">phrase</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>    <span class="c1">//nb we add the non-negated phrase!</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="nx">not_negated</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">phrase</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">});</span></pre></div>             </td>           </tr>                               <tr id="section-17">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-17">&#182;</a>               </div>               <p>are any of the negated phrases identical to a not_negated phrase?</p>             </td>             <td class="code">               <div class="highlight"><pre>        <span class="k">return</span> <span class="nx">_</span><span class="p">.</span><span class="nx">any</span><span class="p">(</span><span class="nx">negated</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">negated_phrase</span><span class="p">){</span>
+            <span class="k">return</span> <span class="nx">_</span><span class="p">.</span><span class="nx">any</span><span class="p">(</span><span class="nx">not_negated</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">return</span> <span class="nx">are_identical_phrases</span><span class="p">(</span><span class="nx">negated_phrase</span><span class="p">,</span> <span class="nx">phrase</span><span class="p">);</span>
+            <span class="p">});</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+
+    <span class="cm">/**</span>
+<span class="cm">     * spots formulae and their negations in conjunctions and disjunctions</span>
+<span class="cm">     */</span>
+    <span class="kd">function</span> <span class="nx">simplify</span><span class="p">(</span> <span class="nx">phrase</span> <span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span> <span class="o">!</span> <span class="nx">_</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">phrase</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">if</span><span class="p">(</span> <span class="nx">phrase</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">===</span> <span class="s1">&#39;and&#39;</span> <span class="o">||</span> <span class="nx">phrase</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">===</span> <span class="s1">&#39;or&#39;</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">juncts</span> <span class="o">=</span> <span class="nx">phrase</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+            <span class="k">if</span><span class="p">(</span> <span class="nx">contains_fmla_and_its_neg</span><span class="p">(</span><span class="nx">juncts</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+                <span class="k">return</span> <span class="p">(</span> <span class="nx">phrase</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">===</span> <span class="s1">&#39;and&#39;</span> <span class="o">?</span> <span class="nx">False</span> <span class="o">:</span> <span class="nx">True</span> <span class="p">)</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">_</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">elem</span><span class="p">){</span>
+            <span class="k">return</span> <span class="nx">simplify</span><span class="p">(</span><span class="nx">elem</span><span class="p">);</span>
+        <span class="p">})</span>
+    <span class="p">}</span>
+    
+    <span class="cm">/**</span>
+<span class="cm">     * disjunctive normal form with no repeted *juncts and no *junct containg</span>
+<span class="cm">     * a formula and its negation</span>
+<span class="cm">     */</span>
+    <span class="kd">function</span> <span class="nx">canonical</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">do_substitutions</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">substitute_exhaust</span><span class="p">(</span><span class="nx">phrase</span><span class="p">,</span> <span class="nx">substitutions</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">do_substitutions</span><span class="p">(</span>
+            <span class="nx">unflatten</span><span class="p">(</span>
+                <span class="nx">simplify</span><span class="p">(</span>
+                    <span class="nx">flatten</span><span class="p">(</span>
+                        <span class="nx">do_substitutions</span><span class="p">(</span><span class="nx">phrase</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+    
+    </pre></div>             </td>           </tr>                               <tr id="section-18">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-18">&#182;</a>               </div>               <p>TODO write function that will compare phrases irrespective of order of *juncts
+(requires being able to interscet two lists with a custom comparator --- then
+ just compare their lengths to their intersection)</p>             </td>             <td class="code">               <div class="highlight"><pre>    
+    
+    </pre></div>             </td>           </tr>                               <tr id="section-19">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-19">&#182;</a>               </div>               <p>-- testing only -- config for browser console</p>             </td>             <td class="code">               <div class="highlight"><pre>    
+    <span class="nb">window</span><span class="p">.</span><span class="nx">l</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="nx">are_identical_phrases</span> <span class="o">:</span> <span class="nx">are_identical_phrases</span><span class="p">,</span>
+        <span class="nx">is_match</span> <span class="o">:</span> <span class="nx">is_match</span><span class="p">,</span>
+        <span class="nx">replace</span> <span class="o">:</span> <span class="nx">replace</span><span class="p">,</span>
+        <span class="nx">substitute</span> <span class="o">:</span> <span class="nx">substitute</span><span class="p">,</span>
+        <span class="nx">substitutions</span> <span class="o">:</span> <span class="nx">substitutions</span><span class="p">,</span>
+        <span class="nx">substitute_reduce</span> <span class="o">:</span> <span class="nx">substitute_reduce</span><span class="p">,</span>
+        <span class="nx">substitute_exhaust</span> <span class="o">:</span> <span class="nx">substitute_exhaust</span><span class="p">,</span>
+        <span class="nx">flatten</span> <span class="o">:</span> <span class="nx">flatten</span><span class="p">,</span>
+        <span class="nx">unflatten</span> <span class="o">:</span> <span class="nx">unflatten</span><span class="p">,</span>
+        <span class="nx">remove_duplicates</span> <span class="o">:</span> <span class="nx">remove_duplicates</span><span class="p">,</span>
+        <span class="nx">exhaust</span> <span class="o">:</span> <span class="nx">exhaust</span><span class="p">,</span>
+        <span class="nx">canonical</span> <span class="o">:</span> <span class="nx">canonical</span><span class="p">,</span>
+        <span class="nx">list_PROPs</span> <span class="o">:</span> <span class="nx">list_PROPs</span><span class="p">,</span>
+        <span class="nx">rename_PROPs</span> <span class="o">:</span> <span class="nx">rename_PROPs</span><span class="p">,</span>
+        <span class="nx">contains_fmla_and_its_neg</span> <span class="o">:</span> <span class="nx">contains_fmla_and_its_neg</span><span class="p">,</span>
+        <span class="nx">simplify</span> <span class="o">:</span> <span class="nx">simplify</span><span class="p">,</span>
+        <span class="nx">dm</span> <span class="o">:</span> <span class="p">{</span>
+            <span class="nx">from</span><span class="o">:</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="s1">&#39;$1&#39;</span><span class="p">,</span> <span class="s1">&#39;$2&#39;</span> <span class="p">]],</span>
+            <span class="nx">to</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span><span class="s1">&#39;$1&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span><span class="s1">&#39;$2&#39;</span><span class="p">]]</span>
+        <span class="p">},</span>
+        <span class="nx">dm_phrase</span> <span class="o">:</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span><span class="s1">&#39;Q&#39;</span><span class="p">],[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="s1">&#39;P&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span> <span class="s1">&#39;Q&#39;</span><span class="p">]</span> <span class="p">]]]</span>
+    <span class="p">};</span></pre></div>             </td>           </tr>                               <tr id="section-20">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-20">&#182;</a>               </div>               <p>test</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="nb">window</span><span class="p">.</span><span class="nx">res</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="nx">are_identical_phrases</span> <span class="o">:</span> <span class="nx">are_identical_phrases</span><span class="p">([</span><span class="mi">1</span><span class="p">,[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]],[</span><span class="mi">1</span><span class="p">,[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]]),</span>
+        <span class="nx">substitute</span> <span class="o">:</span> <span class="nx">substitute</span><span class="p">(</span><span class="nx">l</span><span class="p">.</span><span class="nx">dm_phrase</span><span class="p">,</span><span class="nx">l</span><span class="p">.</span><span class="nx">dm</span><span class="p">),</span>
+        <span class="nx">substitute2</span> <span class="o">:</span> <span class="nx">substitute</span><span class="p">([</span><span class="s1">&#39;not&#39;</span><span class="p">,[</span><span class="s1">&#39;not&#39;</span><span class="p">,</span><span class="s1">&#39;P&#39;</span><span class="p">]],</span><span class="nx">l</span><span class="p">.</span><span class="nx">substitutions</span><span class="p">.</span><span class="nx">dbl_neg</span><span class="p">),</span>
+        <span class="nx">substitute_exhaust</span> <span class="o">:</span> <span class="nx">substitute_exhaust</span><span class="p">(</span><span class="nx">l</span><span class="p">.</span><span class="nx">dm_phrase</span><span class="p">,</span> <span class="nx">substitutions</span><span class="p">),</span>
+        <span class="nx">canonical_test</span><span class="o">:</span> <span class="nx">are_identical_phrases</span><span class="p">(</span> <span class="nx">l</span><span class="p">.</span><span class="nx">canonical</span><span class="p">(</span><span class="nx">fol</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="s1">&#39;P or (Q arrow false)&#39;</span><span class="p">)),</span> <span class="nx">l</span><span class="p">.</span><span class="nx">canonical</span><span class="p">(</span><span class="nx">fol</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="s1">&#39;not (not P and Q)&#39;</span><span class="p">))</span> <span class="p">)</span>
+        
+
+    <span class="p">};</span>
+
+<span class="p">});</span>
+
+</pre></div>             </td>           </tr>                </tbody>     </table>   </div> </body> </html> 
