@@ -75,8 +75,8 @@ var parser = (function(){
 var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,3],$V1=[1,6],$V2=[1,4],$V3=[1,5],$V4=[1,7],$V5=[1,8],$V6=[1,9],$V7=[1,10],$V8=[1,12],$V9=[1,13],$Va=[1,14],$Vb=[5,9,11,12,13],$Vc=[1,29],$Vd=[1,28],$Ve=[9,21];
 var parser = {trace: function trace() { },
 yy: {},
-symbols_: {"error":2,"expressions":3,"e":4,"EOF":5,"existential_quantifier":6,"(":7,"variable":8,")":9,"universal_quantifier":10,"and":11,"or":12,"arrow":13,"not":14,"true":15,"false":16,"sentence_letter":17,"predicate":18,"termlist":19,"term":20,",":21,"name":22,"$accept":0,"$end":1},
-terminals_: {2:"error",5:"EOF",6:"existential_quantifier",7:"(",8:"variable",9:")",10:"universal_quantifier",11:"and",12:"or",13:"arrow",14:"not",15:"true",16:"false",17:"sentence_letter",18:"predicate",21:",",22:"name"},
+symbols_: {"error":2,"expressions":3,"e":4,"EOF":5,"EXISTENTIAL":6,"(":7,"VARIABLE":8,")":9,"UNIVERSAL":10,"and":11,"or":12,"arrow":13,"not":14,"true":15,"false":16,"PROP":17,"predicate":18,"termlist":19,"term":20,",":21,"NAME":22,"$accept":0,"$end":1},
+terminals_: {2:"error",5:"EOF",6:"EXISTENTIAL",7:"(",8:"VARIABLE",9:")",10:"UNIVERSAL",11:"and",12:"or",13:"arrow",14:"not",15:"true",16:"false",17:"PROP",18:"predicate",21:",",22:"NAME"},
 productions_: [0,[3,2],[4,5],[4,5],[4,3],[4,3],[4,3],[4,2],[4,3],[4,1],[4,1],[4,1],[4,4],[19,1],[19,3],[20,1],[20,1]],
 performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate /* action[1] */, $$ /* vstack */, _$ /* lstack */) {
 /* this == yyval */
@@ -87,37 +87,37 @@ case 1:
  return $$[$0-1]; 
 break;
 case 2:
- this.$ = {type:"existential_quantifier", location:_$[$0-4], variable:{type:'variable', variable_name:$$[$0-2], location:_$[$0-2]}, left:$$[$0], right:null}; 
+ this.$ = ['EXISTENTIAL',$$[$0-2], $$[$0]]; 
 break;
 case 3:
- this.$ = {type:"universal_quantifier", location:_$[$0-4], variable:{type:'variable', variable_name:$$[$0-2], location:_$[$0-2]}, left:$$[$0], right:null}; 
+ this.$ = ['UNIVERSAL',$$[$0-2], $$[$0]]; 
 break;
 case 4:
- this.$ = {type:'and', location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+ this.$ = ['and', $$[$0-2], $$[$0]]; 
 break;
 case 5:
- this.$ = {type:'or', location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+ this.$ = ['or', $$[$0-2], $$[$0]]; 
 break;
 case 6:
- this.$ = {type:'arrow', location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+ this.$ = ['arrow', $$[$0-2], $$[$0]]; 
 break;
 case 7:
- this.$ = {type:'not', location:_$[$0-1], left:$$[$0], right:null}; 
+ this.$ = ['not',$$[$0]]; 
 break;
 case 8:
  this.$ = $$[$0-1]; 
 break;
 case 9:
- this.$ = {type:'value', value:true, left:null, right:null}; 
+ this.$ = ['VAL', true]; 
 break;
 case 10:
- this.$ = {type:'value', value:false, left:null, right:null}; 
+ this.$ = ['VAL', false]; 
 break;
 case 11:
- this.$ = {type:'sentence_letter', location:_$[$0], letter:$$[$0], left:null, right:null}; 
+ this.$ = ['PROP', $$[$0]]; 
 break;
 case 12:
- this.$ = { type:'predicate', name:$$[$0-3], location:_$[$0-3], termlist:$$[$0-1] } ; 
+ this.$ = ['predicate', $$[$0-3], $$[$0-1]] ; 
 break;
 case 13:
  this.$ = [$$[$0]] 
@@ -126,10 +126,10 @@ case 14:
  this.$ = [$$[$0-2]].concat($$[$0]) 
 break;
 case 15:
- this.$ = {type:'name', name:$$[$0], location:_$[$0]}; 
+ this.$ = ['NAME', $$[$0]]; 
 break;
 case 16:
- this.$ = {type:'variable', variable_name:$$[$0], location:_$[$0]}; 
+ this.$ = ['VARIABLE', $$[$0]]; 
 break;
 }
 },
@@ -631,9 +631,9 @@ case 10: return 9 ;
 break;
 case 11: return 21 ;          
 break;
-case 12: return 18;   
+case 12: return 18;        
 break;
-case 13: return 18;   
+case 13: return 18;        
 break;
 case 14: return 17;        
 break;
@@ -645,11 +645,11 @@ case 17: return 8;
 break;
 case 18: return 5 ;        
 break;
-case 19: return 'invalid_character' ;    
+case 19: return 'INVALID' ;    
 break;
 }
 },
-rules: [/^(?:\s+)/,/^(?:true\b)/,/^(?:false\b)/,/^(?:and|&)/,/^(?:arrow|->)/,/^(?:or\b)/,/^(?:not\b)/,/^(?:all\b)/,/^(?:some|exists\b)/,/^(?:\()/,/^(?:\))/,/^(?:,)/,/^(?:[A-Z][a-z][A-Za-z0-9]*)/,/^(?:[F-HR][0-9]*)/,/^(?:[PQST][0-9]*)/,/^(?:[A-E][0-9]*)/,/^(?:[a-d][0-9]*)/,/^(?:[etxyzw][0-9]*)/,/^(?:$)/,/^(?:.)/],
+rules: [/^(?:\s+)/,/^(?:true\b)/,/^(?:false\b)/,/^(?:and|&)/,/^(?:arrow\b)/,/^(?:or\b)/,/^(?:not\b)/,/^(?:all\b)/,/^(?:some|exists\b)/,/^(?:\()/,/^(?:\))/,/^(?:,)/,/^(?:[A-Z][a-z][A-Za-z0-9]*)/,/^(?:[F-HR][0-9]*)/,/^(?:[PQST][0-9]*)/,/^(?:[A-E][0-9]*)/,/^(?:[a-d][0-9]*)/,/^(?:[etxyzw][0-9]*)/,/^(?:$)/,/^(?:.)/],
 conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19],"inclusive":true}}
 });
 return lexer;

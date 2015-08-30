@@ -1,4 +1,6 @@
-/* description: simple boolean test */
+/* description: simple FOL test 
+ * The parser returns objects like {type:"and", left:[Object], right:[Object]}.
+*/
 
 /* lexical grammar */
 %lex
@@ -10,20 +12,22 @@
 "true"                  { return 'true' ;       }
 "false"                 { return 'false' ;      }
 "and"|"&"               { return 'and' ;        }
-"arrow"                 { return 'arrow' ;      }
+"arrow"|"->"            { return 'arrow' ;      }
 "or"                    { return 'or' ;         }
 "not"                   { return 'not';         }
+"all"                   { return 'universal_quantifier';   }
+"some"|"exists"         { return 'existential_quantifier'; }
 "("                     { return '(' ;          }
 ")"                     { return ')' ;          }
 ","                     { return ',' ;          }
-[A-Z][a-z][A-Za-z0-9]*  { return 'PRED';        }    
-[F-HR][0-9]*            { return 'PRED';        }
-[PQST][0-9]*            { return 'PROP';        }
-[A-E][0-9]*             { return 'PROP';        }
-[a-d][0-9]*             { return 'NAME';        }
-[etxyzw][0-9]*          { return 'VARIABLE';    }
+[A-Z][a-z][A-Za-z0-9]*  { return 'predicate';   }    
+[F-HR][0-9]*            { return 'predicate';   }
+[PQST][0-9]*            { return 'sentence_letter';        }
+[A-E][0-9]*             { return 'sentence_letter';        }
+[a-d][0-9]*             { return 'name';        }
+[etxyzw][0-9]*          { return 'variable';    }
 <<EOF>>                 { return 'EOF' ;        }
-.                       { return 'INVALID' ;    }
+.                       { return 'invalid_character' ;    }
 
 /lex
 
@@ -32,6 +36,7 @@
 %nonassoc 'arrow'
 %left 'and' 'or'
 %left 'not'
+%left existential_quantifier universal_quantifier
 
 %start expressions
 
@@ -43,24 +48,28 @@ expressions
     ;
 
 e
-    : e and e
-        { $$ = ['and', $1, $3]; }
+    : existential_quantifier '(' variable ')' e
+        { $$ = {type:"existential_quantifier", location:@1, variable:{type:'variable', variable_name:$3, location:@3}, left:$5, right:null}; }
+    | universal_quantifier '(' variable ')' e
+        { $$ = {type:"universal_quantifier", location:@1, variable:{type:'variable', variable_name:$3, location:@3}, left:$5, right:null}; }
+    | e and e
+        { $$ = {type:'and', location:@2, left:$1, right:$3}; }
     | e or e
-        { $$ = ['or', $1, $3]; }
+        { $$ = {type:'or', location:@2, left:$1, right:$3}; }
     | e arrow e
-        { $$ = ['arrow', $1, $3]; }
+        { $$ = {type:'arrow', location:@2, left:$1, right:$3}; }
     | not e
-        { $$ = ['not',$2]; }
+        { $$ = {type:'not', location:@1, left:$2, right:null}; }
     | '(' e ')'
         { $$ = $2; }
     | true
-        { $$ = ['VAL', true]; }
+        { $$ = {type:'value', value:true, left:null, right:null}; }
     | false
-        { $$ = ['VAL', false]; }
-    | PROP
-        { $$ = ['PROP', $1]; }
-    | PRED '(' termlist  ')'
-        { $$ = ['PRED', $1, $3] ; }
+        { $$ = {type:'value', value:false, left:null, right:null}; }
+    | sentence_letter
+        { $$ = {type:'sentence_letter', location:@1, letter:$1, left:null, right:null}; }
+    | predicate '(' termlist  ')'
+        { $$ = { type:'predicate', name:$1, location:@1, termlist:$3 } ; }
     ;
 
 termlist
@@ -71,8 +80,8 @@ termlist
     ;
 
 term
-    : NAME
-        { $$ = ['NAME', $1]; }
-    | VARIABLE
-        { $$ = ['VARIABLE', $1]; }
+    : name
+        { $$ = {type:'name', name:$1, location:@1}; }
+    | variable
+        { $$ = {type:'variable', variable_name:$1, location:@1}; }
     ;
