@@ -68,7 +68,20 @@ describe 'substitute', ->
         φ : fol.parse("A")
       expect(matches).not.to.be.false
       expect(util.areIdenticalExpressions(matches.φ, expectedMatches.φ)).to.be.true
+    
 
+  describe 'findMatches with expressions that are not closed wffs', ->
+    it "should match 'all x not φ' in 'all x (not (F(x) and G(x)))", ->
+      pattern = fol.parse 'all x not φ'
+      expression = fol.parse 'all x (not (F(x) and G(x)))'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        φ : fol.parse("F(x) and G(x)")
+      expect(matches).not.to.be.false
+      expect(util.areIdenticalExpressions(matches.φ, expectedMatches.φ)).to.be.true
+      
+
+  describe 'findMatches with `term_metavariable`s', ->
     it "should find match 'α=α' with α='a' in 'a=a'", ->
       pattern = fol.parse 'α=α'
       expression = fol.parse 'a=a'
@@ -99,8 +112,19 @@ describe 'substitute', ->
       expect(util.areIdenticalExpressions(matches.α, expectedMatches.α)).to.be.true
       expect(util.areIdenticalExpressions(matches.β, expectedMatches.β)).to.be.true
 
+    it "should match for pattern 'all τ φ", ->
+      pattern = fol.parse 'all τ φ'
+      expression = fol.parse '(all x) (F(x) and G(x))'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        "τ" : VARIABLE_X
+        "φ" : expression.left
+      expect(matches).not.to.be.false
+      expect(util.areIdenticalExpressions(matches.τ, expectedMatches.τ)).to.be.true
+      expect(util.areIdenticalExpressions(matches.φ, expectedMatches.φ)).to.be.true
 
-  describe 'using findMatches with specified matches', ->
+
+  describe 'using findMatches where what expression variables must match is stipulated', ->
     it "should match for pattern α=β with specified matches (expect success)", ->
       pattern = fol.parse 'α=β'
       expression1 = fol.parse 'a=b'
@@ -116,6 +140,7 @@ describe 'substitute', ->
         "β" : NAME_A
       matches = substitute.findMatches expression1, pattern, stipulatedMatches
       expect(matches).to.be.false
+
 
   describe 'replace (replaces one expression or term with another)', ->    
     it "should help with testing whether a=b, F(a) therefore F(b) is ok", ->
@@ -154,6 +179,15 @@ describe 'substitute', ->
       expectedResult = fol.parse "Loves(τ,a)"
       expect( util.areIdenticalExpressions(result,expectedResult) ).to.be.true
     
+    it "should replace all instances of a variable with a `term_metavariable`", ->
+      expression = fol.parse "Loves(x,a) and F(x) arrow G(x)"
+      whatToReplace = 
+        from : VARIABLE_X
+        to : TERM_METAVARIABLE_T
+      result = substitute.replace expression, whatToReplace
+      expectedResult = fol.parse "Loves(τ,a) and F(τ) arrow G(τ)"
+      expect( util.areIdenticalExpressions(result,expectedResult) ).to.be.true
+
     it "should allow us to tell whether 'F(a)' is an instance of 'all x F(x)'", ->
       expression = fol.parse "all x F(x)"
       boundVariable = expression.variable
@@ -202,8 +236,6 @@ describe 'substitute', ->
       theMatch = substitute.findMatches aCandidateInstance, thePattern
       expect(theMatch).to.be.false
       
-      
-      
 
   describe 'applyMatches', ->
     it "should correctly apply a simple match to a pattern", ->
@@ -212,6 +244,14 @@ describe 'substitute', ->
         φ : fol.parse 'A'
       result = substitute.applyMatches pattern, matches
       expectedResult = fol.parse 'not not A'
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+
+    it "should correctly apply a simple match to a pattern when the match occurs more than once", ->
+      pattern = fol.parse 'not not (φ and (φ or φ))'
+      matches = 
+        φ : fol.parse 'A'
+      result = substitute.applyMatches pattern, matches
+      expectedResult = fol.parse 'not not (A and (A or A))'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
 
     it "should correctly apply a match with multiple `expression_variable`s to a pattern", ->
@@ -231,6 +271,7 @@ describe 'substitute', ->
       expectedResult = fol.parse 'Loves(a,b) and not a=b'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
 
+
   describe 'doSub', ->
     it "should do a double-negation substitution", ->
       sub = 
@@ -239,6 +280,15 @@ describe 'substitute', ->
       expression = fol.parse 'not not A'
       result = substitute.doSub expression, sub
       expectedResult = fol.parse 'A'
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+
+    it "should be fine when a double-negation substitution can't be done", ->
+      sub = 
+        from : fol.parse 'not not φ'
+        to : fol.parse 'φ'
+      expression = fol.parse 'not A'
+      result = substitute.doSub expression, sub
+      expectedResult = fol.parse 'not A'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
 
     it "should do a deMorgan substitution", ->
@@ -258,3 +308,80 @@ describe 'substitute', ->
       result = substitute.doSub expression, sub
       expectedResult = fol.parse 'true'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+
+
+  describe 'doSubRecursive', ->
+    it "should do a double-negation substitution", ->
+      sub = 
+        from : fol.parse 'not not φ'
+        to : fol.parse 'φ'
+      expression = fol.parse 'not not A'
+      result = substitute.doSubRecursive expression, sub
+      expectedResult = fol.parse 'A'
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+
+    it "should do a double-negation substitution when the double neg is nested", ->
+      sub = 
+        from : fol.parse 'not not φ'
+        to : fol.parse 'φ'
+      expression = fol.parse 'not (not not A & B)'
+      result = substitute.doSubRecursive expression, sub
+      # console.log "result #{util.expressionToString result}"
+      expectedResult = fol.parse 'not (A and B)'
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+
+
+  describe 'subs, the built-in substitutions', ->
+    it "should do not_exists substitution", ->
+      sub = substitute.subs.not_exists
+      expression = fol.parse 'not exists y ( F(y))'
+      result = substitute.doSub expression, sub
+      expectedResult = fol.parse 'all y (not F(y))'
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+      
+    it "should do not_all substitution", ->
+      sub = substitute.subs.not_all
+      expression = fol.parse 'not all z ( Loves(a,z))'
+      result = substitute.doSub expression, sub
+      expectedResult = fol.parse 'exists z (not Loves(a,z))'
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+
+    it "should do all_and_left substitution", ->
+      sub = substitute.subs.all_and_left
+      expression = fol.parse 'P and all z ( Loves(a,z))'
+      result = substitute.doSub expression, sub
+      expectedResult = fol.parse 'all z (P and Loves(a,z))'
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+      
+    it "should do all_and_right substitution", ->
+      sub = substitute.subs.all_and_right
+      expression = fol.parse 'all z ( R(a,z)) and P'
+      result = substitute.doSub expression, sub
+      expectedResult = fol.parse 'all z (R(a,z) and P)'
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+
+    it "should do all_or_left substitution", ->
+      sub = substitute.subs.all_or_left
+      expression = fol.parse 'exists x F(x) or all z G(z)'
+      result = substitute.doSub expression, sub
+      expectedResult = fol.parse 'all z (exists x F(x) or G(z))'
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+      
+  describe 'listVariables', ->
+    it "should return a list of all variables in a phrase with one quantifier"
+    it "should return a list of all variables in a phrase with multiple quantifiers"
+
+  describe 'renameVariables', ->
+    it "should rename the variables in a single quantifier phrase properly"
+    it "should rename the variables in a multiple quantifier phrase properly"
+    it "should rename the variables in a tricky quantifier phrase properly"
+
+
+
+
+
+
+
+
+
+

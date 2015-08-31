@@ -2,8 +2,11 @@
 # including converting an arbitrary formula to prenex normal form.
 #
 # apply substitutions to formulae like
-# ['not', ['not', '$1']] > '$1'
-# ['not', ['and', '$1', '$2' ]] > ['or', ['not','$1'], ['not','$2']]
+# ```
+#      sub =
+#        from : fol.parse 'not not φ'
+#        to : fol.parse 'φ'
+#  ```
 #
 #
 # terminology for parameter values:
@@ -16,83 +19,138 @@
 _ = require 'lodash'
 
 util = require './util'
+fol = require './fol'  # TODO remove dependence (only required for compiling subs)
 
 True = ['VAL', true];
 False = ['VAL', false];
 
-subs = 
-  dbl_neg: 
-    from: ['not', ['not', '$1']],
-    to: '$1'
+# TOOD : these should be compiled as part of the build, not on init.
+_subs = 
+  replace_arrow :
+    from : 'φ arrow ψ'
+    to: '(not φ) or ψ'
+  replace_double_arrow :
+    from : 'φ ↔ ψ'
+    to: '(φ or (not ψ)) and ((not φ) or ψ)'
   demorgan1:
-    from: ['not', ['and', '$1', '$2']],
-    to: ['or', ['not', '$1'], ['not', '$2']]
+    from: 'not (φ and ψ)',
+    to: '((not φ) or (not ψ))'
   demorgan2:
-    from: ['not', ['or', '$1', '$2']],
-    to: ['and', ['not', '$1'], ['not', '$2']]
-  arrow:
-    from: ['arrow', '$1', '$2'],
-    to: ['or', ['not', '$1'], '$2']
-  not_false:
-    from: ['not', False],
-    to: True
-  not_true:
-    from: ['not', True],
-    to: False
-  lem_left:
-    from: ['or', ['not', '$1'], '$1'],
-    to: True
-  lem_right:
-    from: ['or', '$1', ['not', '$1']],
-    to: True
-  contra_left:
-    from: ['and', ['not', '$1'], '$1'],
-    to: False
-  contra_right:
-    from: ['and', '$1', ['not', '$1']],
-    to: False
-  or_true_left:
-    from: ['or', True, '$1'],
-    to: True
-  or_true_right:
-    from: ['or', '$1', True],
-    to: True
-  or_false_left:
-    from: ['or', '$1', False],
-    to: '$1'
-  or_false_right:
-    from: ['or', False, '$1'],
-    to: '$1'
-  and_false_left:
-    from: ['and', False, '$1'],
-    to: False
-  and_false_right:
-    from: ['and', '$1', False],
-    to: False
-  and_true_left:
-    from: ['and', True, '$1'],
-    to: '$1'
-  and_true_right:
-    from: ['and', '$1', True],
-    to: '$1'
-  dnf_left:
-    from: ['and', ['or', '$1', '$2'], '$3'],
-    to: ['or', ['and', '$1', '$3'], ['and', '$2', '$3']]
-  dnf_right:
-    from: ['and', '$3', ['or', '$1', '$2']],
-    to: ['or', ['and', '$1', '$3'], ['and', '$2', '$3']]
+    from: 'not (φ or ψ)',
+    to: '((not φ) and (not ψ))'
+  dbl_neg: 
+    from: 'not not φ',
+    to: 'φ'
+  not_all:
+    from: 'not ((all τ) φ)'
+    to: '(exists τ) (not φ)'
+  not_exists:
+    from: 'not ((exists τ) φ)'
+    to: '(all τ) (not φ)'
+  cnf_left:
+    from: 'φ1 or (φ2 and φ3)'
+    to: '(φ1 or φ2) and (φ1 or φ3)'
+  cnf_right:
+    from: '(φ2 and φ3) or φ1'
+    to: '(φ2 or φ1) and (φ3 or φ1)'
+  #the following only preserve truth in expressions where no two quantifiers bind the same variable
+  all_and_left:
+    from: 'φ and ((all τ) ψ)'
+    to: '(all τ) (φ and ψ)'
+  all_and_right:
+    from: '((all τ) ψ) and φ'
+    to: '(all τ) (ψ and φ)'
+  all_or_left:
+    from: 'φ or ((all τ) ψ)'
+    to: '(all τ) (φ or ψ)'
+  all_or_right:
+    from: '((all τ) ψ) or φ'
+    to: '(all τ) (ψ or φ)'
+    
 
+subs = {}
+for k,v of _subs
+  from = fol.parse v.from
+  to = fol.parse v.to
+  theSub = {from:from, to:to}
+  subs[k] = theSub
 exports.subs = subs
 
-# Apply the `sub` to the `expression` 
+  
+# not_false:
+#   from: ['not', False],
+#   to: True
+# not_true:
+#   from: ['not', True],
+#   to: False
+# lem_left:
+#   from: ['or', ['not', '$1'], '$1'],
+#   to: True
+# lem_right:
+#   from: ['or', '$1', ['not', '$1']],
+#   to: True
+# contra_left:
+#   from: ['and', ['not', '$1'], '$1'],
+#   to: False
+# contra_right:
+#   from: ['and', '$1', ['not', '$1']],
+#   to: False
+# or_true_left:
+#   from: ['or', True, '$1'],
+#   to: True
+# or_true_right:
+#   from: ['or', '$1', True],
+#   to: True
+# or_false_left:
+#   from: ['or', '$1', False],
+#   to: '$1'
+# or_false_right:
+#   from: ['or', False, '$1'],
+#   to: '$1'
+# and_false_left:
+#   from: ['and', False, '$1'],
+#   to: False
+# and_false_right:
+#   from: ['and', '$1', False],
+#   to: False
+# and_true_left:
+#   from: ['and', True, '$1'],
+#   to: '$1'
+# and_true_right:
+#   from: ['and', '$1', True],
+#   to: '$1'
+# dnf_left:
+#   from: ['and', ['or', '$1', '$2'], '$3'],
+#   to: ['or', ['and', '$1', '$3'], ['and', '$2', '$3']]
+# dnf_right:
+#   from: ['and', '$3', ['or', '$1', '$2']],
+#   to: ['or', ['and', '$1', '$3'], ['and', '$2', '$3']]
+
+
+
+
+# Apply the `sub` to the `expression`.  `sub` is like {from:"not not φ", to:"φ"}
+# If `sub` cannot be applied, returns `expression` unchanged.
 doSub = (expression, sub) ->
   theMatches = findMatches expression, sub.from 
   if theMatches 
     return applyMatches(sub.to, theMatches)
   else 
-    return false 
+    return expression 
 exports.doSub = doSub
 
+# Apply the `sub` to the `expression` and all its components.  
+# (see doSub)
+doSubRecursive = (expression, sub) ->
+  result = {}
+  for property in ['left','right','variable']
+    if expression[property]?
+      result[property] = doSubRecursive expression[property], sub
+  if expression.termlist?
+    result.termlist = (doSubRecursive(t,sub) for t in expression.termlist)      
+  result = _.defaults result, expression
+  return doSub(result, sub)
+exports.doSubRecursive = doSubRecursive
 
 
 
@@ -179,7 +237,6 @@ _findMatchesArray = (expression, arrayOfPatterns, _matches) ->
 # value from `matches`.  E.g. 
 #     `applyMatches fol.parse("not not φ"), {φ:fol.parse('A and B')}`
 # will return fol.parse("not not (A and B)")
-#
 applyMatches = (pattern, matches) ->
   if 'type' of pattern and (pattern.type is 'expression_variable' or pattern.type is 'term_metavariable')
     targetVar = pattern.letter if pattern.type is 'expression_variable' # eg φ
@@ -225,9 +282,14 @@ replace =  (expression, whatToReplace) ->
   # add everything from `expression` to `result` except where `result` already contains it
   return _.defaults(result, expression)  
   
-  
-  
 exports.replace = replace
 
 
+listVariables = (expression, _variables) ->
+  # TODO!
+exports.listVariables = listVariables
+
+renameVariables = (expression, _varMap) ->
+  # TODO!
+exports.renameVariables = renameVariables
 

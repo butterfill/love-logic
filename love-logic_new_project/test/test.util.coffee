@@ -13,7 +13,6 @@ describe 'util', ->
     it "should not thrown an error with 'Fish(a) and LeftOf(a,b)'", ->
       util.delExtraneousProperties fol.parse("Fish(a) and LeftOf(a,b)")      
       
-describe 'util', ->
   describe 'areIdenticalExpressions', ->
     it "should say that 'A & B' and 'A and B' are identical phrases", ->
       expect( util.areIdenticalExpressions(fol.parse("A & B"), fol.parse("A and B"))).to.be.true
@@ -26,3 +25,17 @@ describe 'util', ->
     it "should say that 'all x (F(x) arrow G(x))' and 'all x (G(x) arrow F(x))' are not identical phrases", ->
       expect( util.areIdenticalExpressions(fol.parse("all x (F(x) arrow G(x))"), fol.parse("all x (G(x) arrow F(x))"))).to.be.false
 
+  describe 'expressionToString', ->
+    it "should not throw", ->
+      expression = fol.parse 'not (not not A & B)'
+      console.log "sentence =  #{util.expressionToString expression}"
+    it "should parse into what it was (i.e. parse1 is parse2 where string1 -> parse1 -> string2 -> parse2)", ->
+      expression1 = fol.parse 'not (not not A & B)'
+      string = util.expressionToString expression1
+      expression2 = fol.parse string
+      expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
+    it "should parse into what it was: sentences with predicates"
+    it "should parse into what it was: sentences with identity"
+    it "should parse into what it was: sentences with quantifiers"
+    it "should parse into what it was: sentences with `expression_variable`s"
+    it "should parse into what it was: sentences with `term_metavariable`s"
