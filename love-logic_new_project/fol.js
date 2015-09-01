@@ -87,16 +87,16 @@ case 1:
  return $$[$0-1]; 
 break;
 case 2:
- this.$ = {type:"existential_quantifier", symbol:$$[$0-2], location:_$[$0-2], variable:$$[$0-1], left:$$[$0], right:null}; 
+ this.$ = {type:"existential_quantifier", symbol:$$[$0-2], location:_$[$0-2], boundVariable:$$[$0-1], left:$$[$0], right:null}; 
 break;
 case 3:
- this.$ = {type:"existential_quantifier", symbol:$$[$0-3], location:_$[$0-3], variable:$$[$0-2], left:$$[$0], right:null}; 
+ this.$ = {type:"existential_quantifier", symbol:$$[$0-3], location:_$[$0-3], boundVariable:$$[$0-2], left:$$[$0], right:null}; 
 break;
 case 4:
- this.$ = {type:"universal_quantifier", symbol:$$[$0-2], location:_$[$0-2], variable:$$[$0-1], left:$$[$0], right:null}; 
+ this.$ = {type:"universal_quantifier", symbol:$$[$0-2], location:_$[$0-2], boundVariable:$$[$0-1], left:$$[$0], right:null}; 
 break;
 case 5:
- this.$ = {type:"universal_quantifier", symbol:$$[$0-3], location:_$[$0-3], variable:$$[$0-2], left:$$[$0], right:null}; 
+ this.$ = {type:"universal_quantifier", symbol:$$[$0-3], location:_$[$0-3], boundVariable:$$[$0-2], left:$$[$0], right:null}; 
 break;
 case 6:
  this.$ = {type:'and', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
@@ -665,38 +665,26 @@ case 15: return 28 ;
 break;
 case 16: return 22;               
 break;
-case 17: return 22;               
+case 17: return 20;         
 break;
-case 18: return 21;     
+case 18: return 20;         
 break;
-case 19: return 21;     
+case 19: return 29;                    
 break;
-case 20: return 21;     
+case 20: return 26;                
 break;
-case 21: return 20;         
+case 21: return 21;     
 break;
-case 22: return 20;         
+case 22: return 27;       
 break;
-case 23: return 29;                    
+case 23: return 5 ;                    
 break;
-case 24: return 26;                
-break;
-case 25: return 27;       
-break;
-case 26: return 27;       
-break;
-case 27: return 27;       
-break;
-case 28: return 27;       
-break;
-case 29: return 5 ;                    
-break;
-case 30: return 'invalid_character' ;      
+case 24: return 'invalid_character' ;      
 break;
 }
 },
-rules: [/^(?:\s+)/,/^(?:true\b)/,/^(?:false|⊥)/,/^(?:=)/,/^(?:and|&|∧|•)/,/^(?:arrow|->|⇒|→|⊃)/,/^(?:↔|≡|⇔)/,/^(?:or|∨|\+|ǀǀ)/,/^(?:not|¬|˜|!)/,/^(?:nor|↓)/,/^(?:nand|↑)/,/^(?:all|∀|every\b)/,/^(?:some|exists|∃)/,/^(?:\()/,/^(?:\))/,/^(?:,)/,/^(?:[A-Z][a-z][A-Za-z0-9]*)/,/^(?:[F-HR][0-9]*)/,/^(?:φ[0-9]*)/,/^(?:χ[0-9]*)/,/^(?:ψ[0-9]*)/,/^(?:[PQST][0-9]*)/,/^(?:[A-E][0-9]*)/,/^(?:[a-d][0-9]*)/,/^(?:[etxyzw][0-9]*)/,/^(?:α[0-9]*)/,/^(?:β[0-9]*)/,/^(?:γ[0-9]*)/,/^(?:τ[0-9]*)/,/^(?:$)/,/^(?:.)/],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30],"inclusive":true}}
+rules: [/^(?:\s+)/,/^(?:true\b)/,/^(?:false|⊥)/,/^(?:=)/,/^(?:and|&|∧|•)/,/^(?:arrow|->|⇒|→|⊃)/,/^(?:↔|≡|⇔)/,/^(?:or|∨|\+|ǀǀ)/,/^(?:not|¬|˜|!)/,/^(?:nor|↓)/,/^(?:nand|↑)/,/^(?:all|∀|every\b)/,/^(?:some|exists|∃)/,/^(?:\()/,/^(?:\))/,/^(?:,)/,/^(?:[A-Z][A-Za-z0-9]*(?=((\s)*\()))/,/^(?:[PQRST][0-9]*)/,/^(?:[A-E][0-9]*)/,/^(?:[a-d][0-9]*)/,/^(?:[etxyzw][0-9]*)/,/^(?:[φψχ][0-9]*)/,/^(?:[αβγτ][0-9]*)/,/^(?:$)/,/^(?:.)/],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24],"inclusive":true}}
 });
 return lexer;
 })();

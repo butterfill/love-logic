@@ -69,7 +69,7 @@ Evaluator::evaluate = (sentence) ->
     return test.length>0 
   
   if sentence.type is 'existential_quantifier' or sentence.type is 'universal_quantifier'
-    boundVariable = sentence.variable
+    boundVariable = sentence.boundVariable
     variableName = boundVariable.name
     if not (variableName of @varStack)
       @varStack[variableName] = []

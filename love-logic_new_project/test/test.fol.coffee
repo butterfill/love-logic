@@ -143,6 +143,25 @@ describe 'fol', ->
       assert.deepEqual util.delExtraneousProperties(res.right), util.delExtraneousProperties(fol.parse("LeftOf(a,b)"))
 
 
+  describe 'parse (distinguishing predicates from sentence variables)', ->
+    it "should identify R(a,b) as a predicate", ->
+      result = fol.parse "R(a,b)"
+      expect(result.type).to.equal("predicate")
+      
+    it "should identify R (a,b) as a predicate (note the space)", ->
+      result = fol.parse "R (a,b)"
+      expect(result.type).to.equal("predicate")
+
+    it "should identify R as a sentence variable", ->
+      result = fol.parse "R"
+      expect(result.type).to.equal("sentence_letter")
+      
+    it "should deal with 'R and R(a)'", ->
+      result = fol.parse "R and R(a)"
+      expect(result.left.type).to.equal("sentence_letter")
+      expect(result.right.type).to.equal("predicate")
+
+
   describe 'parse (identity)', ->
     it 'should parse  "a=b"', ->
       res = fol.parse("a=b")
@@ -181,7 +200,7 @@ describe 'fol', ->
     it 'should parse  "exists(x) Fish(x)"', ->
       res = fol.parse("exists(x) Fish(x)")
       assert.equal res.type, "existential_quantifier"
-      assert.equal res.variable.name, "x"
+      assert.equal res.boundVariable.name, "x"
       assert.deepEqual util.delExtraneousProperties(res.left), util.delExtraneousProperties(fol.parse("Fish(x)"))
       assert.equal res.right, null
 
@@ -200,7 +219,7 @@ describe 'fol', ->
     it 'should parse  "all(y) Why(y)"', ->
       res = fol.parse("all(y) Why(y)")
       assert.equal res.type, "universal_quantifier"
-      assert.equal res.variable.name, "y"
+      assert.equal res.boundVariable.name, "y"
       assert.deepEqual util.delExtraneousProperties(res.left), util.delExtraneousProperties(fol.parse("Why(y)"))
       assert.equal res.right, null
 
@@ -225,7 +244,7 @@ describe 'fol', ->
     it 'should parse  "all(y) exists(x) ( Loves(x,y) )"', ->
       res = fol.parse("all(y) exists(x) ( Loves(x,y) )")
       assert.equal res.type, "universal_quantifier"
-      assert.equal res.variable.name, "y"
+      assert.equal res.boundVariable.name, "y"
       assert.deepEqual util.delExtraneousProperties(res.left), util.delExtraneousProperties(fol.parse("exists(x) ( Loves(x,y) )"))
       assert.equal res.right, null
     
@@ -239,10 +258,10 @@ describe 'fol', ->
       result = fol.parse "¬∀x∀y Loves(x,y)"
       expect(result.type).to.equal('not')
       expect(result.left.type).to.equal('universal_quantifier')
-      expect(result.left.variable.name).to.equal('x')
+      expect(result.left.boundVariable.name).to.equal('x')
       expect(result.right).to.equal(null)
       expect(result.left.left.type).to.equal('universal_quantifier')
-      expect(result.left.left.variable.name).to.equal('y')
+      expect(result.left.left.boundVariable.name).to.equal('y')
       expect(result.left.right).to.equal(null)
 
 
@@ -279,6 +298,11 @@ describe 'fol', ->
       expect(result.termlist[0].name).to.equal('α')
       expect(result.termlist[1].name).to.equal('β')
       
+  describe "parse (don't interfere with assumptions needed elsewhere)", ->
+    it "should not recognise xx1 as a variable in predicates", ->
+      expect(-> fol.parse "F(xx1)").to.throw
+    it "should not recognise xx1 as a variable in quantifier expressions", ->
+      expect(-> fol.parse "all(xx1) P").to.throw
     
     
     

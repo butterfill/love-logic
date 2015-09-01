@@ -1,4 +1,4 @@
-/* description: simple FOL test 
+/* Defines a JISON lexer and parser for the yaFOL language.
  * The parser returns objects like {type:"and", left:[Object], right:[Object], location:{...}, symbol:'&'}.
  * where `location` is the parser's object describing the location of the symbol parsed.
  * and `symbol` is the symbol from the input.
@@ -26,19 +26,22 @@
 "("                     { return '(' ;                      }
 ")"                     { return ')' ;                      }
 ","                     { return ',' ;                      }
-[A-Z][a-z][A-Za-z0-9]*  { return 'predicate';               }    
-[F-HR][0-9]*            { return 'predicate';               }
-"φ"[0-9]*              { return 'expression_variable';     }
-"χ"[0-9]*               { return 'expression_variable';     }
-"ψ"[0-9]*              { return 'expression_variable';     }
-[PQST][0-9]*            { return 'sentence_letter';         }
+
+/*  Predicates.
+    A predicate starts with a capital letter and is followed by a bracket.
+    Examples: F(x), R (a,b), LeftOf(a,b), F2(x)
+    in the following, '/((\s)*\()' is lex for lookahead:
+     /      -- the lex symbol for look ahead
+     (\s)*  -- allow any amount of whitespace
+     \(     -- match a bracket (the bracket is escaped)
+*/
+[A-Z][A-Za-z0-9]*/((\s)*\()  { return 'predicate';               }    
+[PQRST][0-9]*            { return 'sentence_letter';         }
 [A-E][0-9]*             { return 'sentence_letter';         }
 [a-d][0-9]*             { return 'name';                    }
 [etxyzw][0-9]*          { return 'variable';                }
-"α"[0-9]*               { return 'term_metavariable';       }
-"β"[0-9]*               { return 'term_metavariable';       }
-"γ"[0-9]*               { return 'term_metavariable';       }
-"τ"[0-9]*               { return 'term_metavariable';       }
+[φψχ][0-9]*              { return 'expression_variable';     }
+[αβγτ][0-9]*               { return 'term_metavariable';       }
 <<EOF>>                 { return 'EOF' ;                    }
 .                       { return 'invalid_character' ;      }
 
@@ -62,13 +65,13 @@ expressions
 
 e
     : existential_quantifier quantifier_variable e
-        { $$ = {type:"existential_quantifier", symbol:$1, location:@1, variable:$2, left:$3, right:null}; }
+        { $$ = {type:"existential_quantifier", symbol:$1, location:@1, boundVariable:$2, left:$3, right:null}; }
     | '(' existential_quantifier quantifier_variable ')' e
-        { $$ = {type:"existential_quantifier", symbol:$2, location:@2, variable:$3, left:$5, right:null}; }
+        { $$ = {type:"existential_quantifier", symbol:$2, location:@2, boundVariable:$3, left:$5, right:null}; }
     | universal_quantifier quantifier_variable e
-        { $$ = {type:"universal_quantifier", symbol:$1, location:@1, variable:$2, left:$3, right:null}; }
+        { $$ = {type:"universal_quantifier", symbol:$1, location:@1, boundVariable:$2, left:$3, right:null}; }
     | '(' universal_quantifier quantifier_variable ')' e
-        { $$ = {type:"universal_quantifier", symbol:$2, location:@2, variable:$3, left:$5, right:null}; }
+        { $$ = {type:"universal_quantifier", symbol:$2, location:@2, boundVariable:$3, left:$5, right:null}; }
     | e and e
         { $$ = {type:'and', symbol:$2, location:@2, left:$1, right:$3}; }
     | e or e

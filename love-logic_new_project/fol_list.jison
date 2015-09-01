@@ -1,5 +1,6 @@
 /* description: simple FOL test 
  * This version creates lists.
+ * TODO: delete (not actually in use, now out of date).
 */
 
 /* lexical grammar */
