@@ -23,7 +23,6 @@ fol = require './fol'  # TODO remove dependence (only required for compiling sub
 symmetry = require './symmetry'
 
 
-# TOOD : these should be compiled as part of the build, not on init.
 _subs = 
   replace_arrow :
     from : 'φ arrow ψ'
@@ -78,8 +77,8 @@ _subs =
   exists_or_right:
     from: '((exists τ) ψ) or φ'
     to: '(exists τ) (ψ or φ)'
-    
 
+# TODO : these built in subs should be compiled as part of the build, not on init.
 subs = {}
 for k,v of _subs
   from = fol.parse v.from
@@ -88,57 +87,80 @@ for k,v of _subs
   subs[k] = theSub
 exports.subs = subs
 
+
+# These depend on the standard sort order.
+_subs_eliminate_redundancy = 
+  identity :
+    from : 'τ=τ'
+    to : 'true'
+  not_true : 
+    from : 'not true'
+    to : 'false'
+  not_false : 
+    from : 'not false'
+    to : 'true'
+  or_duplicate:
+    from : 'φ or φ'
+    to : 'φ'
+  or_duplicate_left:
+    from : 'φ or (φ or ψ)'
+    to : 'φ or ψ'
+  # TODO: Is the right version (`or_duplicate_right`) is needed 
+  # given how `symmetry.rebuildExpression` works?
+  # (This applies to the stuff below as well.)
+  or_duplicate_right:
+    from : '(ψ or φ) or φ'
+    to : 'ψ or φ'
+  and_duplicate:
+    from : 'φ and φ'
+    to : 'φ'
+  and_duplicate_left:
+    from : 'φ and (φ and ψ)'
+    to : 'φ and ψ'
+  and_duplicate_right:
+    from : '(ψ and φ) and φ'
+    to : 'ψ and φ'
+  false_or :
+    from : 'false or φ'
+    to : 'φ'
+  true_or :
+    from : 'true or φ'
+    to : 'true'
+  false_and : 
+    from : 'false and φ'
+    to : 'false'
+  true_and : 
+    from : 'true and φ'
+    to : 'φ'
+  # (Attempting things like 'φ or not φ' depends on the sorting algorithm.)
+  contradiction_and :
+    from : 'φ and not φ'
+    to : 'false'
+  contradiction_and_left :
+    from : 'φ and (not φ and ψ)'
+    to : 'false'
+  contradiction_and_right :
+    from : '(ψ and φ) and not φ'
+    to : 'false'
+  taut_or :
+    from : 'φ or not φ'
+    to : 'true'
+  taut_and_left :
+    from : 'φ or (not φ or ψ)'
+    to : 'true'
+  taut_and_right :
+    from : '(ψ or φ) or not φ'
+    to : 'true'
+    
   
-# not_false:
-#   from: ['not', False],
-#   to: True
-# not_true:
-#   from: ['not', True],
-#   to: False
-# lem_left:
-#   from: ['or', ['not', '$1'], '$1'],
-#   to: True
-# lem_right:
-#   from: ['or', '$1', ['not', '$1']],
-#   to: True
-# contra_left:
-#   from: ['and', ['not', '$1'], '$1'],
-#   to: False
-# contra_right:
-#   from: ['and', '$1', ['not', '$1']],
-#   to: False
-# or_true_left:
-#   from: ['or', True, '$1'],
-#   to: True
-# or_true_right:
-#   from: ['or', '$1', True],
-#   to: True
-# or_false_left:
-#   from: ['or', '$1', False],
-#   to: '$1'
-# or_false_right:
-#   from: ['or', False, '$1'],
-#   to: '$1'
-# and_false_left:
-#   from: ['and', False, '$1'],
-#   to: False
-# and_false_right:
-#   from: ['and', '$1', False],
-#   to: False
-# and_true_left:
-#   from: ['and', True, '$1'],
-#   to: '$1'
-# and_true_right:
-#   from: ['and', '$1', True],
-#   to: '$1'
-# dnf_left:
-#   from: ['and', ['or', '$1', '$2'], '$3'],
-#   to: ['or', ['and', '$1', '$3'], ['and', '$2', '$3']]
-# dnf_right:
-#   from: ['and', '$3', ['or', '$1', '$2']],
-#   to: ['or', ['and', '$1', '$3'], ['and', '$2', '$3']]
-
-
+    
+subs_eliminate_redundancy = {}
+for k,v of _subs_eliminate_redundancy
+  from = fol.parse v.from
+  to = fol.parse v.to
+  theSub = {from:from, to:to}
+  subs_eliminate_redundancy[k] = theSub
+exports.subs_eliminate_redundancy = subs_eliminate_redundancy
 
 
 # Apply the `sub` to the `expression`.  `sub` is like {from:"not not φ", to:"φ"}
@@ -177,6 +199,7 @@ exports.doSubRecursive = doSubRecursive
 # Note: this function only attempts to match `expression` itself 
 # (it does not look for matches with components of `expression`).
 findMatches = (expression, pattern, _matches, o) ->
+  _matches ?= {}
   o ?= {}
   o.symmetricIdentity ?= false
   o._notFirstCall ?= false
@@ -185,7 +208,6 @@ findMatches = (expression, pattern, _matches, o) ->
     util.delExtraneousProperties(pattern)
     o._notFirstCall = true
   
-  _matches = _matches ? {}
   
   if pattern is null
     if expression is null
@@ -211,7 +233,7 @@ findMatches = (expression, pattern, _matches, o) ->
   # Pattern is an object.
   
   # First check whether it's an expression_variable; and, if so, test for a match.
-  if 'type' of pattern and (pattern.type is 'expression_variable' or pattern.type is 'term_metavariable')
+  if 'type' of pattern and (pattern.type in ['expression_variable', 'term_metavariable'])
     targetVar = pattern.letter if pattern.type is 'expression_variable' # eg φ
     targetVar = pattern.name if pattern.type is 'term_metavariable' # eg τ2
     targetValue = expression
@@ -229,6 +251,8 @@ findMatches = (expression, pattern, _matches, o) ->
 
   # The following special case is needed only because we want to be able to
   # treat identity as symmetric when `o.symmetricIdentity` is true.
+  # (This was needed for `symmetry.arePNFExpressionsEquivalent`, although now 
+  # we don't need it because we sort identity statements.)
   if 'type' of pattern and pattern.type is 'identity'
     return false unless (expression.type? and expression.type is 'identity')
     result = _findMatchesArray expression.termlist, pattern.termlist, _matches, o
@@ -251,6 +275,8 @@ findMatches = (expression, pattern, _matches, o) ->
   # loop through its keys and match them with keys of `expression`.
   for key, value of pattern
     return false unless (key of expression)
+    if pattern[key] is undefined
+      console.log "pattern = #{util.expressionToString pattern}, key = #{key}"
     result = findMatches expression[key], pattern[key], _matches, o #may update _matches
     return false if result is false
   return _matches

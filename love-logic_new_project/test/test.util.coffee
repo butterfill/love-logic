@@ -104,6 +104,7 @@ describe 'util', ->
       result = util.sameElementsDeep list1, list2
       expect(result).to.be.true
 
+
   describe "exhaust", ->
     it "should remove all elements from a simple list", ->
       fn = (list) -> 
@@ -128,28 +129,51 @@ describe 'util', ->
       expect(result).to.deep.equal(theList)
       
 
-describe "atomicExpressionComparator", ->
-  it "should put sentence letters before predicates",->
-    result = util.atomicExpressionComparator fol.parse('A'), fol.parse('A(x)')
-    expect(result).to.equal(-1)
-    
-  it "should sort identity statements",->
-    result = util.atomicExpressionComparator fol.parse('d=c'), fol.parse('d=b')
-    expect(result).to.equal(1)
+  describe "atomicExpressionComparator", ->
+    it "should put sentence letters before predicates",->
+      result = util.atomicExpressionComparator fol.parse('A'), fol.parse('A(x)')
+      expect(result).to.equal(-1)
 
-  it "should sort identity statements (irrespective of order)",->
-    result = util.atomicExpressionComparator fol.parse('d=a'), fol.parse('c=b')
-    expect(result).to.equal(-1)
+    it "should put truth values (true, false) first",->
+      result = util.atomicExpressionComparator fol.parse('true'), fol.parse('A')
+      expect(result).to.equal(-1)
     
-  it "should sort a mixed list of atomic expressions correctly", ->
-    list = ['F(x)','A','b=b','B2','B1','not A','a=b']
-    list = (fol.parse(e) for e in list)
-    list = list.sort(util.atomicExpressionComparator)
-    # console.log "list #{(util.expressionToString(e) for e in list)}"
-    expectedResult = ['A','B1','B2','F(x)','a=b','b=b','not A']
-    expectedResult = (fol.parse(e) for e in expectedResult)
-    for expected, i in expectedResult
-      expect( util.areIdenticalExpressions(expected, list[i]) ).to.be.true
+    it "should sort identity statements",->
+      result = util.atomicExpressionComparator fol.parse('d=c'), fol.parse('d=b')
+      expect(result).to.equal(1)
+    
+    it "should sort identity statements (irrespective of order)",->
+      result = util.atomicExpressionComparator fol.parse('d=a'), fol.parse('c=b')
+      expect(result).to.equal(-1)
+
+    it "should put negations just after the thing negated", ->
+      list = [
+        'F(x)','A'
+        'not F(x)','not A'
+        'not b=b','not true'
+        'b=b','true'
+      ]
+      list = (fol.parse(e) for e in list)
+      list = list.sort(util.atomicExpressionComparator)
+      expectedResult = [
+        'true', 'not true'
+        'A','not A'
+        'F(x)','not F(x)'
+        'b=b','not b=b'
+      ]
+      expectedResult = (fol.parse(e) for e in expectedResult)
+      for expected, i in expectedResult
+        expect( util.areIdenticalExpressions(expected, list[i]) ).to.be.true
+        
+    it "should sort a mixed list of atomic expressions correctly", ->
+      list = ['F(x)','A','b=b','B2','B1','not A','true','a=b']
+      list = (fol.parse(e) for e in list)
+      list = list.sort(util.atomicExpressionComparator)
+      # console.log "list #{(util.expressionToString(e) for e in list)}"
+      expectedResult = ['true','A','not A','B1','B2','F(x)','a=b','b=b']
+      expectedResult = (fol.parse(e) for e in expectedResult)
+      for expected, i in expectedResult
+        expect( util.areIdenticalExpressions(expected, list[i]) ).to.be.true
     
     
     

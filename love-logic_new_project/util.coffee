@@ -58,7 +58,7 @@ expressionToString = (expression) ->
     return symbol+" #{variableName} "+left_bracket+expressionToString(expression.left)+right_bracket
   
   if expression.type is 'identity'
-    symbol = (expression.symbol or expression.type)
+    symbol = (expression.symbol or '=')
     return termToString(expression.termlist[0])+" #{symbol} "+termToString(expression.termlist[1])
 
   if expression.termlist?
@@ -70,7 +70,7 @@ expressionToString = (expression) ->
   if expression.left?
     result.push(expressionToString(expression.left))
   if expression.type?
-    result.push(expression.symbol or expression.type)
+    result.push(expression.symbol or expression.type or "!unknown expression!")
   if expression.right?
     result.push(expressionToString(expression.right))
   result.push(right_bracket)
@@ -139,7 +139,27 @@ atomicExpressionComparator = (left, right) ->
   result = _typeComparator(left.type, right.type)
   return result unless result is 0
   
+  # Negated atomic statements are sorted according to the sort order of what they negate.
+  if left.type is 'not' and right.type isnt 'not'
+    test = atomicExpressionComparator left.left, right
+    return 1 if test is 0  #not comes after the unnegated thing
+    return test
+
+  if left.type isnt 'not' and right.type is 'not'
+    test = atomicExpressionComparator left, right.left
+    return -1 if test is 0  #not comes after the unnegated thing
+    return test
+
+  if left.type is 'not' and right.type is 'not'
+    return atomicExpressionComparator left.left, right.left
+    
   # From now on, we know that `left` and `right` are of the same type.
+
+  # Truth values are sorted by value
+  if left.value?
+    return -1 if left.value < right.value
+    return 1 if left.value > right.value
+    return 0
 
   # Sentence letters are sorted by name.
   if left.letter?
@@ -159,10 +179,6 @@ atomicExpressionComparator = (left, right) ->
     rightToCompare = max right.termlist[0], right.termlist[1], termComparator
     return termComparator leftToCompare, rightToCompare
   
-  # Negated atomic statements are sorted according to the sort order of what they negate.
-  if left.type is 'not'
-    return atomicExpressionComparator left.left, right.left
-  
   throw new Error "Could not do a comparison for #{JSON.stringify left,null,4}"
 exports.atomicExpressionComparator = atomicExpressionComparator
 
@@ -178,11 +194,17 @@ termComparator = (left, right) ->
   return -1 if left.name < right.name
   return 1 if left.name > right.name
   return 0
+exports.termComparator = termComparator
 
 # A comparator for some expression types.
 _typeComparator = (left, right) ->
-  order = {sentence_letter:0, predicate:1, identity:2, "not":3, "name":4, "variable":5}
-  return order[left]-order[right]
+  if left is 'not' or right is 'not'
+    # we do not sort nots
+    return 0
+  order = {value:5, sentence_letter:10, predicate:20, identity:30, "name":50, "variable":60}
+  return -1 if  order[left] < order[right]
+  return 1 if  order[left] > order[right]
+  return 0
   
 
 

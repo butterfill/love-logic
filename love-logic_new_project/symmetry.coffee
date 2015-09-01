@@ -1,6 +1,32 @@
-# TODO Should this be called 'prenex normal form'?
+# TODO Should this be called 'normal form' or something?
+
+_ = require 'lodash'
 
 util = require './util'
+substitute = require './substitute'
+
+
+arePNFExpressionsEquivalent = (left, right) ->
+  left = sortPNFExpression(left)
+  sortIdentityStatements(left)
+  right = sortPNFExpression(right)
+  sortIdentityStatements(right)
+  pattern = substitute.renameVariables left, 'τ'
+  patternCore = removeQuantifiers pattern
+  rightCore = removeQuantifiers right
+
+  # Note: the commented-out parameters in the call to `substitute.findMatches`
+  # enables matches to be found irrespective of the order of terms in identity statements.
+  # This is now necessary because we sort identity statements (using `sortIdentityStatements`).
+  matches = substitute.findMatches rightCore, patternCore #, null, {symmetricIdentity:true}
+
+  return false if matches is false
+  
+  # From this point on, we know that the cores (expressions minus quantifiers)
+  # match.  The question is just whether the quantifiers match.
+  modifiedLeft = substitute.applyMatches pattern, matches
+  return arePrefixedQuantifiersEquivalent modifiedLeft, right
+exports.arePNFExpressionsEquivalent = arePNFExpressionsEquivalent
 
 # Sort the conjuncts and disjuncts in an expression in PNF.
 sortPNFExpression = (expression) ->
@@ -26,7 +52,6 @@ removeQuantifiers = (expression) ->
     return removeQuantifiers expression.left
   return expression
 exports.removeQuantifiers = removeQuantifiers
-  
 
 
 # Given an `expression` like "P and (Q and (R or (P1 and P2)))" and `type` "and",
@@ -66,11 +91,15 @@ exports.sortListOfJuncts = sortListOfJuncts
 # Takes a list of juncts and rebuilds them into a 
 # conjunction or whatever is specified by `type` (e.g. 'or' for building a disjunction).
 rebuildExpression = (listOfJuncts, type) ->
+  if not listOfJuncts or not  listOfJuncts.length? or listOfJuncts.length is 0
+    throw new Error "rebuildExpression called with listOfJuncts = #{listOfJuncts}"
+    
   if listOfJuncts.length is 1
     return listOfJuncts[0]
+  
   head = listOfJuncts.shift()
   tail = listOfJuncts
-  right = rebuildExpression(tail)
+  right = rebuildExpression(tail, type)
   return {type:type, left:head, right:right}
 exports.rebuildExpression = rebuildExpression
 
@@ -79,7 +108,6 @@ exports.rebuildExpression = rebuildExpression
 # This function returns an object containing (i) `quantifiedExpression`, the expression after 
 # the initial quantifiers of `type`, and (ii) `boundVariables`, a list of variables bound by
 # those quantifiers.
-# TODO: Why is this useful?
 listQuants = (expression, type) ->
   if expression.type? and expression.type isnt type
     return {quantifiedExpression: expression}
@@ -111,6 +139,8 @@ exports.getPrefixedQuantifiers = getPrefixedQuantifiers
 # `expression` is a yaFOL expression.
 # It modifies `quantifiers` in place, attaching expression the end of them.
 attachExpressionToQuantifiers = (expression, quantifiers) ->
+  if quantifiers is null
+    return expression
   if quantifiers.left isnt null
     attachExpressionToQuantifiers(expression, quantifiers.left) 
   else
@@ -119,7 +149,121 @@ attachExpressionToQuantifiers = (expression, quantifiers) ->
 exports.attachExpressionToQuantifiers = attachExpressionToQuantifiers
 
 
+# Returns true for 
+#   `arePrefixedQuantifiersEquivalent fol.parse("all x all y P"), fol.parse("all y all x Q")`
+# Returns false for 
+#   `arePrefixedQuantifiersEquivalent fol.parse("all x exists y P"), fol.parse("all y exists x Q")`
+#
+arePrefixedQuantifiersEquivalent = (left, right, _inProgress) ->
+  _inProgress ?= 
+    quantifierType : null
+    leftBoundVariables : []
+    rightBoundVariables : []
+  
+  quantifierType = left?.type or null
+  
+  if _inProgress.quantifierType isnt quantifierType
+    # New type of quantifier or end of sequence. 
+    # First check that the boundVariables we collected previously match.
+    _inProgress.leftBoundVariables.sort()
+    _inProgress.rightBoundVariables.sort()
+    # console.log "_inProgress.leftBoundVariables #{_inProgress.leftBoundVariables}"
+    return false unless _.isEqual(_inProgress.leftBoundVariables, _inProgress.rightBoundVariables)
+    # Everything matches so far: reset the list of bounded variables for the next quantifier sequence.
+    _inProgress.leftBoundVariables = []
+    _inProgress.rightBoundVariables = []
+    _inProgress.quantifierType = quantifierType
 
+  # `left` or `right` can be null when we reach the end of a sequence of quantifiers.
+  if left is null
+    return true if right is null 
+    return true if (not right.boundVariable?) #I.e. if `right` isn't a quantifier.
+    return false
 
+  # Test whether expression1 is a quantifier: only quantifiers have `.boundVariable` properties.
+  if not left.boundVariable?
+    # The number of quantifiers must match.
+    return true if right is null  #Right isn't a quantifier either.
+    return true if (not right.boundVariable?) #I.e. if `right` isn't a quantifier either.
+    return false
+  
+  # From here on, we know that left is a quantifier.
+  
+  # The sequence of quantifier types must match.
+  return false if right is null
+  return false if not right.type? 
+  return false if right.type isnt quantifierType
+  
+  _inProgress.leftBoundVariables.push(left.boundVariable.name)
+  _inProgress.rightBoundVariables.push(right.boundVariable.name)
+  return arePrefixedQuantifiersEquivalent left.left, right.left, _inProgress
+exports.arePrefixedQuantifiersEquivalent = arePrefixedQuantifiersEquivalent
 
-
+# `expression` must be in PNF.
+# `expression` will be modified in place.
+# Provides a canonical sorting  for identity statements.
+# This helps with finding equivalent expressions.
+# For identity statements containing two variables,
+# the order in which the variables appear depends on the order of the quantifiers.
+# So `exists y all x x=y` will become `exists y all x y=x` because y is first.
+# Note: param `_variableOrder` should not normally be given (used for recursion).
+sortIdentityStatements = (expression, _variableOrder) ->
+  if _variableOrder is undefined
+    _variableOrder = _getVariableOrder(expression)
+  return expression unless expression?.type?
+  
+  if expression.type isnt 'identity'
+    if expression.left?
+      sortIdentityStatements expression.left, _variableOrder
+    if expression.right?
+      sortIdentityStatements expression.right, _variableOrder
+    return expression
+  
+  identity = expression
+  left = expression.termlist[0]
+  right = expression.termlist[1]
+  
+  # First, deal with two names or one name and a variable.
+  if util.termComparator(left, right) is 1
+     #swap left and right
+    [left, right] = [right, left]
+    
+  # Now deal with two variables.
+  if left.type is 'variable' and right.type is 'variable'
+    leftRank = _variableOrder.indexOf(left.name)
+    rightRank = _variableOrder.indexOf(right.name)
+    if leftRank > rightRank
+      [left, right] = [right, left]
+      
+  expression.termlist = [left, right]
+  return expression
+exports.sortIdentityStatements = sortIdentityStatements  
+  
+  
+_getVariableOrder = (expression, _inProgress) ->
+  _inProgress ?= 
+    quantifierType : null
+    thisTypeBoundVariables : []
+    allBoundVariables : []
+  
+  quantifierType = expression?.type or null
+  
+  # console.log "_inProgress.thisTypeBoundVariables #{_inProgress.thisTypeBoundVariables}"
+  # console.log "_inProgress.allBoundVariables #{_inProgress.allBoundVariables}"
+  # console.log "quantifierType #{quantifierType}"
+  
+  if _inProgress.quantifierType isnt quantifierType
+    # New type of quantifier or end of sequence. 
+    _inProgress.thisTypeBoundVariables.sort()
+    _inProgress.allBoundVariables.push (_inProgress.thisTypeBoundVariables)...
+    _inProgress.thisTypeBoundVariables = []
+    _inProgress.quantifierType = quantifierType
+  
+  if quantifierType is null or not expression.boundVariable?
+    return _inProgress.allBoundVariables
+  
+  _inProgress.thisTypeBoundVariables.push(expression.boundVariable.name)
+  return _getVariableOrder expression.left, _inProgress
+# Only export this for testing.
+exports._getVariableOrder = _getVariableOrder  
+    
