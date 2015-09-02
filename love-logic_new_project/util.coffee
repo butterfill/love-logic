@@ -1,23 +1,46 @@
 _ = require 'lodash'
 
-# caution: this modifies the `expression`
-delExtraneousProperties = (expression) ->
-  # console.log "delete expression for: #{expression.type}"
-  delete(expression.location) if expression.location?
-  delete(expression.symbol) if expression.symbol?
-  delExtraneousProperties(expression.left) if expression.left?
-  delExtraneousProperties(expression.right) if expression.right?
-  delExtraneousProperties(expression.boundVariable) if expression.boundVariable?
-  delExtraneousProperties(expression.name) if expression.name? and expression.name?.type?
+
+  
+# Walk through `expression` depth-first applying `fn`.
+# This will visit terms and bound variables.
+walk = (expression, fn) ->
+  return null if not expression?
+  if _.isArray(expression)  #e.g. it's a termlist
+    for e in expression
+      walk e, fn
+  if expression.boundVariable?
+    walk expression.boundVariable, fn
   if expression.termlist?
-    for term in expression.termlist
-      delExtraneousProperties term
-  return expression    
+    walk expression.termlist, fn
+  if expression.left?
+    walk expression.left, fn
+  if expression.right?
+    walk expression.right, fn
+  return fn(expression)
+exports.walk = walk  
+
+
+# This modifies `expression` in place.
+# It is useful when we want to compare expressions ignoring things like
+# location information and symbols provided by the parser.  (See `areIdenticalExpressions`.)
+# If you create a function that adds attributes to expressions, 
+# update this function to be sure that it deletes them.
+delExtraneousProperties = (expression) ->
+  # For testing, this might be called indirectly with strings or numbers.
+  # When that happens, just return what was sent.
+  return expression unless expression?.type?
+  
+  return walk(expression, _delExtraneousProperties)
+
+_delExtraneousProperties = (expression) ->
+  for attr in ['location','symbol','parent']
+    delete(expression[attr]) if attr of expression
+  return expression
 exports.delExtraneousProperties = delExtraneousProperties
 
-
 cloneExpression = (expression) ->
-  return _.cloneDeep expression
+  return delExtraneousProperties(_.cloneDeep(expression))
 exports.cloneExpression = cloneExpression
 
 
@@ -29,16 +52,31 @@ areIdenticalExpressions = (expression1, expression2) ->
     
   e1 = cloneExpression expression1
   e2 = cloneExpression expression2
-  return _.isEqual(delExtraneousProperties(e1), delExtraneousProperties(e2))
+  delExtraneousProperties e1 
+  delExtraneousProperties e2 
+  return _.isEqual(e1, e2)
 exports.areIdenticalExpressions = areIdenticalExpressions
 
 
 # Create a string representation of a fol expression.
 # It uses the symbols that were specified when the expression was parsed (where these exist).
-# TODO: currently does not handle many cases
+# TODO: what cases does this not yet handle?
 # TODO: check system for deciding when brackets are needed.
-# TODO: clean up whitespace 
+_cleanUp = 
+  whitespace :
+    from : /\s+/g
+    to : ' '
+  quantifier_space :
+    from : /([∀∃])\s+/g
+    to : "$1"
 expressionToString = (expression) ->
+  result = _expressionToString(expression)
+  # Now clean up whitespace.
+  result = result.trim()
+  for k, rplc of _cleanUp
+    result = result.replace(rplc.from, rplc.to)
+  return result
+_expressionToString = (expression) ->
   brackets_needed = expression.right?
   left_bracket = " "
   right_bracket = " "
@@ -49,13 +87,16 @@ expressionToString = (expression) ->
   if expression.type is 'sentence_letter'
     return expression.letter
   if expression.type is 'not'
-    return (expression.symbol or expression.type)+left_bracket+expressionToString(expression.left)+right_bracket
+    symbol = expression.symbol or expression.type
+    return "#{symbol}#{left_bracket}#{expressionToString(expression.left)}#{right_bracket}"
   
   # Is `expression` a quantifier?
   if expression.boundVariable?
     symbol = (expression.symbol or expression.type)
+    symbol = '∀' if symbol is 'universal_quantifier'
+    symbol = '∃' if symbol is 'existential_quantifier'
     variableName = expression.boundVariable.name
-    return symbol+" #{variableName} "+left_bracket+expressionToString(expression.left)+right_bracket
+    return "#{symbol} #{variableName} #{left_bracket}#{expressionToString(expression.left)}#{right_bracket}"
   
   if expression.type is 'identity'
     symbol = (expression.symbol or '=')
@@ -64,7 +105,7 @@ expressionToString = (expression) ->
   if expression.termlist?
     symbol = (expression.name or expression.symbol or expression.type)
     termStringList = (termToString(t) for t in expression.termlist)
-    return "#{symbol}(#{termStringList.join(', ')})"
+    return "#{symbol}(#{termStringList.join(',')})"
   
   result = [left_bracket]
   if expression.left?
@@ -182,9 +223,11 @@ atomicExpressionComparator = (left, right) ->
   throw new Error "Could not do a comparison for #{JSON.stringify left,null,4}"
 exports.atomicExpressionComparator = atomicExpressionComparator
 
+
 max = (left, right, comparator) ->
   return left unless comparator(left,right)>0
   return right
+
 
 # A comparator for variables and names only.
 termComparator = (left, right) ->
@@ -196,6 +239,7 @@ termComparator = (left, right) ->
   return 0
 exports.termComparator = termComparator
 
+
 # A comparator for some expression types.
 _typeComparator = (left, right) ->
   if left is 'not' or right is 'not'
@@ -205,7 +249,46 @@ _typeComparator = (left, right) ->
   return -1 if  order[left] < order[right]
   return 1 if  order[left] > order[right]
   return 0
+
   
+# Returns a list of terms in `expression`.
+# (What is returned are the actual terms (objects), not their names.)
+# This does not include variables bound by a quantifier.
+# You should not normally set parameter `_terms` (this is used for recursion).
+listTerms = (expression) ->
+  terms = []
+  fn = (expression) ->
+    if expression.type in ['variable','name','term_metavariable']
+      terms.push(expression)
+    return terms
+  return walk expression, fn
+
+exports.listTerms = listTerms
+
+# Adds the `parent` property to expression and every component of it.
+addParents =  (expression, _parent) ->
+  _parent ?= null
+  expression.parent = _parent
+  
+  # This expression is parent to all its children
+  _parent = expression
+  
+  if _.isArray(expression)  #e.g. it's a termlist
+    for e in expression
+      addParents e, _parent
+  if expression.boundVariable?
+    addParents expression.boundVariable, _parent
+  if expression.termlist?
+    addParents expression.termlist, _parent
+  if expression.left?
+    addParents expression.left, _parent
+  if expression.right?
+    addParents expression.right, _parent
+  return expression
+exports.addParents = addParents
+
+
+
 
 
 

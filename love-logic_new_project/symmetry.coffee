@@ -5,11 +5,23 @@ _ = require 'lodash'
 util = require './util'
 substitute = require './substitute'
 
+areExpressionsEquivalent = (left, right) ->
+  left = substitute.prenexNormalForm left
+  right = substitute.prenexNormalForm right
+  return arePNFExpressionsEquivalent left, right
+exports.areExpressionsEquivalent = areExpressionsEquivalent
+
 
 arePNFExpressionsEquivalent = (left, right) ->
+  left =  eliminateRedundancyInPNF(left)
+  # Strictly speaking, we don't need to sort as `eliminateRedundancyInPNF` currently does so anyway.
+  # But it's essential that we are sorted, so I'll do it anyway.
   left = sortPNFExpression(left)
   sortIdentityStatements(left)
+  right = eliminateRedundancyInPNF(right)
   right = sortPNFExpression(right)
+  # console.log "left = #{util.expressionToString left}"
+  # console.log "right = #{util.expressionToString right}"
   sortIdentityStatements(right)
   pattern = substitute.renameVariables left, 'τ'
   patternCore = removeQuantifiers pattern
@@ -19,12 +31,19 @@ arePNFExpressionsEquivalent = (left, right) ->
   # enables matches to be found irrespective of the order of terms in identity statements.
   # This is now necessary because we sort identity statements (using `sortIdentityStatements`).
   matches = substitute.findMatches rightCore, patternCore #, null, {symmetricIdentity:true}
-
   return false if matches is false
   
   # From this point on, we know that the cores (expressions minus quantifiers)
   # match.  The question is just whether the quantifiers match.
   modifiedLeft = substitute.applyMatches pattern, matches
+  
+  # There's a potential catch.  If there were quantifiers that dont bind anything,
+  # there could be unmatched term_metavariables in `modifiedLeft`.
+  # But since we did `removeQuantifiersThatBindNothing` (as part of `eliminateRedundancyInPNF`),
+  # this possibility will not arise here.
+  # console.log "arePNFExpressionsEquivalent modifiedLeft = #{util.expressionToString modifiedLeft}"
+  # console.log "arePNFExpressionsEquivalent right = #{util.expressionToString right}"
+  
   return arePrefixedQuantifiersEquivalent modifiedLeft, right
 exports.arePNFExpressionsEquivalent = arePNFExpressionsEquivalent
 
@@ -239,7 +258,13 @@ sortIdentityStatements = (expression, _variableOrder) ->
   return expression
 exports.sortIdentityStatements = sortIdentityStatements  
   
-  
+# Returns a list of the names of variables bound by quantifiers where `expression` 
+# is in PNF.
+# The variables are ordered in such a way that alternation between different 
+# types of quantifier (existential and universal) is preserved; but variables
+# bound by a sequence of quantifiers of the same type are sorted by name.
+# This is used by `sortIdentityStatements` to determine which variable to put first
+# in identity statements like x=y.
 _getVariableOrder = (expression, _inProgress) ->
   _inProgress ?= 
     quantifierType : null
@@ -266,4 +291,69 @@ _getVariableOrder = (expression, _inProgress) ->
   return _getVariableOrder expression.left, _inProgress
 # Only export this for testing.
 exports._getVariableOrder = _getVariableOrder  
+
+
+
+# Warning : convert to PNF first!  (This only works for PNF sentences)
+eliminateRedundancyInPNF = (expression) ->
+  fn = (expression) ->
+    for name, sub of substitute.subs_eliminate_redundancy
+      expression = substitute.doSubRecursive expression, sub
+    expression = sortPNFExpression(expression)
+  result = util.exhaust expression, fn
+  result = removeQuantifiersThatBindNothing result
+  return result
+exports.eliminateRedundancyInPNF = eliminateRedundancyInPNF  
+
+
+# Returns `true` if the variable named `variableName` occurs free in `expression`.
+isVariableFree = (variableName, expression) ->
+  # console.log "#{variableName} : #{util.expressionToString expression}"
+  if expression.termlist?
+    termNames = (t.name for t in expression.termlist)
+    # console.log "termNames #{termNames}, test = #{variableName in termNames}"
+    return true if variableName in termNames
+  if expression.boundVariable?
+    if expression.boundVariable.name is variableName
+      return false
+  if expression.left?
+    return true if isVariableFree(variableName, expression.left)
+  if expression.right?
+    return true if isVariableFree(variableName, expression.right)
+  return false
+exports.isVariableFree = isVariableFree
+  
+# This may modify `expression` in place but you need to use its
+# return value as it does not always modify `expression` in place.
+removeQuantifiersThatBindNothing = (expression) ->
+  # Add the `parent` property to help with deleting a quantifier.
+  util.addParents expression 
+
+  fn = (expression) ->
+    # There's nothing to do if `expression` isn't a quantifier.
+    return expression if not expression.boundVariable?
     
+    # `expression` is a quantifier.
+    quantifier = expression
+    quantifiedExpression = expression.left
+    
+    # There's nothing to do if `quantifier` binds a variable that occurs 
+    # free in the expression it quantifies.
+    return expression if isVariableFree(quantifier.boundVariable.name, quantifiedExpression) 
+    
+    # We need to remove this quantifier.
+    if not quantifier.parent
+      return quantifiedExpression
+      
+    # Quantifier has a parent, so we want to attach `quantifiedExpression` to its parent.
+    # We need to out work whether `quantifier` is the `.left` or `.right` child.
+    if quantifier.parent.left is quantifier
+      quantifier.parent.left = quantifiedExpression
+    else if expression.parent.right is expression
+      quantifier.parent.right = quantifiedExpression
+    else
+      throw new Error "Could not work out how to remove quantifier from expression."
+    return quantifiedExpression
+        
+  return util.walk expression, fn
+exports.removeQuantifiersThatBindNothing = removeQuantifiersThatBindNothing

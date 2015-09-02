@@ -175,6 +175,21 @@ describe "symmetry", ->
       
     
   describe "arePNFExpressionsEquivalent", ->
+    it "should say true and true are equivalent", ->
+      e1 = fol.parse 'true'
+      e2 = fol.parse 'true'
+      expect( symmetry.areExpressionsEquivalent(e1, e2) ).to.be.true
+
+    it "should say A and A are equivalent", ->
+      e1 = fol.parse 'A'
+      e2 = fol.parse 'A'
+      expect( symmetry.areExpressionsEquivalent(e1, e2) ).to.be.true
+      
+    it "should cope when a quantifier doesn't bind any variables", ->
+      e1 = fol.parse 'exists x A'
+      e2 = fol.parse 'exists x A'
+      expect( symmetry.areExpressionsEquivalent(e1, e2) ).to.be.true
+    
     it "should be ok with all x all y Loves(x,y) things", ->
       expressions = [
         fol.parse 'all x all y Loves(x,y)'
@@ -196,12 +211,17 @@ describe "symmetry", ->
       e2 = fol.parse "C and A and B"
       expect( symmetry.arePNFExpressionsEquivalent(e1, e2) ).to.be.true
 
+    it "should be fine with sentence letters being repeated", ->
+      e1 = fol.parse "A and (A or A)"
+      e2 = fol.parse "A"
+      expect( symmetry.arePNFExpressionsEquivalent(e1, e2) ).to.be.true
+
     it "should realise quantifier order matters in exists x all y Loves(x,y)", ->
       e1 = fol.parse 'exists x all y Loves(x,y)'
       e2 = fol.parse 'all y exists x Loves(x,y)'
       expect( symmetry.arePNFExpressionsEquivalent(e1, e2) ).to.be.false
     
-    it "should realise quantifier order matters in exists x all y Loves(x,y) (version 2)", ->
+    it "should realise the order of variables matters in exists x all y Loves(x,y)", ->
       e1 = fol.parse 'exists x all y Loves(x,y)'
       e2 = fol.parse 'exists x all y Loves(y,x)'
       expect( symmetry.arePNFExpressionsEquivalent(e1, e2) ).to.be.false
@@ -243,6 +263,31 @@ describe "symmetry", ->
       e2 = fol.parse 'exists x all y x=x'
       expect( symmetry.arePNFExpressionsEquivalent(e1, e2) ).to.be.false
 
+    it "should be fine with additional redundant clauses", ->
+      e1 = fol.parse 'exists x F(x)'
+      e2 = fol.parse 'exists x F(x) and y=y'
+      expect( symmetry.areExpressionsEquivalent(e1, e2) ).to.be.true
+      
+    it "should equate tautologies", ->
+      e1 = fol.parse 'exists x (F(x) or not F(x))'
+      e2 = fol.parse 'exists x (G(x) or not G(x))'
+      expect( symmetry.areExpressionsEquivalent(e1, e2) ).to.be.true
+      
+    it "should equate contradictions", ->
+      e1 = fol.parse 'exists x (F(x) and not F(x))'
+      e2 = fol.parse 'exists x (G(x) and not G(x))'
+      expect( symmetry.areExpressionsEquivalent(e1, e2) ).to.be.true
+      
+    it "should equate contradictions even with multiple quantifiers", ->
+      e1 = fol.parse 'exists x (F(x) and not F(x))'
+      e2 = fol.parse 'exists x exists y (G(x,y) and not G(x,y))'
+      expect( symmetry.areExpressionsEquivalent(e1, e2) ).to.be.true
+
+    it "should equate tautologies even with multiple quantifiers", ->
+      e1 = fol.parse 'exists x (F(x) or not F(x))'
+      e2 = fol.parse 'exists x exists y (G(x,y) or not G(x,y))'
+      expect( symmetry.areExpressionsEquivalent(e1, e2) ).to.be.true
+
     it "should identify alternatively ordered expressions of uniqueness", ->
       # Note: it won't identify all of these as equivalent, just 0,1 and 2,3 and 4,5
       theF = [  [ fol.parse 'exists x (F(x) and all y (F(y) arrow x=y))'
@@ -280,6 +325,7 @@ describe "symmetry", ->
       for pair in pnf
         expect( symmetry.arePNFExpressionsEquivalent(pair[0], pair[1]) ).to.be.true
   
+  
   describe "_getVariableOrder", ->
     it "should order single variable expressions", ->
       e = fol.parse "all y all x F(x)"
@@ -315,12 +361,85 @@ describe "symmetry", ->
       e = fol.parse "exists y all x ( x=y and Loves(x,y) )"
       result = symmetry.sortIdentityStatements(e)
       expectedResult = fol.parse "exists y all x ( y=x and Loves(x,y) )"
-      expect( util.areIdenticalExpressions(e, expectedResult) ).to.be.true
+      expect( util.areIdenticalExpressions(result, expectedResult) ).to.be.true
       
     it "should sort expressions containing identities according to quantifier order (version 2)", ->
       e = fol.parse "exists y exists x x=y"
       result = symmetry.sortIdentityStatements(e)
       expectedResult = fol.parse "exists y exists x x=y"
-      expect( util.areIdenticalExpressions(e, expectedResult) ).to.be.true
+      expect( util.areIdenticalExpressions(result, expectedResult) ).to.be.true
+
       
-      
+  describe "eliminateRedundancyInPNF", ->    
+    it "should not alter the truth table of propositional sentences"
+    # TODO
+    
+    it "should transform A or (not a=a or not A)", ->
+      e = fol.parse "A or (not a=a or not A)"
+      result = symmetry.eliminateRedundancyInPNF(e)
+      expectedResult = fol.parse "true"
+      expect( util.areIdenticalExpressions(result, expectedResult) ).to.be.true
+  
+  
+  describe "isVariableFree", ->
+    it "should report that x is free", ->
+      e = fol.parse "R(x,y)"
+      expect( symmetry.isVariableFree('x',e) ).to.be.true
+    it "should report that x is free when there's a quantifier", ->
+      e = fol.parse "all y R(x,y)"
+      expect( symmetry.isVariableFree('x',e) ).to.be.true
+    it "should report that x is free when there's a quantifier but x isn't in its scope", ->
+      e = fol.parse "all y R(x,y) and exists x F(x)"
+      expect( symmetry.isVariableFree('x',e) ).to.be.true
+    it "should report that x is not free when it doesn't appear", ->
+      e = fol.parse "R(z,y)"
+      expect( symmetry.isVariableFree('x',e) ).to.be.false
+    it "should report that x is not free when it is bound", ->
+      e = fol.parse "all x R(x,y)"
+      expect( symmetry.isVariableFree('x',e) ).to.be.false
+    it "should report that x is not free in 'exists x all y F(x)'", ->
+      e = fol.parse "exists x all y F(x)"
+      expect( symmetry.isVariableFree('x',e) ).to.be.false
+  
+  
+  describe "removeQuantifiersThatBindNothing", ->
+    it "should remove a single quantifier", ->
+      e = fol.parse "exists x A"
+      result = symmetry.removeQuantifiersThatBindNothing e
+      expectedResult = fol.parse 'A'
+      expect( util.areIdenticalExpressions(result, expectedResult) ).to.be.true
+    
+    it "should remove an inner quantifier", ->
+      e = fol.parse "exists x all y F(x)"
+      result = symmetry.removeQuantifiersThatBindNothing e
+      expectedResult = fol.parse 'exists x F(x)'
+      util.delExtraneousProperties(result)
+      util.delExtraneousProperties(expectedResult)
+      # console.log "result = #{JSON.stringify result,null,4}"
+      # console.log "result = #{util.expressionToString result}"
+      expect(result).to.deep.equal(expectedResult)
+
+    it "should remove an outer quantifier", ->
+      e = fol.parse "exists x all y F(y)"
+      result = symmetry.removeQuantifiersThatBindNothing e
+      expectedResult = fol.parse 'all y F(y)'
+      util.delExtraneousProperties(result)
+      util.delExtraneousProperties(expectedResult)
+      expect(result).to.deep.equal(expectedResult)
+
+    it "should remove a middle quantifier", ->
+      e = fol.parse "exists x exists y all z R(x,z)"
+      result = symmetry.removeQuantifiersThatBindNothing e
+      expectedResult = fol.parse 'exists x all z R(x,z)'
+      util.delExtraneousProperties(result)
+      util.delExtraneousProperties(expectedResult)
+      expect(result).to.deep.equal(expectedResult)
+
+    it "should remove multiple quantifiers", ->
+      e = fol.parse "exists x exists y all z F(x)"
+      result = symmetry.removeQuantifiersThatBindNothing e
+      expectedResult = fol.parse 'exists x F(x)'
+      util.delExtraneousProperties(result)
+      util.delExtraneousProperties(expectedResult)
+      expect(result).to.deep.equal(expectedResult)
+    

@@ -1,4 +1,4 @@
-# A module for applying various substitutions,
+# Apply various substitutions to yaFOL expressions,
 # including converting an arbitrary formula to prenex normal form.
 #
 # apply substitutions to formulae like
@@ -7,14 +7,6 @@
 #        from : fol.parse 'not not φ'
 #        to : fol.parse 'φ'
 #  ```
-#
-#
-# terminology for parameter values:
-#  - a phrase is a piece of parsed FOL (e.g. ['not', ['not', 'P']])
-#  - a variable is a string prefixed with $, e.g. '$1'
-#  - a match is a piece of parsed FOL with zero or more elements replaced by
-#      variables (e.g. ['not', ['not', '$1']])
-#  - a substitution is a map with .from and .to keys whose values are both matches
 
 _ = require 'lodash'
 
@@ -52,7 +44,8 @@ _subs =
   cnf_right:
     from: '(φ2 and φ3) or φ1'
     to: '(φ2 or φ1) and (φ3 or φ1)'
-  #the following only preserve truth in expressions where no two quantifiers bind the same variable
+  # The following only preserve truth in expressions where no two quantifiers bind the same variable.
+  # (So always apply `renameVariables` before using them.)
   all_and_left:
     from: 'φ and ((all τ) ψ)'
     to: '(all τ) (φ and ψ)'
@@ -78,17 +71,23 @@ _subs =
     from: '((exists τ) ψ) or φ'
     to: '(exists τ) (ψ or φ)'
 
-# TODO : these built in subs should be compiled as part of the build, not on init.
+# TODO : Should these built in subs be compiled as part of the build, not here 
+# as the module inits?
 subs = {}
 for k,v of _subs
   from = fol.parse v.from
+  util.delExtraneousProperties from
   to = fol.parse v.to
+  util.delExtraneousProperties to
   theSub = {from:from, to:to}
   subs[k] = theSub
 exports.subs = subs
 
 
-# These depend on the standard sort order.
+# To be useful, these substitutions depend on the standard sort order, 
+# as defined in `symmetry.sortPNFExpression`.
+# Note: it is required that none of these substitutions could take an expression
+# in PNF to one that is not in PNF!
 _subs_eliminate_redundancy = 
   identity :
     from : 'τ=τ'
@@ -132,14 +131,15 @@ _subs_eliminate_redundancy =
   true_and : 
     from : 'true and φ'
     to : 'φ'
-  # (Attempting things like 'φ or not φ' depends on the sorting algorithm.)
+  # The following are useful because of the sorting provided by `symmetry.sortPNFExpression`.
+  # E.g. this sorting guaratees that not φ comes after φ in a disjunction.
   contradiction_and :
     from : 'φ and not φ'
     to : 'false'
   contradiction_and_left :
     from : 'φ and (not φ and ψ)'
     to : 'false'
-  contradiction_and_right :
+  contradiction_and_right : # Do we need this (`symmetry.rebuildExpression` should mean it doesn't happen)?
     from : '(ψ and φ) and not φ'
     to : 'false'
   taut_or :
@@ -148,16 +148,32 @@ _subs_eliminate_redundancy =
   taut_and_left :
     from : 'φ or (not φ or ψ)'
     to : 'true'
-  taut_and_right :
+  taut_and_right :       # Do we need this (`symmetry.rebuildExpression` should mean it doesn't happen)?
     from : '(ψ or φ) or not φ'
     to : 'true'
+  # The following are not needed because we now use
+  # the more general `symmetry.removeQuantifiersThatBindNothing`.
+  # exists_false :
+  #   from : 'exists τ false'
+  #   to : 'false'
+  # exists_true :
+  #   from : 'exists τ true'
+  #   to : 'true'
+  # all_false :
+  #   from : 'all τ false'
+  #   to : 'false'
+  # all_true :
+  #   from : 'all τ true'
+  #   to : 'true'
     
   
     
 subs_eliminate_redundancy = {}
 for k,v of _subs_eliminate_redundancy
   from = fol.parse v.from
+  util.delExtraneousProperties from
   to = fol.parse v.to
+  util.delExtraneousProperties to
   theSub = {from:from, to:to}
   subs_eliminate_redundancy[k] = theSub
 exports.subs_eliminate_redundancy = subs_eliminate_redundancy
@@ -208,7 +224,6 @@ findMatches = (expression, pattern, _matches, o) ->
     util.delExtraneousProperties(pattern)
     o._notFirstCall = true
   
-  
   if pattern is null
     if expression is null
       return _matches
@@ -247,7 +262,8 @@ findMatches = (expression, pattern, _matches, o) ->
       _matches[targetVar] = targetValue
       return _matches
 
-  # From this point on, we know that pattern.type isn neither an expression_variable nor a term_metavariable
+  # From this point on, we know that pattern.type isn neither 
+  # an expression_variable nor a term_metavariable.
 
   # The following special case is needed only because we want to be able to
   # treat identity as symmetric when `o.symmetricIdentity` is true.
@@ -306,7 +322,7 @@ applyMatches = (pattern, matches) ->
   if 'type' of pattern and (pattern.type is 'expression_variable' or pattern.type is 'term_metavariable')
     targetVar = pattern.letter if pattern.type is 'expression_variable' # eg φ
     targetVar = pattern.name if pattern.type is 'term_metavariable' # eg τ2
-    return _.cloneDeep(matches[targetVar])
+    return util.cloneExpression(matches[targetVar])
   res = {}
   if pattern.left?
     res.left = applyMatches pattern.left, matches
@@ -334,7 +350,7 @@ replace =  (expression, whatToReplace) ->
   toFind = whatToReplace.from
   toReplace = whatToReplace.to
   if util.areIdenticalExpressions(expression, toFind)
-    return _.cloneDeep(toReplace)
+    return util.cloneExpression(toReplace)
   result = {}
   if expression.left?
     result.left = replace expression.left, whatToReplace

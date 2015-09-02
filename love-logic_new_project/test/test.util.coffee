@@ -14,6 +14,26 @@ describe 'util', ->
       util.delExtraneousProperties fol.parse("A and B")
     it "should not thrown an error with 'Fish(a) and LeftOf(a,b)'", ->
       util.delExtraneousProperties fol.parse("Fish(a) and LeftOf(a,b)")      
+    it "should remove extraneous properties of all constituents of an expression (this is a test of `util.walk`)'", ->
+      e = fol.parse 'A and (B and C)'
+      util.delExtraneousProperties e
+      expect(e.location?).to.be.false
+      expect(e.right.location?).to.be.false
+      expect(e.right.left.location?).to.be.false
+      expect(e.right.right.location?).to.be.false
+    it "should remove extraneous properties of terms and boundVariables'", ->
+      e = fol.parse 'all x (F(x,a))'
+      util.delExtraneousProperties e
+      expect(e.location?).to.be.false
+      expect(e.boundVariable.location?).to.be.false
+      expect(e.left.location?).to.be.false
+      expect(e.left.termlist[0].location?).to.be.false
+      expect(e.left.termlist[1].location?).to.be.false
+    it "should modify expressions in place", ->
+      e = fol.parse("A and B")
+      expect(e.location?).to.be.true
+      util.delExtraneousProperties e
+      expect(e.location?).to.be.false
       
   describe 'cloneExpression', ->
     it "should clone an expression of yAFOL", ->
@@ -114,13 +134,13 @@ describe 'util', ->
       result = util.exhaust(theList, fn, _.isEqual)
       expect(result).to.deep.equal([])
     
-    it "should remove not modify `expression` in place", ->
+    it "should not modify `expression` in place", ->
       fn = (list) -> 
         list.pop()
         return list
-      theList = [1,2,3,4]
+      theList = ['1','2','3','4']
       result = util.exhaust(theList, fn, _.isEqual)
-      expect(theList).to.deep.equal([1,2,3,4])
+      expect(theList).to.deep.equal(['1','2','3','4'])
     
     it "should work with a function that does nothing", ->
       fn = (list) -> return list
@@ -174,8 +194,21 @@ describe 'util', ->
       expectedResult = (fol.parse(e) for e in expectedResult)
       for expected, i in expectedResult
         expect( util.areIdenticalExpressions(expected, list[i]) ).to.be.true
-    
-    
+
+
+  describe "addParents", ->
+    it "should add parents to children", ->
+      e = fol.parse "A and B"
+      util.delExtraneousProperties e
+      util.addParents e
+      expect(e.left.parent).to.equal(e)
+      expect(e.right.parent).to.equal(e)
+    it "should add parents to children (more complex example)", ->
+      e = fol.parse "all y some x (R(x,y) and F(x))"
+      util.delExtraneousProperties e
+      util.addParents e
+      expect(e.left.left.parent).to.equal(e.left)
+      expect(e.left.left.left.parent).to.equal(e.left.left)
     
     
     

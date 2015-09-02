@@ -69,6 +69,20 @@ describe 'substitute', ->
       expect(matches).not.to.be.false
       expect(util.areIdenticalExpressions(matches.φ, expectedMatches.φ)).to.be.true
     
+    it "should match a sentence with the same (no expression variables)", ->
+      pattern = fol.parse 'A or A'
+      expression = fol.parse 'A or A'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches = {}
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal({})
+      
+    it "should not match different sentences (no expression variables)", ->
+      pattern = fol.parse 'A or A'
+      expression = fol.parse 'B or B'
+      matches = substitute.findMatches expression, pattern
+      expect(matches).to.be.false
+    
 
   describe 'findMatches with expressions that are not closed wffs', ->
     it "should match 'all x not φ' in 'all x (not (F(x) and G(x)))", ->
@@ -334,9 +348,10 @@ describe 'substitute', ->
         from : fol.parse 'φ or true'
         to : fol.parse 'true'
       expression = fol.parse '((A arrow B) or true)'
-      clone = util.cloneExpression expression
+      pre = util.cloneExpression expression
       substitute.doSub expression, sub
-      expect(expression).to.deep.equal(clone)
+      post = util.cloneExpression expression
+      expect(pre).to.deep.equal(post)
 
 
   describe 'doSubRecursive', ->
@@ -364,9 +379,10 @@ describe 'substitute', ->
         from : fol.parse 'not not φ'
         to : fol.parse 'φ'
       expression = fol.parse 'not not A'
-      clone = util.cloneExpression expression
+      pre = util.cloneExpression expression
       substitute.doSubRecursive expression, sub
-      expect(expression).to.deep.equal(clone)
+      post = util.cloneExpression expression
+      expect(pre).to.deep.equal(post)
 
 
   describe 'subs, the built-in substitutions', ->
@@ -389,6 +405,13 @@ describe 'substitute', ->
       sub = substitute.subs.replace_arrow
       result = substitute.doSub expression, sub
       expectedResult = fol.parse 'not A or B'
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+        
+    it "should convert arrow correctly (when antecedent is complex)", ->
+      expression = fol.parse '(A and B) arrow (C and D)'
+      sub = substitute.subs.replace_arrow
+      result = substitute.doSub expression, sub
+      expectedResult = fol.parse 'not (A and B) or (C and D)'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
         
     it "should do replace_double_arrow", ->
@@ -426,6 +449,19 @@ describe 'substitute', ->
       expectedResult = fol.parse 'all z (exists x F(x) or G(z))'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
       
+    it "should not alter the truth table of propositional sentences"
+    # TODO
+
+
+  describe 'subs_eliminate_redundancy', ->
+    it "should transform A or (not a=a or not A)", ->
+      e = fol.parse "A or (not a=a or not A)"
+      subs = substitute.subs_eliminate_redundancy
+      sub = subs.identity
+      result = substitute.doSubRecursive e, sub
+      expectedResult = fol.parse 'A or (not true or not A)'
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+
   describe 'renameVariables', ->
     it "should rename the variables in a single quantifier phrase properly", ->
       expression = fol.parse 'exists(x) F(x)'
@@ -502,12 +538,14 @@ describe 'substitute', ->
     it "I just want to see this", ->
       theF = [ 
         fol.parse 'exists x (F(x) and all y (F(y) arrow x=y))'
-        fol.parse 'exists x (all y (F(y) arrow x=y) and F(x))'
         fol.parse 'exists x all y (F(y) ↔ x=y)'
         fol.parse 'exists x F(x) and exists x all y ( F(y) arrow x=y )'
       ]
       pnf = ( substitute.prenexNormalForm(e) for e in theF )
       for e in pnf
+        symmetry.sortPNFExpression(e)
+        symmetry.sortIdentityStatements(e)
+        e = symmetry.eliminateRedundancyInPNF(e)
         console.log "the F : #{util.expressionToString e} "
       throw "E"
 
@@ -568,7 +606,7 @@ describe 'substitute', ->
     it "deals with an example from wikipedia", ->
       expression = fol.parse 'all x ((exists y F(y)) or ((exists z G(z)) arrow H(x)))'
       result = substitute.prenexNormalForm expression
-      console.log "result = #{util.expressionToString result}"
+      # console.log "result = #{util.expressionToString result}"
       test = substitute.isPNF result
       expect(test).to.be.true
       
