@@ -12,11 +12,16 @@ block_parser = require './block_parser'
 
 _GET_NUMBER = /^\(?([0-9]\S*)([\s\S]*)/
 _DROP_TRAILING_DOTS_AND_BRACKET = /\.*\)?$/
+
+cleanNumber = (lineNumber) ->
+  return lineNumber.replace _DROP_TRAILING_DOTS_AND_BRACKET, ''
+exports.cleanNumber = cleanNumber
+
 split = (line) ->
   m = line.content.match _GET_NUMBER
   if m
     lineNumber = m[1]
-    lineNumber = lineNumber.replace _DROP_TRAILING_DOTS_AND_BRACKET, ''
+    lineNumber = cleanNumber lineNumber
     return { lineNumber, rest:m[2] } 
   return { lineNumber:null, rest: line.content }
   

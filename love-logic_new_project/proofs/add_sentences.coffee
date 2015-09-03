@@ -28,10 +28,10 @@ to = (block) ->
       item.isIdenticalExpression = (e) ->
         return util.areIdenticalExpressions(@sentence, e)
       # Now we add some functions that may be useful later.
-      item.isIdenticalExpressionLeft = (e) ->
+      item.leftIsIdenticalExpression = (e) ->
         return util.areIdenticalExpressions(@sentence.left, e)
       # Now we add some functions that may be useful later.
-      item.isIdenticalExpressionRight = (e) ->
+      item.rightIsIdenticalExpression = (e) ->
         return util.areIdenticalExpressions(@sentence.right, e)
       
       return undefined  # Keep walking.

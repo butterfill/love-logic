@@ -150,6 +150,21 @@ describe "justification_parser", ->
     expect(result.rule.connective).to.equal('or')
     expect(result.numbers).to.deep.equal(['1','9','7','10-12','8','7'])
 
+  it "represents number ranges uniformly", ->
+    result = jp.parse "or intro 1-2 1 to 2 1 - 2 1 -- 2"
+    expect(result.numbers.length).to.equal(4)
+    for num in result.numbers
+      expect(num).to.equal('1-2')
+
+  # # This is really tricky to do with the lexer; I decided to 
+  # # do it with `line_numbers.cleanNumber` instead.  This has the 
+  # # advantage that we do the same thing to the citation numbers 
+  # # as we do to the numbers at the start of a line.
+  # it "gets rid of one trailing period", ->
+  #   result = jp.parse "or intro because 1. , 9., ,7., 10.-12.,8.,7.,"
+  #   expect(result.rule.connective).to.equal('or')
+  #   expect(result.numbers).to.deep.equal(['1','9','7','10-12','8','7'])
+
   it "number ranges are correctly formatted whether you use `-`, `--`, ` to `, or ` - `", ->
     sentences = [
       jp.parse "or intro because 1 to 3"

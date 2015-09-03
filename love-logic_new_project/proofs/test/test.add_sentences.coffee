@@ -41,6 +41,6 @@ describe "add_sentences", ->
       e2 = fol.parse "A"
       expect( line1.isIdenticalExpression(e) ).to.be.true
       expect( line1.isIdenticalExpression(e2) ).to.be.false
-      expect( line1.isIdenticalExpressionLeft(e2) ).to.be.true
-      expect( line1.isIdenticalExpressionRight( fol.parse("B")) ).to.be.true
+      expect( line1.leftIsIdenticalExpression(e2) ).to.be.true
+      expect( line1.rightIsIdenticalExpression( fol.parse("B")) ).to.be.true
       

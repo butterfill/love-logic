@@ -35,7 +35,7 @@
     as `digits-digits`.  (This matches how number ranges are formatted 
     elsewhere, e.g. in the `line_numbers` module.)
 */
-([0-9][^,\s]*\s*)\sto\s\s*([0-9][^,\s]*) 
+([0-9][^,\s]*)\s+to\s+([0-9][^,\s]*) 
     { yytext = yy.lexer.matches[1]+"-"+yy.lexer.matches[2];  
       return 'number'; 
     }    

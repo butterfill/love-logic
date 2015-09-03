@@ -14,6 +14,9 @@
 
 jp = require './justification_parser'
 
+# We are going to apply the same `cleanNumber` function to line number references
+# that is used in parsing the line numbers at the start of lines of the proof.
+cleanNumber = require('./line_numbers').cleanNumber
 
 # This will be useful later in case we have to add it to any lines
 # above a divider where no justification is given explicitly. 
@@ -24,20 +27,28 @@ PREMISE_JUSTIFICATION = jp.parse "premise"
 to = (block) ->
   
   # First pass: extract the justification and add it to the lines.
-  # Also add some functions to help later.
   walker = 
     visit : (item) ->
       return undefined if item.type isnt 'line'
       return undefined if item.justification? or item.justificationErrors?
+      
       line = item
       r = split line.content
       line.justification = r.justification
+      if line.justification?.numbers?
+        line.justification.numbers = (cleanNumber(n) for n in line.justification.numbers)
       line.content = r.rest
       line.justificationErrors = r.justificationErrors
       line.justificationText = r.justificationText
+      
+      # Also add some functions to help later.
       line.getRuleName = getRuleName
+      line.findLine = findLine
+      line.findBlock = findBlock
+      line.findLineOrBlock = findLineOrBlock
       line.getReferencedLine = getReferencedLine
       line.getReferencedBlock = getReferencedBlock
+      
       return undefined  # Keep walking.
   block.walk walker
 
@@ -121,14 +132,36 @@ getRuleName = ->
   side = @justification.rule.variant.side or ''
   return "#{connective} #{intronation} #{side}".trim()
 
-# This should only be used if this line references a single line.
-getReferencedLine = ->
-  targetNumber = @justification.numbers[0]
+# `targetNumber` specifies the number of a line as (typically) given by the
+# user who wrote the proof.
+findLine = (targetNumber) ->
   return @find( (item) ->
     return undefined if item.type isnt 'line'
     return true if item.number is targetNumber
     return undefined
   )
+  
+# `targetNumber` specifies the number of a line as (typically) given by the
+# user who wrote the proof.
+findBlock = (targetNumber) ->
+  return @find( (item) ->
+    return undefined if item.type isnt 'block'
+    return true if item.number is targetNumber
+    return undefined
+  )
+
+# `targetNumber` specifies the number of a line as (typically) given by the
+# user who wrote the proof.
+findLineOrBlock = (targetNumber) ->
+  return @find( (item) ->
+    return true if item.number is targetNumber
+    return undefined
+  )
+
+# This should only be used if this line references a single line.
+getReferencedLine = ->
+  targetNumber = @justification.numbers[0]
+  return @findLine( targetNumber )
 
 # This should only be used if this line references a single block.
 getReferencedBlock = ->
