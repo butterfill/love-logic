@@ -39,6 +39,15 @@ describe "block_parser", ->
       b4 = b3.close()
       expect(b3).to.equal(b1)
       expect(b4?).to.be.false
+    it "the top block has no parent", ->
+      b = new bp.Block()
+      expect(b.parent?).to.be.false
+    it "allows us to test whether a line is the first line in a block", ->
+      b = new bp.Block()
+      l1 = b.newLine('hello')
+      l2 = b.newLine('again')
+      expect( l1.parent.content[0] is l1 ).to.be.true
+      expect( l1.parent.content[0] is l2 ).to.be.false
     
     describe ".walk", ->
       it "visits every item in the order of lines", ->

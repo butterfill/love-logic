@@ -20,8 +20,6 @@ arePNFExpressionsEquivalent = (left, right) ->
   sortIdentityStatements(left)
   right = eliminateRedundancyInPNF(right)
   right = sortPNFExpression(right)
-  # console.log "left = #{util.expressionToString left}"
-  # console.log "right = #{util.expressionToString right}"
   sortIdentityStatements(right)
   pattern = substitute.renameVariables left, 'τ'
   patternCore = removeQuantifiers pattern
@@ -41,8 +39,6 @@ arePNFExpressionsEquivalent = (left, right) ->
   # there could be unmatched term_metavariables in `modifiedLeft`.
   # But since we did `removeQuantifiersThatBindNothing` (as part of `eliminateRedundancyInPNF`),
   # this possibility will not arise here.
-  # console.log "arePNFExpressionsEquivalent modifiedLeft = #{util.expressionToString modifiedLeft}"
-  # console.log "arePNFExpressionsEquivalent right = #{util.expressionToString right}"
   
   return arePrefixedQuantifiersEquivalent modifiedLeft, right
 exports.arePNFExpressionsEquivalent = arePNFExpressionsEquivalent
@@ -186,8 +182,8 @@ arePrefixedQuantifiersEquivalent = (left, right, _inProgress) ->
     # First check that the boundVariables we collected previously match.
     _inProgress.leftBoundVariables.sort()
     _inProgress.rightBoundVariables.sort()
-    # console.log "_inProgress.leftBoundVariables #{_inProgress.leftBoundVariables}"
     return false unless _.isEqual(_inProgress.leftBoundVariables, _inProgress.rightBoundVariables)
+    
     # Everything matches so far: reset the list of bounded variables for the next quantifier sequence.
     _inProgress.leftBoundVariables = []
     _inProgress.rightBoundVariables = []
@@ -273,10 +269,6 @@ _getVariableOrder = (expression, _inProgress) ->
   
   quantifierType = expression?.type or null
   
-  # console.log "_inProgress.thisTypeBoundVariables #{_inProgress.thisTypeBoundVariables}"
-  # console.log "_inProgress.allBoundVariables #{_inProgress.allBoundVariables}"
-  # console.log "quantifierType #{quantifierType}"
-  
   if _inProgress.quantifierType isnt quantifierType
     # New type of quantifier or end of sequence. 
     _inProgress.thisTypeBoundVariables.sort()
@@ -308,10 +300,8 @@ exports.eliminateRedundancyInPNF = eliminateRedundancyInPNF
 
 # Returns `true` if the variable named `variableName` occurs free in `expression`.
 isVariableFree = (variableName, expression) ->
-  # console.log "#{variableName} : #{util.expressionToString expression}"
   if expression.termlist?
     termNames = (t.name for t in expression.termlist)
-    # console.log "termNames #{termNames}, test = #{variableName in termNames}"
     return true if variableName in termNames
   if expression.boundVariable?
     if expression.boundVariable.name is variableName

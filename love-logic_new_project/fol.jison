@@ -1,11 +1,17 @@
-/* Defines a JISON lexer and parser for the yaFOL language.
- * The parser returns objects like {type:"and", left:[Object], right:[Object], location:{...}, symbol:'&'}.
- * where `location` is the parser's object describing the location of the symbol parsed.
- * and `symbol` is the symbol from the input.
+/*  Defines a JISON lexer and parser for the yaFOL language.
+    The parser returns objects like {type:"and", left:[Object], right:[Object], location:{...}, symbol:'&'}.
+    where `location` is the parser's object describing the location of the symbol parsed.
+    and `symbol` is the symbol from the input.
+ 
+    Tested against JISON version 0.4.15.
+    
+    Note that the JISON lexer does not return the longest match; instead
+    it matches the first rule it can.
 */
 
 /* lexical grammar */
 %lex
+%options flex 
 
 
 %%
@@ -17,12 +23,12 @@
 "and"|"&"|"∧"|"•"       { return 'and' ;                    }
 "arrow"|"->"|"⇒"|"→"|"⊃"            { return 'arrow' ;                  }
 "↔"|"≡"|"⇔"           { return 'double_arrow';            }
-"or"|"∨"|"+"|"ǀǀ"       { return 'or' ;                     }
-"not"|"¬"|"˜"|"!"       { return 'not';                     }
-"nor"|"↓"               { return 'nor';                     }
-"nand"|"↑"              { return 'nand';                     }
-"all"|"∀"|"every"       { return 'universal_quantifier';    }
-"some"|"exists"|"∃"     { return 'existential_quantifier';  }
+[oO][rR]|"∨"|"+"|"ǀǀ"       { return 'or' ;                     }
+[nN][oO][tT]|"¬"|"˜"|"!"       { return 'not';                     }
+[nN][oO][rR]|"↓"               { return 'nor';                     }
+[nN][aA][nN][dD]|"↑"              { return 'nand';                     }
+[aA][lL][lL]|"∀"|[eE][vV][eE][rR][yY]       { return 'universal_quantifier';    }
+[sS][oO][mM][eE]|[eE][xX][iI][sS][tT][sS]|"∃"     { return 'existential_quantifier';  }
 "("                     { return '(' ;                      }
 ")"                     { return ')' ;                      }
 ","                     { return ',' ;                      }
@@ -47,6 +53,8 @@
 
 /lex
 
+
+
 /* operator associations and precedence */
 
 %nonassoc 'arrow' 'double_arrow'
@@ -54,7 +62,9 @@
 %left 'not'
 %left existential_quantifier universal_quantifier
 
+/* This tells JISON where to start: */
 %start expressions
+
 
 %% /* language grammar */
 

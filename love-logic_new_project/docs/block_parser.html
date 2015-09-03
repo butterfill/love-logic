@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>block_parser.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page_wrapper">
+            <div id="jump_page">
+              
+                
+                <a class="source" href="block_parser.html">
+                  block_parser.coffee
+                </a>
+              
+                
+                <a class="source" href="evaluate.html">
+                  evaluate.coffee
+                </a>
+              
+                
+                <a class="source" href="substitute.html">
+                  substitute.coffee
+                </a>
+              
+                
+                <a class="source" href="symmetry.html">
+                  symmetry.coffee
+                </a>
+              
+                
+                <a class="source" href="util.html">
+                  util.coffee
+                </a>
+              
+            </div>
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>block_parser.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <p>Parse a string into blocks, treating spaces and | as significant.
+E.g. (ignore the numbers):</p>
+<pre><code>block       <span class="hljs-number">17</span>
+  line      <span class="hljs-number">16</span>
+  line      <span class="hljs-number">15</span>
+  block     <span class="hljs-number">3</span>
+    line    <span class="hljs-number">14</span>
+    line    <span class="hljs-number">13</span>
+    line    <span class="hljs-number">12</span>
+    block   <span class="hljs-number">9</span>
+      line  <span class="hljs-number">11</span>
+      line  <span class="hljs-number">10</span>
+    block   <span class="hljs-number">6</span>
+      line  <span class="hljs-number">8</span>
+      line  <span class="hljs-number">7</span>
+    line    <span class="hljs-number">5</span>
+    line    <span class="hljs-number">4</span>
+  line      <span class="hljs-number">2</span>
+  line      <span class="hljs-number">1</span>
+</code></pre><p>To have two blocks at the same level in sequence, leave a blank line:</p>
+<pre><code>    line <span class="hljs-number">1</span>
+      line <span class="hljs-number">2.1</span>
+      line <span class="hljs-number">2.2</span>
+
+      line <span class="hljs-number">3.1</span>
+      line <span class="hljs-number">3.2</span>
+    line <span class="hljs-number">4</span>
+</code></pre><p>Any line starting with – or __ (after any amount of indentation) is considered to be 
+at the same indentation level as the previous line.</p>
+<p>This is work towards a proof parser.<br>This module ignores numbers because we’re going to use numbers on the inside, like this:</p>
+<p>| 1. exists x F(x)    // premise
+| 1b. all x not F(x)  // premise
+| —
+| | 2. consider a. suppose F(a), then …
+| | — 
+| | 3. not F(a)       // from n. using universal-elim
+| | 4. contradiction  // applying contradiction-intro to 2, 3
+| 5. contradiction      //  universal-elim applied to 1, 2-4</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+util = <span class="hljs-built_in">require</span> <span class="hljs-string">'util'</span> <span class="hljs-comment"># require to Block.toString</span>
+_ = <span class="hljs-built_in">require</span> <span class="hljs-string">'lodash'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>This is used to split a line into indentation and content.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>_SPLIT_LINE = <span class="hljs-regexp">/^([|\s]*)([\s\S]*)/</span> 
+<span class="hljs-function"><span class="hljs-title">split</span> = <span class="hljs-params">(line)</span> -&gt;</span>
+  m = line.match _SPLIT_LINE</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Note that <code>_SPLIT_LINE</code> always matches, even if line is “”</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">return</span> { <span class="hljs-attribute">indentation</span>:m[<span class="hljs-number">1</span>], <span class="hljs-attribute">content</span>:m[<span class="hljs-number">2</span>] }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>A line that starts with – or __ (after any indentation) is a divider.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">isDivider</span> = <span class="hljs-params">(line)</span> -&gt;</span>
+  m = line.match <span class="hljs-regexp">/^[(--)(__)]/</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">if</span> m <span class="hljs-keyword">is</span> <span class="hljs-literal">null</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>
+  
+  
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Block</span></span>
+  constructor : <span class="hljs-function"><span class="hljs-params">(<span class="hljs-property">@parent</span>, <span class="hljs-property">@prev</span>, <span class="hljs-property">@indentation</span>)</span> -&gt;</span>
+    <span class="hljs-property">@type</span> = <span class="hljs-string">'block'</span>
+    <span class="hljs-property">@content</span> = []
+    
+  getLastLine : <span class="hljs-function">-&gt;</span>
+    <span class="hljs-keyword">return</span> _.last <span class="hljs-property">@content</span> <span class="hljs-keyword">if</span> <span class="hljs-property">@content</span>.length&gt;<span class="hljs-number">0</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
+    
+  newLine : <span class="hljs-function"><span class="hljs-params">(content)</span> -&gt;</span>
+    theLine = {
+      type : <span class="hljs-string">'line'</span>
+      parent : @
+      prev : <span class="hljs-property">@getLastLine</span>()
+      content : content
+    }
+    <span class="hljs-property">@content</span>.push(theLine)
+    <span class="hljs-keyword">return</span> theLine
+    
+  newBlock : <span class="hljs-function"><span class="hljs-params">(indentation)</span> -&gt;</span>
+    b = <span class="hljs-keyword">new</span> Block(@, <span class="hljs-property">@getLastLine</span>(), indentation)
+    <span class="hljs-property">@content</span>.push(b)
+    <span class="hljs-keyword">return</span> b
+  
+  close : <span class="hljs-function"><span class="hljs-params">()</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-property">@parent</span>
+  
+  toString : <span class="hljs-function"><span class="hljs-params">()</span> -&gt;</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>return util.inspect @</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function">    <span class="hljs-title">_replacer</span> = <span class="hljs-params">(key, value)</span> -&gt;</span>
+      <span class="hljs-keyword">if</span> value <span class="hljs-keyword">and</span> (key <span class="hljs-keyword">is</span> <span class="hljs-string">'prev'</span> <span class="hljs-keyword">or</span> key <span class="hljs-keyword">is</span> <span class="hljs-string">'parent'</span>)  <span class="hljs-comment"># Ignore this value.</span>
+        <span class="hljs-keyword">return</span> <span class="hljs-string">'[circular reference]'</span>
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">undefined</span> <span class="hljs-keyword">if</span> _.isFunction value  <span class="hljs-comment"># Ignore functions.</span>
+      <span class="hljs-keyword">return</span> value
+    <span class="hljs-keyword">return</span> JSON.stringify @, _replacer, <span class="hljs-number">4</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>This is only exported for testing.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>exports.Block = Block
+<span class="hljs-function">
+<span class="hljs-title">clean</span> = <span class="hljs-params">(lines)</span> -&gt;</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>TODO replace \n\r etc
+TODO replace ‘ ‘ with | if there are no | at the start of a line
+TODO remove spaces at the start of a line.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function">
+
+<span class="hljs-title">parse</span> = <span class="hljs-params">(lines)</span> -&gt;</span>
+  clean lines
+  topBlock = <span class="hljs-keyword">new</span> Block()
+  block = topBlock
+  <span class="hljs-keyword">for</span> line, idx <span class="hljs-keyword">in</span> lines.split(<span class="hljs-string">'\n'</span>)
+    {indentation, content} = split line</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>This only occurs on the first run through the loop.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> block.indentation?
+      block.indentation = indentation</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Do we need to start a new block, or to close one?</p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Where a divider occurs, we ignore the indentation.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> (isDivider line) 
+      <span class="hljs-keyword">if</span> indentation.length &gt; block.indentation.length
+        block = block.newBlock(indentation)
+      <span class="hljs-keyword">while</span> indentation.length &lt; block.indentation.length <span class="hljs-keyword">and</span> block
+        block = block.close()
+      <span class="hljs-keyword">if</span> indentation.length <span class="hljs-keyword">isnt</span> block.indentation.length
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error <span class="hljs-string">"Bad indentation at line <span class="hljs-subst">#{idx+<span class="hljs-number">1</span>}</span>. (It is indented to a level to which no earlier line is indented.)"</span>
+      prevIndentation = indentation
+    
+    block.newLine(content)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>The last line we’ve parsed might be more indented than the first.<br>We want to return the top-level block.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">while</span> block <span class="hljs-keyword">isnt</span> topBlock
+    block = block.close()
+  
+  <span class="hljs-keyword">return</span> block
+exports.parse = parse</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

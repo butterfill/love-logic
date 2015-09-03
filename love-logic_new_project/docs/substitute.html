@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>substitute.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page_wrapper">
+            <div id="jump_page">
+              
+                
+                <a class="source" href="block_parser.html">
+                  block_parser.coffee
+                </a>
+              
+                
+                <a class="source" href="evaluate.html">
+                  evaluate.coffee
+                </a>
+              
+                
+                <a class="source" href="substitute.html">
+                  substitute.coffee
+                </a>
+              
+                
+                <a class="source" href="symmetry.html">
+                  symmetry.coffee
+                </a>
+              
+                
+                <a class="source" href="util.html">
+                  util.coffee
+                </a>
+              
+            </div>
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>substitute.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <p>Apply various substitutions to yaFOL expressions,
+including converting an arbitrary formula to prenex normal form.</p>
+<p>apply substitutions to formulae like</p>
+<pre><code>     sub =
+       from : fol.parse <span class="hljs-string">'not not φ'</span>
+       to : fol.parse <span class="hljs-string">'φ'</span>
+</code></pre>
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+_ = <span class="hljs-built_in">require</span> <span class="hljs-string">'lodash'</span>
+
+util = <span class="hljs-built_in">require</span> <span class="hljs-string">'./util'</span>
+fol = <span class="hljs-built_in">require</span> <span class="hljs-string">'./fol'</span>  <span class="hljs-comment"># TODO remove dependence (only required for compiling subs)</span>
+symmetry = <span class="hljs-built_in">require</span> <span class="hljs-string">'./symmetry'</span>
+
+
+_subs = 
+  replace_arrow :
+    from : <span class="hljs-string">'φ arrow ψ'</span>
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'(not φ) or ψ'</span>
+  replace_double_arrow :
+    from : <span class="hljs-string">'φ ↔ ψ'</span>
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'(φ or (not ψ)) and ((not φ) or ψ)'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>to: ‘(φ and ψ) or ((not φ) and (not ψ))’</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">demorgan1</span>:
+    <span class="hljs-attribute">from</span>: <span class="hljs-string">'not (φ and ψ)'</span>,
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'((not φ) or (not ψ))'</span>
+  <span class="hljs-attribute">demorgan2</span>:
+    <span class="hljs-attribute">from</span>: <span class="hljs-string">'not (φ or ψ)'</span>,
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'((not φ) and (not ψ))'</span>
+  <span class="hljs-attribute">dbl_neg</span>: 
+    <span class="hljs-attribute">from</span>: <span class="hljs-string">'not not φ'</span>,
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'φ'</span>
+  <span class="hljs-attribute">not_all</span>:
+    <span class="hljs-attribute">from</span>: <span class="hljs-string">'not ((all τ) φ)'</span>
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'(exists τ) (not φ)'</span>
+  <span class="hljs-attribute">not_exists</span>:
+    <span class="hljs-attribute">from</span>: <span class="hljs-string">'not ((exists τ) φ)'</span>
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'(all τ) (not φ)'</span>
+  <span class="hljs-attribute">cnf_left</span>:
+    <span class="hljs-attribute">from</span>: <span class="hljs-string">'φ1 or (φ2 and φ3)'</span>
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'(φ1 or φ2) and (φ1 or φ3)'</span>
+  <span class="hljs-attribute">cnf_right</span>:
+    <span class="hljs-attribute">from</span>: <span class="hljs-string">'(φ2 and φ3) or φ1'</span>
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'(φ2 or φ1) and (φ3 or φ1)'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>The following only preserve truth in expressions where no two quantifiers bind the same variable.
+(So always apply <code>renameVariables</code> before using them.)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">all_and_left</span>:
+    <span class="hljs-attribute">from</span>: <span class="hljs-string">'φ and ((all τ) ψ)'</span>
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'(all τ) (φ and ψ)'</span>
+  <span class="hljs-attribute">all_and_right</span>:
+    <span class="hljs-attribute">from</span>: <span class="hljs-string">'((all τ) ψ) and φ'</span>
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'(all τ) (ψ and φ)'</span>
+  <span class="hljs-attribute">all_or_left</span>:
+    <span class="hljs-attribute">from</span>: <span class="hljs-string">'φ or ((all τ) ψ)'</span>
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'(all τ) (φ or ψ)'</span>
+  <span class="hljs-attribute">all_or_right</span>:
+    <span class="hljs-attribute">from</span>: <span class="hljs-string">'((all τ) ψ) or φ'</span>
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'(all τ) (ψ or φ)'</span>
+  <span class="hljs-attribute">exists_and_left</span>:
+    <span class="hljs-attribute">from</span>: <span class="hljs-string">'φ and ((exists τ) ψ)'</span>
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'(exists τ) (φ and ψ)'</span>
+  <span class="hljs-attribute">exists_and_right</span>:
+    <span class="hljs-attribute">from</span>: <span class="hljs-string">'((exists τ) ψ) and φ'</span>
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'(exists τ) (ψ and φ)'</span>
+  <span class="hljs-attribute">exists_or_left</span>:
+    <span class="hljs-attribute">from</span>: <span class="hljs-string">'φ or ((exists τ) ψ)'</span>
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'(exists τ) (φ or ψ)'</span>
+  <span class="hljs-attribute">exists_or_right</span>:
+    <span class="hljs-attribute">from</span>: <span class="hljs-string">'((exists τ) ψ) or φ'</span>
+    <span class="hljs-attribute">to</span>: <span class="hljs-string">'(exists τ) (ψ or φ)'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>TODO : Should these built in subs be compiled as part of the build, not here 
+as the module inits?</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>subs = {}
+<span class="hljs-keyword">for</span> k,v <span class="hljs-keyword">of</span> _subs
+  from = fol.parse v.from
+  util.delExtraneousProperties from
+  to = fol.parse v.to
+  util.delExtraneousProperties to
+  theSub = {<span class="hljs-attribute">from</span>:from, <span class="hljs-attribute">to</span>:to}
+  subs[k] = theSub
+exports.subs = subs</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>To be useful, these substitutions depend on the standard sort order, 
+as defined in <code>symmetry.sortPNFExpression</code>.
+Note: it is required that none of these substitutions could take an expression
+in PNF to one that is not in PNF!</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>_subs_eliminate_redundancy = 
+  identity :
+    from : <span class="hljs-string">'τ=τ'</span>
+    to : <span class="hljs-string">'true'</span>
+  not_true : 
+    from : <span class="hljs-string">'not true'</span>
+    to : <span class="hljs-string">'false'</span>
+  not_false : 
+    from : <span class="hljs-string">'not false'</span>
+    to : <span class="hljs-string">'true'</span>
+  <span class="hljs-attribute">or_duplicate</span>:
+    from : <span class="hljs-string">'φ or φ'</span>
+    to : <span class="hljs-string">'φ'</span>
+  <span class="hljs-attribute">or_duplicate_left</span>:
+    from : <span class="hljs-string">'φ or (φ or ψ)'</span>
+    to : <span class="hljs-string">'φ or ψ'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>TODO: Is the right version (<code>or_duplicate_right</code>) is needed 
+given how <code>symmetry.rebuildExpression</code> works?
+(This applies to the stuff below as well.)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">or_duplicate_right</span>:
+    from : <span class="hljs-string">'(ψ or φ) or φ'</span>
+    to : <span class="hljs-string">'ψ or φ'</span>
+  <span class="hljs-attribute">and_duplicate</span>:
+    from : <span class="hljs-string">'φ and φ'</span>
+    to : <span class="hljs-string">'φ'</span>
+  <span class="hljs-attribute">and_duplicate_left</span>:
+    from : <span class="hljs-string">'φ and (φ and ψ)'</span>
+    to : <span class="hljs-string">'φ and ψ'</span>
+  <span class="hljs-attribute">and_duplicate_right</span>:
+    from : <span class="hljs-string">'(ψ and φ) and φ'</span>
+    to : <span class="hljs-string">'ψ and φ'</span>
+  false_or :
+    from : <span class="hljs-string">'false or φ'</span>
+    to : <span class="hljs-string">'φ'</span>
+  true_or :
+    from : <span class="hljs-string">'true or φ'</span>
+    to : <span class="hljs-string">'true'</span>
+  false_and : 
+    from : <span class="hljs-string">'false and φ'</span>
+    to : <span class="hljs-string">'false'</span>
+  true_and : 
+    from : <span class="hljs-string">'true and φ'</span>
+    to : <span class="hljs-string">'φ'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>The following are useful because of the sorting provided by <code>symmetry.sortPNFExpression</code>.
+E.g. this sorting guaratees that not φ comes after φ in a disjunction.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  contradiction_and :
+    from : <span class="hljs-string">'φ and not φ'</span>
+    to : <span class="hljs-string">'false'</span>
+  contradiction_and_left :
+    from : <span class="hljs-string">'φ and (not φ and ψ)'</span>
+    to : <span class="hljs-string">'false'</span>
+  contradiction_and_right : <span class="hljs-comment"># Do we need this (`symmetry.rebuildExpression` should mean it doesn't happen)?</span>
+    from : <span class="hljs-string">'(ψ and φ) and not φ'</span>
+    to : <span class="hljs-string">'false'</span>
+  taut_or :
+    from : <span class="hljs-string">'φ or not φ'</span>
+    to : <span class="hljs-string">'true'</span>
+  taut_and_left :
+    from : <span class="hljs-string">'φ or (not φ or ψ)'</span>
+    to : <span class="hljs-string">'true'</span>
+  taut_and_right :       <span class="hljs-comment"># Do we need this (`symmetry.rebuildExpression` should mean it doesn't happen)?</span>
+    from : <span class="hljs-string">'(ψ or φ) or not φ'</span>
+    to : <span class="hljs-string">'true'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>The following are not needed because we now use
+the more general <code>symmetry.removeQuantifiersThatBindNothing</code>.
+exists_false :
+  from : ‘exists τ false’
+  to : ‘false’
+exists_true :
+  from : ‘exists τ true’
+  to : ‘true’
+all_false :
+  from : ‘all τ false’
+  to : ‘false’
+all_true :
+  from : ‘all τ true’
+  to : ‘true’</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    
+  
+    
+subs_eliminate_redundancy = {}
+<span class="hljs-keyword">for</span> k,v <span class="hljs-keyword">of</span> _subs_eliminate_redundancy
+  from = fol.parse v.from
+  util.delExtraneousProperties from
+  to = fol.parse v.to
+  util.delExtraneousProperties to
+  theSub = {<span class="hljs-attribute">from</span>:from, <span class="hljs-attribute">to</span>:to}
+  subs_eliminate_redundancy[k] = theSub
+exports.subs_eliminate_redundancy = subs_eliminate_redundancy</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Apply the <code>sub</code> to the <code>expression</code>.  <code>sub</code> is like {from:”not not φ”, to:”φ”}
+If <code>sub</code> cannot be applied, returns <code>expression</code> unchanged.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">doSub</span> = <span class="hljs-params">(expression, sub)</span> -&gt;</span>
+  theMatches = findMatches expression, sub.from 
+  <span class="hljs-keyword">if</span> theMatches 
+    <span class="hljs-keyword">return</span> applyMatches(sub.to, theMatches)
+  <span class="hljs-keyword">else</span> 
+    <span class="hljs-keyword">return</span> expression 
+exports.doSub = doSub</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Apply the <code>sub</code> to the <code>expression</code> and all its components.<br>(See doSub.)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">doSubRecursive</span> = <span class="hljs-params">(expression, sub)</span> -&gt;</span>
+  result = {}
+  <span class="hljs-keyword">for</span> property <span class="hljs-keyword">in</span> [<span class="hljs-string">'left'</span>,<span class="hljs-string">'right'</span>,<span class="hljs-string">'variable'</span>]
+    <span class="hljs-keyword">if</span> expression[property]?
+      result[property] = doSubRecursive expression[property], sub
+  <span class="hljs-keyword">if</span> expression.termlist?
+    result.termlist = (doSubRecursive(t,sub) <span class="hljs-keyword">for</span> t <span class="hljs-keyword">in</span> expression.termlist)      
+  result = _.defaults result, expression
+  <span class="hljs-keyword">return</span> doSub(result, sub)
+exports.doSubRecursive = doSubRecursive</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>Determines whether  <code>expression</code> matches <code>pattern</code>, e.g. whether <code>not not A</code> matches <code>not φ</code>.
+Where <code>expression</code> and <code>pattern</code> are fol.parse objects (not strings).
+@returns false if no match, otherwise a map with each variable’s match.
+  E.g, in the above case it will return <code>{φ:fol.parse(&#39;not A&#39;)}</code>
+@param expression is like <code>fol.parse(&quot;not not (P and Q)&quot;)</code>
+@param pattern is like <code>fol.parse(&quot;not not φ&quot;)</code> (extraneous properties will be removed)
+Note: <code>fol.parse &quot;φ&quot;</code> creates an expression with type  <code>expression_variable</code>
+@param _matches should be null (is used internally to keep track of what is already matched).
+Note: this function only attempts to match <code>expression</code> itself 
+(it does not look for matches with components of <code>expression</code>).</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">findMatches</span> = <span class="hljs-params">(expression, pattern, _matches, o)</span> -&gt;</span>
+  _matches ?= {}
+  o ?= {}
+  o.symmetricIdentity ?= <span class="hljs-literal">false</span>
+  o._notFirstCall ?= <span class="hljs-literal">false</span>
+  <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> o._notFirstCall</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>function is being called by user (not recursively)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    util.delExtraneousProperties(pattern)
+    o._notFirstCall = <span class="hljs-literal">true</span>
+  
+  <span class="hljs-keyword">if</span> pattern <span class="hljs-keyword">is</span> <span class="hljs-literal">null</span>
+    <span class="hljs-keyword">if</span> expression <span class="hljs-keyword">is</span> <span class="hljs-literal">null</span>
+      <span class="hljs-keyword">return</span> _matches
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
+  
+  <span class="hljs-keyword">if</span> _.isArray pattern
+    <span class="hljs-keyword">return</span> _findMatchesArray expression, pattern, _matches, o <span class="hljs-comment">#may update _matches</span>
+    
+  <span class="hljs-keyword">if</span> _.isString pattern
+    <span class="hljs-keyword">if</span> _.isString(expression) <span class="hljs-keyword">and</span> (expression <span class="hljs-keyword">is</span> pattern)
+      <span class="hljs-keyword">return</span> _matches
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
+  
+  <span class="hljs-keyword">if</span> _.isBoolean pattern
+    <span class="hljs-keyword">if</span> _.isBoolean(expression) <span class="hljs-keyword">and</span> (expression <span class="hljs-keyword">is</span> pattern)
+      <span class="hljs-keyword">return</span> _matches
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>Pattern is an object.</p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>First check whether it’s an expression_variable; and, if so, test for a match.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> <span class="hljs-string">'type'</span> <span class="hljs-keyword">of</span> pattern <span class="hljs-keyword">and</span> (pattern.type <span class="hljs-keyword">in</span> [<span class="hljs-string">'expression_variable'</span>, <span class="hljs-string">'term_metavariable'</span>])
+    targetVar = pattern.letter <span class="hljs-keyword">if</span> pattern.type <span class="hljs-keyword">is</span> <span class="hljs-string">'expression_variable'</span> <span class="hljs-comment"># eg φ</span>
+    targetVar = pattern.name <span class="hljs-keyword">if</span> pattern.type <span class="hljs-keyword">is</span> <span class="hljs-string">'term_metavariable'</span> <span class="hljs-comment"># eg τ2</span>
+    targetValue = expression
+    <span class="hljs-keyword">if</span> targetVar <span class="hljs-keyword">of</span> _matches
+      <span class="hljs-keyword">if</span> util.areIdenticalExpressions targetValue, _matches[targetVar]
+        <span class="hljs-keyword">return</span> _matches
+      <span class="hljs-keyword">else</span>
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
+    <span class="hljs-keyword">else</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>console.log “matched #{targetVar} with #{targetValue.type}”</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      _matches[targetVar] = targetValue
+      <span class="hljs-keyword">return</span> _matches</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>From this point on, we know that pattern.type isn neither 
+an expression_variable nor a term_metavariable.</p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>The following special case is needed only because we want to be able to
+treat identity as symmetric when <code>o.symmetricIdentity</code> is true.
+(This was needed for <code>symmetry.arePNFExpressionsEquivalent</code>, although now 
+we don’t need it because we sort identity statements.)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> <span class="hljs-string">'type'</span> <span class="hljs-keyword">of</span> pattern <span class="hljs-keyword">and</span> pattern.type <span class="hljs-keyword">is</span> <span class="hljs-string">'identity'</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">unless</span> (expression.type? <span class="hljs-keyword">and</span> expression.type <span class="hljs-keyword">is</span> <span class="hljs-string">'identity'</span>)
+    result = _findMatchesArray expression.termlist, pattern.termlist, _matches, o</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>Check whether we need to treat identity as symmetric.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> result <span class="hljs-keyword">is</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">and</span> o.symmetricIdentity <span class="hljs-keyword">is</span> <span class="hljs-literal">true</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>We need to attempt to match the other way around.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      reversedPatternTermlist = [pattern.termlist[<span class="hljs-number">1</span>],pattern.termlist[<span class="hljs-number">0</span>]]
+      result = _findMatchesArray expression.termlist, reversedPatternTermlist, _matches, o
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">if</span> result <span class="hljs-keyword">is</span> <span class="hljs-literal">false</span>
+    <span class="hljs-keyword">return</span> _matches</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <h1 id="we-could-attempt-to-save-some-time-by-checking-primitive">We could attempt to save some time by checking primitive</h1>
+<h1 id="properties-first-as-follows-">properties first as follows.</h1>
+<p>for attr in [‘type’,’letter’,’name’]
+  if pattern[attr]?
+    return false unless expression[attr]?
+    return false unless expression[attr] is pattern[attr]</p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>Pattern is an object and not an expression_variable, so we
+loop through its keys and match them with keys of <code>expression</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">for</span> key, value <span class="hljs-keyword">of</span> pattern
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">unless</span> (key <span class="hljs-keyword">of</span> expression)
+    <span class="hljs-keyword">if</span> pattern[key] <span class="hljs-keyword">is</span> <span class="hljs-literal">undefined</span>
+      <span class="hljs-built_in">console</span>.log <span class="hljs-string">"pattern = <span class="hljs-subst">#{util.expressionToString pattern}</span>, key = <span class="hljs-subst">#{key}</span>"</span>
+    result = findMatches expression[key], pattern[key], _matches, o <span class="hljs-comment">#may update _matches</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">if</span> result <span class="hljs-keyword">is</span> <span class="hljs-literal">false</span>
+  <span class="hljs-keyword">return</span> _matches
+  
+exports.findMatches = findMatches
+<span class="hljs-function">
+<span class="hljs-title">_findMatchesArray</span> = <span class="hljs-params">(expression, arrayOfPatterns, _matches, o)</span> -&gt;</span>
+  <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> (_.isArray(expression))
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
+  arrayOfExpressions = expression
+  <span class="hljs-keyword">if</span> expression.length <span class="hljs-keyword">isnt</span> arrayOfPatterns.length
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
+  <span class="hljs-keyword">for</span> pattern, i <span class="hljs-keyword">in</span> arrayOfPatterns
+    result = findMatches arrayOfExpressions[i], arrayOfPatterns[i], _matches, o
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">if</span> result <span class="hljs-keyword">is</span> <span class="hljs-literal">false</span>
+  <span class="hljs-keyword">return</span> _matches</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-22">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-22">&#182;</a>
+              </div>
+              <p>Replaces occurrences of an <code>expression_variable</code> in <code>pattern</code> with the corresponding
+value from <code>matches</code>.  E.g. 
+    <code>applyMatches fol.parse(&quot;not not φ&quot;), {φ:fol.parse(&#39;A and B&#39;)}</code>
+will return fol.parse(“not not (A and B)”)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">applyMatches</span> = <span class="hljs-params">(pattern, matches)</span> -&gt;</span>
+  <span class="hljs-keyword">if</span> <span class="hljs-string">'type'</span> <span class="hljs-keyword">of</span> pattern <span class="hljs-keyword">and</span> (pattern.type <span class="hljs-keyword">is</span> <span class="hljs-string">'expression_variable'</span> <span class="hljs-keyword">or</span> pattern.type <span class="hljs-keyword">is</span> <span class="hljs-string">'term_metavariable'</span>)
+    targetVar = pattern.letter <span class="hljs-keyword">if</span> pattern.type <span class="hljs-keyword">is</span> <span class="hljs-string">'expression_variable'</span> <span class="hljs-comment"># eg φ</span>
+    targetVar = pattern.name <span class="hljs-keyword">if</span> pattern.type <span class="hljs-keyword">is</span> <span class="hljs-string">'term_metavariable'</span> <span class="hljs-comment"># eg τ2</span>
+    <span class="hljs-keyword">return</span> util.cloneExpression(matches[targetVar])
+  res = {}
+  <span class="hljs-keyword">if</span> pattern.left?
+    res.left = applyMatches pattern.left, matches
+  <span class="hljs-keyword">if</span> pattern.right?
+    res.right = applyMatches pattern.right, matches
+  <span class="hljs-keyword">if</span> pattern.termlist?
+    res.termlist = (applyMatches(t,matches) <span class="hljs-keyword">for</span> t <span class="hljs-keyword">in</span> pattern.termlist)
+  <span class="hljs-keyword">if</span> pattern.boundVariable?
+    res.boundVariable = applyMatches(pattern.boundVariable, matches)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-23">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-23">&#182;</a>
+              </div>
+              <p>add everything from <code>pattern</code> to <code>res</code> except where <code>res</code> already contains it</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">return</span> _.defaults(res, pattern)
+  
+exports.applyMatches = applyMatches</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-24">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-24">&#182;</a>
+              </div>
+              <p>Replaces all instances of <code>whatToReplace.from</code> with <code>whatToReplace.to</code> in <code>expression</code>.
+E.g.
+   the expression <code>fol.parse &quot;Loves(x,b)&quot;</code> 
+   would be turned into <code>Loves(a,b)</code> with whatToReplace = {from:VARIABLE_X, to:NAME_A}</p>
+<p>WARNING: At present this will not take into account whether a variable is bound
+when replacing it!</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">replace</span> =  <span class="hljs-params">(expression, whatToReplace)</span> -&gt;</span>
+  toFind = whatToReplace.from
+  toReplace = whatToReplace.to
+  <span class="hljs-keyword">if</span> util.areIdenticalExpressions(expression, toFind)
+    <span class="hljs-keyword">return</span> util.cloneExpression(toReplace)
+  result = {}
+  <span class="hljs-keyword">if</span> expression.left?
+    result.left = replace expression.left, whatToReplace
+  <span class="hljs-keyword">if</span> expression.right?
+    result.right = replace expression.right, whatToReplace
+  <span class="hljs-keyword">if</span> expression.termlist?
+    result.termlist = (replace(t,whatToReplace) <span class="hljs-keyword">for</span> t <span class="hljs-keyword">in</span> expression.termlist)
+  <span class="hljs-keyword">if</span> expression.boundVariable?
+    result.boundVariable = replace(expression.boundVariable, whatToReplace)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-25">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p>add everything from <code>expression</code> to <code>result</code> except where <code>result</code> already contains it</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">return</span> _.defaults(result, expression)  
+  
+exports.replace = replace</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-26">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-26">&#182;</a>
+              </div>
+              <p>Go through expression and rename variables so that each 
+quantifier binds a distinct variable.
+This may use variable names that are illegal in the yaFOL lexer (e.g. xx1, xx2).
+(This isn’t strictly necessary: it just provides a visual marker that things have been changed.)</p>
+<p>The new variable names will have the form <code>newVariableBaseName[0-9]+</code> .
+If you want to create a pattern to match, set <code>newVariableBaseName</code> to ‘τ’.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">renameVariables</span> = <span class="hljs-params">(expression, newVariableBaseName, _varStack, _newVarIdx)</span> -&gt;</span>
+  newVariableBaseName ?= <span class="hljs-string">'xx'</span>
+  _newVarIdx ?= {<span class="hljs-attribute">idx</span>:<span class="hljs-number">0</span>} <span class="hljs-comment">#Note: this is not a number because we need to mutate it.</span>
+  _varStack ?= {}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-27">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-27">&#182;</a>
+              </div>
+              <p>Note: <code>expression.boundVariable?</code> is currently equivalent to 
+<code>(expression.type in [&#39;existential_quantifier&#39;,&#39;universal_quantifier&#39;])</code>.<br>But what follows should generalise in case new quantifiers are added to yaFOL.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> expression.boundVariable?
+    quantifier = expression
+    variableNameToRename = quantifier.boundVariable.name
+    _newVarIdx.idx += <span class="hljs-number">1</span>
+    newName = <span class="hljs-string">"<span class="hljs-subst">#{newVariableBaseName}</span><span class="hljs-subst">#{_newVarIdx.idx}</span>"</span>
+    _varStack[variableNameToRename] ?= []
+    _varStack[variableNameToRename].push newName
+    quantifier.boundVariable.name = newName
+    <span class="hljs-keyword">if</span> newVariableBaseName[<span class="hljs-number">0</span>] <span class="hljs-keyword">in</span> [<span class="hljs-string">'α'</span>,<span class="hljs-string">'β'</span>,<span class="hljs-string">'γ'</span>,<span class="hljs-string">'τ'</span>]
+      quantifier.boundVariable.type = <span class="hljs-string">'term_metavariable'</span>
+    renameVariables quantifier.left, newVariableBaseName, _varStack, _newVarIdx</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-28">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-28">&#182;</a>
+              </div>
+              <p>None of the yaFOL quantifiers currently have <code>.right</code> but we would rename
+<code>quantifier.right</code> as well if they did.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> quantifier.right?
+      renameVariables quantifier.right, newVariableBaseName, _varStack, _newVarIdx
+    _varStack[variableNameToRename].pop()
+    <span class="hljs-keyword">return</span> expression</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-29">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-29">&#182;</a>
+              </div>
+              <p>Note: <code>expression.termlist?</code> is currently short for testing <code>expression.type</code> 
+against ‘predicate’ and ‘identity’.  But doing it this way means it will work
+for any extensions involving termlists.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> expression.termlist?</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-30">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-30">&#182;</a>
+              </div>
+              <p>I’m calling it a predicate but <code>expression.type</code> may be ‘identity’; that will work fine too.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    predicate = expression
+    <span class="hljs-keyword">for</span> term <span class="hljs-keyword">in</span> expression.termlist <span class="hljs-keyword">when</span> term.type <span class="hljs-keyword">is</span> <span class="hljs-string">'variable'</span>
+      variable = term
+      variableNameToRename = variable.name</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-31">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-31">&#182;</a>
+              </div>
+              <p>Find out whether have already assigned this variable a new name.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      _varStack[variableNameToRename] ?= []
+      theStack = _varStack[variableNameToRename]
+      <span class="hljs-keyword">if</span> theStack.length <span class="hljs-keyword">is</span> <span class="hljs-number">0</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-32">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-32">&#182;</a>
+              </div>
+              <p>No, we have not already assigned this variable a new name (it’s unbound).</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        _newVarIdx.idx += <span class="hljs-number">1</span>
+        newName = <span class="hljs-string">"<span class="hljs-subst">#{newVariableBaseName}</span><span class="hljs-subst">#{_newVarIdx.idx}</span>"</span>
+        theStack.push newName</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-33">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-33">&#182;</a>
+              </div>
+              <p>From here we can proceed regardless of whether we have already assigned this variable a new name.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      newName = _.last theStack
+      variable.name = newName
+      <span class="hljs-keyword">if</span> newVariableBaseName[<span class="hljs-number">0</span>] <span class="hljs-keyword">in</span> [<span class="hljs-string">'α'</span>,<span class="hljs-string">'β'</span>,<span class="hljs-string">'γ'</span>,<span class="hljs-string">'τ'</span>]
+        variable.type = <span class="hljs-string">'term_metavariable'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-34">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-34">&#182;</a>
+              </div>
+              <p>I assume that any expression with a termlist is terminal (i.e. has no <code>.left</code> or <code>.right</code>)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> expression</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-35">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-35">&#182;</a>
+              </div>
+              <p>If we are here expression isn’t a quantifier and doesn’t have a termlist.
+So I assume it doesn’t contain any variables to rename.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> expression.left?
+    renameVariables expression.left, newVariableBaseName, _varStack, _newVarIdx
+  <span class="hljs-keyword">if</span> expression.right?
+    renameVariables expression.right, newVariableBaseName, _varStack, _newVarIdx
+  <span class="hljs-keyword">return</span> expression
+    
+exports.renameVariables = renameVariables</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-36">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-36">&#182;</a>
+              </div>
+              <p>returns a clone of <code>expression</code> in prenex normal form</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">prenexNormalForm</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+  result = expression <span class="hljs-comment">#No need to clone: that is done by the substitutions.</span>
+  result = doSubRecursive result, subs.replace_arrow
+  result = doSubRecursive result, subs.replace_double_arrow
+  result = renameVariables result</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-37">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-37">&#182;</a>
+              </div>
+              <p>The rest of the substitutions may need to be done repeatedly.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function">  
+  <span class="hljs-title">dnf</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+    result = expression
+    <span class="hljs-keyword">for</span> name,sub <span class="hljs-keyword">of</span> subs <span class="hljs-keyword">when</span> <span class="hljs-keyword">not</span> (name <span class="hljs-keyword">in</span> [<span class="hljs-string">'replace_arrow'</span>, <span class="hljs-string">'replace_double_arrow'</span>])
+      result = doSubRecursive result, sub
+    <span class="hljs-keyword">return</span> result
+  result = util.exhaust result, dnf</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-38">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-38">&#182;</a>
+              </div>
+              <h1 id="the-above-dnf-thing-is-slow-it-can-be-sped-up-by-applying-subsitutions">The above dnf thing is slow; it can be sped up by applying subsitutions</h1>
+<h1 id="in-smaller-sets-as-follows">in smaller sets as follows</h1>
+<h1 id="-but-this-makes-it-less-obvious-the-alogrithm-will-always-work-">(but this makes it less obvious the alogrithm will always work).</h1>
+<pre><code><span class="hljs-comment"># First move the quantifiers out.</span>
+<span class="hljs-function"><span class="hljs-title">quantifiersOut</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+  result = expression
+  <span class="hljs-keyword">for</span> sub <span class="hljs-keyword">in</span> [subs.not_all, subs.not_exists
+              subs.all_and_left, subs.all_and_right
+              subs.all_or_left, subs.all_or_right
+              subs.exists_and_left, subs.exists_and_right
+              subs.exists_or_left,  subs.exists_or_right
+            ]
+    result = doSubRecursive result, sub
+  <span class="hljs-keyword">return</span> result
+result = util.exhaust result, quantifiersOut
+
+<span class="hljs-comment"># Then fix the body: push negations all the way in to the atomic formulae.</span>
+<span class="hljs-function"><span class="hljs-title">demorgan</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+  result = expression
+  <span class="hljs-keyword">for</span> sub <span class="hljs-keyword">in</span> [subs.dbl_neg, subs.demorgan1, subs.demorgan2]
+    result = doSubRecursive result, sub
+  <span class="hljs-keyword">return</span> result
+result = util.exhaust result, demorgan
+
+<span class="hljs-comment"># Finally, move disjunctions into conjunctions</span>
+<span class="hljs-function"><span class="hljs-title">dnf</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+  result = expression
+  <span class="hljs-keyword">for</span> sub <span class="hljs-keyword">in</span> [subs.cnf_left, subs.cnf_right]
+    result = doSubRecursive result, sub
+  <span class="hljs-keyword">return</span> result
+result = util.exhaust result, dnf
+</code></pre>
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  
+  <span class="hljs-keyword">return</span> result
+  
+exports.prenexNormalForm = prenexNormalForm</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-39">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-39">&#182;</a>
+              </div>
+              <p>Returns true just if expression is in prenex normal form.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">isPNF</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+  core = symmetry.removeQuantifiers expression
+  conjuncts = symmetry.listJuncts core, <span class="hljs-string">'and'</span>
+  nestedDisjuncts = ( symmetry.listJuncts(junct, <span class="hljs-string">'or'</span>) <span class="hljs-keyword">for</span> junct <span class="hljs-keyword">in</span> conjuncts)
+  <span class="hljs-keyword">for</span> someDisjuncts <span class="hljs-keyword">in</span> nestedDisjuncts
+    <span class="hljs-keyword">for</span> disjunct <span class="hljs-keyword">in</span> someDisjuncts</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-40">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-40">&#182;</a>
+              </div>
+              <p>We are only allowed sentence letters or negations in here</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">unless</span> (disjunct.type <span class="hljs-keyword">in</span> [<span class="hljs-string">'not'</span>, <span class="hljs-string">'sentence_letter'</span>, <span class="hljs-string">'predicate'</span>])
+      <span class="hljs-keyword">if</span> disjunct.type <span class="hljs-keyword">is</span> <span class="hljs-string">'not'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-41">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-41">&#182;</a>
+              </div>
+              <p>The thing negated must be a sentence letter or predicate</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">unless</span> disjunct.left.type <span class="hljs-keyword">in</span> [<span class="hljs-string">'sentence_letter'</span>,<span class="hljs-string">'predicate'</span>]
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>
+exports.isPNF = isPNF</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

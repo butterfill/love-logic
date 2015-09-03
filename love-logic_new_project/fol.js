@@ -627,7 +627,7 @@ pushState:function pushState(condition) {
 stateStackSize:function stateStackSize() {
         return this.conditionStack.length;
     },
-options: {},
+options: {"flex":true},
 performAction: function anonymous(yy,yy_,$avoiding_name_collisions,YY_START) {
 var YYSTATE=YY_START;
 switch($avoiding_name_collisions) {
@@ -681,10 +681,12 @@ case 23: return 5 ;
 break;
 case 24: return 'invalid_character' ;      
 break;
+case 25:console.log(yy_.yytext);
+break;
 }
 },
-rules: [/^(?:\s+)/,/^(?:true\b)/,/^(?:false|⊥)/,/^(?:=)/,/^(?:and|&|∧|•)/,/^(?:arrow|->|⇒|→|⊃)/,/^(?:↔|≡|⇔)/,/^(?:or|∨|\+|ǀǀ)/,/^(?:not|¬|˜|!)/,/^(?:nor|↓)/,/^(?:nand|↑)/,/^(?:all|∀|every\b)/,/^(?:some|exists|∃)/,/^(?:\()/,/^(?:\))/,/^(?:,)/,/^(?:[A-Z][A-Za-z0-9]*(?=((\s)*\()))/,/^(?:[PQRST][0-9]*)/,/^(?:[A-E][0-9]*)/,/^(?:[a-d][0-9]*)/,/^(?:[etxyzw][0-9]*)/,/^(?:[φψχ][0-9]*)/,/^(?:[αβγτ][0-9]*)/,/^(?:$)/,/^(?:.)/],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24],"inclusive":true}}
+rules: [/^(?:\s+)/,/^(?:true)/,/^(?:false|⊥)/,/^(?:=)/,/^(?:and|&|∧|•)/,/^(?:arrow|->|⇒|→|⊃)/,/^(?:↔|≡|⇔)/,/^(?:[oO][rR]|∨|\+|ǀǀ)/,/^(?:[nN][oO][tT]|¬|˜|!)/,/^(?:[nN][oO][rR]|↓)/,/^(?:[nN][aA][nN][dD]|↑)/,/^(?:[aA][lL][lL]|∀|[eE][vV][eE][rR][yY])/,/^(?:[sS][oO][mM][eE]|[eE][xX][iI][sS][tT][sS]|∃)/,/^(?:\()/,/^(?:\))/,/^(?:,)/,/^(?:[A-Z][A-Za-z0-9]*(?=((\s)*\()))/,/^(?:[PQRST][0-9]*)/,/^(?:[A-E][0-9]*)/,/^(?:[a-d][0-9]*)/,/^(?:[etxyzw][0-9]*)/,/^(?:[φψχ][0-9]*)/,/^(?:[αβγτ][0-9]*)/,/^(?:$)/,/^(?:.)/,/^(?:.)/],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],"inclusive":true}}
 });
 return lexer;
 })();

@@ -55,6 +55,7 @@
 
 _ = require 'lodash'
 
+util = require '../util'
 
 # This regular expression is used to split a line into indentation and content.
 _SPLIT_LINE = /^([|\s]*)([\s\S]*)/ 
@@ -80,11 +81,12 @@ class Block
     return _.last @content if @content.length>0
     return null
     
-  newLine : (content) ->
+  newLine : (content, lineNumberInSource) ->
     theLine = {
       type : 'line'
       parent : @
       prev : @getLastLine()
+      lineNumberInSource : lineNumberInSource
       content : content
       
       # Works up the proof from the current line
@@ -139,6 +141,8 @@ class Block
     _replacer = (key, value) ->
       if value and (key is 'prev' or key is 'parent')  # Ignore this value.
         return "[circular reference to #{value?.type}]"
+      if key is 'sentence'
+        return util.expressionToString(value)
       return undefined if _.isFunction value  # Ignore functions.
       return value
     return JSON.stringify @, _replacer, 4
@@ -176,7 +180,7 @@ parse = (lines) ->
         throw new Error "Bad indentation at line #{idx+1}. (It is indented to a level to which no earlier line is indented.)"
       prevIndentation = indentation
     
-    newLineOfBlock = block.newLine(content)
+    newLineOfBlock = block.newLine(content, idx+1)
     if (isDivider line) 
       newLineOfBlock.type = 'divider'
   

@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>symmetry.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page_wrapper">
+            <div id="jump_page">
+              
+                
+                <a class="source" href="block_parser.html">
+                  block_parser.coffee
+                </a>
+              
+                
+                <a class="source" href="evaluate.html">
+                  evaluate.coffee
+                </a>
+              
+                
+                <a class="source" href="substitute.html">
+                  substitute.coffee
+                </a>
+              
+                
+                <a class="source" href="symmetry.html">
+                  symmetry.coffee
+                </a>
+              
+                
+                <a class="source" href="util.html">
+                  util.coffee
+                </a>
+              
+            </div>
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>symmetry.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <p>TODO Should this be called ‘normal form’ or something?</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+_ = <span class="hljs-built_in">require</span> <span class="hljs-string">'lodash'</span>
+
+util = <span class="hljs-built_in">require</span> <span class="hljs-string">'./util'</span>
+substitute = <span class="hljs-built_in">require</span> <span class="hljs-string">'./substitute'</span>
+<span class="hljs-function">
+<span class="hljs-title">areExpressionsEquivalent</span> = <span class="hljs-params">(left, right)</span> -&gt;</span>
+  left = substitute.prenexNormalForm left
+  right = substitute.prenexNormalForm right
+  <span class="hljs-keyword">return</span> arePNFExpressionsEquivalent left, right
+exports.areExpressionsEquivalent = areExpressionsEquivalent
+<span class="hljs-function">
+
+<span class="hljs-title">arePNFExpressionsEquivalent</span> = <span class="hljs-params">(left, right)</span> -&gt;</span>
+  left =  eliminateRedundancyInPNF(left)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Strictly speaking, we don’t need to sort as <code>eliminateRedundancyInPNF</code> currently does so anyway.
+But it’s essential that we are sorted, so I’ll do it anyway.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  left = sortPNFExpression(left)
+  sortIdentityStatements(left)
+  right = eliminateRedundancyInPNF(right)
+  right = sortPNFExpression(right)
+  sortIdentityStatements(right)
+  pattern = substitute.renameVariables left, <span class="hljs-string">'τ'</span>
+  patternCore = removeQuantifiers pattern
+  rightCore = removeQuantifiers right</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Note: the commented-out parameters in the call to <code>substitute.findMatches</code>
+enables matches to be found irrespective of the order of terms in identity statements.
+This is now necessary because we sort identity statements (using <code>sortIdentityStatements</code>).</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  matches = substitute.findMatches rightCore, patternCore <span class="hljs-comment">#, null, {symmetricIdentity:true}</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">if</span> matches <span class="hljs-keyword">is</span> <span class="hljs-literal">false</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>From this point on, we know that the cores (expressions minus quantifiers)
+match.  The question is just whether the quantifiers match.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  modifiedLeft = substitute.applyMatches pattern, matches</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>There’s a potential catch.  If there were quantifiers that dont bind anything,
+there could be unmatched term_metavariables in <code>modifiedLeft</code>.
+But since we did <code>removeQuantifiersThatBindNothing</code> (as part of <code>eliminateRedundancyInPNF</code>),
+this possibility will not arise here.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  
+  <span class="hljs-keyword">return</span> arePrefixedQuantifiersEquivalent modifiedLeft, right
+exports.arePNFExpressionsEquivalent = arePNFExpressionsEquivalent</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Sort the conjuncts and disjuncts in an expression in PNF.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">sortPNFExpression</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+  theQuantifiers = getPrefixedQuantifiers expression
+  core = removeQuantifiers expression
+  conjuncts = listJuncts core, <span class="hljs-string">'and'</span>
+  nestedDisjuncts = ( listJuncts(junct, <span class="hljs-string">'or'</span>) <span class="hljs-keyword">for</span> junct <span class="hljs-keyword">in</span> conjuncts)
+  <span class="hljs-keyword">for</span> junctList <span class="hljs-keyword">in</span> nestedDisjuncts
+    sortJuncts junctList
+  sortListOfJuncts nestedDisjuncts
+  rebuiltConjuncts = []
+  <span class="hljs-keyword">for</span> junctList <span class="hljs-keyword">in</span> nestedDisjuncts
+    rebuiltConjuncts.push rebuildExpression(junctList, <span class="hljs-string">'or'</span>)
+  rebuiltCore = rebuildExpression rebuiltConjuncts, <span class="hljs-string">'and'</span>
+  <span class="hljs-keyword">return</span> attachExpressionToQuantifiers rebuiltCore, theQuantifiers
+exports.sortPNFExpression = sortPNFExpression</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Find the sub-expression of <code>expression</code> which starts after any leading quantifiers.
+(Does not modify or clone <code>expression</code>.)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">removeQuantifiers</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+  <span class="hljs-keyword">if</span> expression.boundVariable?
+    <span class="hljs-keyword">return</span> removeQuantifiers expression.left
+  <span class="hljs-keyword">return</span> expression
+exports.removeQuantifiers = removeQuantifiers</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Given an <code>expression</code> like “P and (Q and (R or (P1 and P2)))” and <code>type</code> “and”,
+returns [“P”, “Q”, “(R or (P1 and P2)”], i.e. a list of juncts.
+Parameter <code>type</code> can be ‘and’, ‘or’ or any type which has <code>.left</code> and <code>.right</code> properties
+(but it only makes sense for symmetric things, so wouldn’t make sense for ‘arrow’).
+If <code>expression.type</code> isnt <code>type</code>, it will return a list containing just <code>expression</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">listJuncts</span> = <span class="hljs-params">(expression, type)</span> -&gt;</span>
+  <span class="hljs-keyword">if</span> expression.type? <span class="hljs-keyword">and</span> expression.type <span class="hljs-keyword">isnt</span> type
+    <span class="hljs-keyword">return</span> [expression]
+  <span class="hljs-keyword">if</span> expression.type? <span class="hljs-keyword">and</span> expression.type <span class="hljs-keyword">is</span> type
+    _juncts = []</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>note: push takes multiple arguments and the ‘…’ operator turns a list into arguments</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    _juncts.push listJuncts(expression.left, type)...
+    _juncts.push listJuncts(expression.right, type)...
+    <span class="hljs-keyword">return</span> _juncts
+  <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error <span class="hljs-string">"listJuncts called with type = <span class="hljs-subst">#{type}</span> and unrecognized expression = <span class="hljs-subst">#{JSON.stringify expression,<span class="hljs-literal">null</span>,<span class="hljs-number">4</span>}</span>"</span>
+  
+exports.listJuncts = listJuncts</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Sort a list of juncts into a standard order.
+This only works where the juncts are atomic expressions.
+(It’s used in comparing expressions in PNF.)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">sortJuncts</span> = <span class="hljs-params">(listOfJuncts)</span> -&gt;</span>
+  <span class="hljs-keyword">return</span> listOfJuncts.sort(util.atomicExpressionComparator)
+exports.sortJuncts = sortJuncts</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>Sort a list of lists of juncts into a standard order.
+This only works where the juncts are atomic expressions.
+(It’s used in comparing expressions in PNF.)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">sortListOfJuncts</span> = <span class="hljs-params">(listOfListOfJuncts)</span> -&gt;</span>
+  <span class="hljs-keyword">return</span> listOfListOfJuncts.sort(util.listOfAtomicExpressionsComparator)
+exports.sortListOfJuncts = sortListOfJuncts</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>Takes a list of juncts and rebuilds them into a 
+conjunction or whatever is specified by <code>type</code> (e.g. ‘or’ for building a disjunction).</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">rebuildExpression</span> = <span class="hljs-params">(listOfJuncts, type)</span> -&gt;</span>
+  <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> listOfJuncts <span class="hljs-keyword">or</span> <span class="hljs-keyword">not</span>  listOfJuncts.length? <span class="hljs-keyword">or</span> listOfJuncts.length <span class="hljs-keyword">is</span> <span class="hljs-number">0</span>
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error <span class="hljs-string">"rebuildExpression called with listOfJuncts = <span class="hljs-subst">#{listOfJuncts}</span>"</span>
+    
+  <span class="hljs-keyword">if</span> listOfJuncts.length <span class="hljs-keyword">is</span> <span class="hljs-number">1</span>
+    <span class="hljs-keyword">return</span> listOfJuncts[<span class="hljs-number">0</span>]
+  
+  head = listOfJuncts.shift()
+  tail = listOfJuncts
+  right = rebuildExpression(tail, type)
+  <span class="hljs-keyword">return</span> {<span class="hljs-attribute">type</span>:type, <span class="hljs-attribute">left</span>:head, <span class="hljs-attribute">right</span>:right}
+exports.rebuildExpression = rebuildExpression</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p><code>expression</code> starts with zero or more quantifiers of type <code>type</code> (e.g. ‘existential_quantifier’).
+This function returns an object containing (i) <code>quantifiedExpression</code>, the expression after 
+the initial quantifiers of <code>type</code>, and (ii) <code>boundVariables</code>, a list of variables bound by
+those quantifiers.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">listQuants</span> = <span class="hljs-params">(expression, type)</span> -&gt;</span>
+  <span class="hljs-keyword">if</span> expression.type? <span class="hljs-keyword">and</span> expression.type <span class="hljs-keyword">isnt</span> type
+    <span class="hljs-keyword">return</span> {<span class="hljs-attribute">quantifiedExpression</span>: expression}
+  <span class="hljs-keyword">if</span> expression.type? <span class="hljs-keyword">and</span> expression.type <span class="hljs-keyword">is</span> type
+    result = listQuants expression.left, type
+    result.boundVariables ?=  []
+    result.boundVariables.push expression.boundVariable
+    <span class="hljs-keyword">return</span> result
+  <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error <span class="hljs-string">"listQuants called with type = <span class="hljs-subst">#{type}</span> and unrecognized expression = <span class="hljs-subst">#{JSON.stringify expression,<span class="hljs-literal">null</span>,<span class="hljs-number">4</span>}</span>"</span>
+exports.listQuants = listQuants</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>Returns a new expression containing just a clone of the sequence of quantifiers
+which occur at the start of expression (if any), or <code>null</code> if there are none.
+(Does not modify <code>expression</code>.)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">getPrefixedQuantifiers</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+  theRest = <span class="hljs-literal">null</span>
+  <span class="hljs-keyword">if</span> expression.boundVariable?
+    quantifier = expression
+    theRest = getPrefixedQuantifiers quantifier.left</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>build a fake quantifier</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span>  {<span class="hljs-attribute">type</span>:quantifier.type, <span class="hljs-attribute">symbol</span>:quantifier.symbol, <span class="hljs-attribute">location</span>:quantifier.location, <span class="hljs-attribute">boundVariable</span>:quantifier.boundVariable, <span class="hljs-attribute">left</span>:theRest, <span class="hljs-attribute">right</span>:<span class="hljs-literal">null</span>}; 
+  <span class="hljs-keyword">else</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
+exports.getPrefixedQuantifiers = getPrefixedQuantifiers</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p><code>quantifiers</code> is a pseudo-expression containing some quantifiers.
+<code>expression</code> is a yaFOL expression.
+It modifies <code>quantifiers</code> in place, attaching expression the end of them.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">attachExpressionToQuantifiers</span> = <span class="hljs-params">(expression, quantifiers)</span> -&gt;</span>
+  <span class="hljs-keyword">if</span> quantifiers <span class="hljs-keyword">is</span> <span class="hljs-literal">null</span>
+    <span class="hljs-keyword">return</span> expression
+  <span class="hljs-keyword">if</span> quantifiers.left <span class="hljs-keyword">isnt</span> <span class="hljs-literal">null</span>
+    attachExpressionToQuantifiers(expression, quantifiers.left) 
+  <span class="hljs-keyword">else</span>
+    quantifiers.left = expression
+  <span class="hljs-keyword">return</span> quantifiers
+exports.attachExpressionToQuantifiers = attachExpressionToQuantifiers</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>Returns true for 
+  <code>arePrefixedQuantifiersEquivalent fol.parse(&quot;all x all y P&quot;), fol.parse(&quot;all y all x Q&quot;)</code>
+Returns false for 
+  <code>arePrefixedQuantifiersEquivalent fol.parse(&quot;all x exists y P&quot;), fol.parse(&quot;all y exists x Q&quot;)</code></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">arePrefixedQuantifiersEquivalent</span> = <span class="hljs-params">(left, right, _inProgress)</span> -&gt;</span>
+  _inProgress ?= 
+    quantifierType : <span class="hljs-literal">null</span>
+    leftBoundVariables : []
+    rightBoundVariables : []
+  
+  quantifierType = left?.type <span class="hljs-keyword">or</span> <span class="hljs-literal">null</span>
+  
+  <span class="hljs-keyword">if</span> _inProgress.quantifierType <span class="hljs-keyword">isnt</span> quantifierType</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>New type of quantifier or end of sequence. 
+First check that the boundVariables we collected previously match.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    _inProgress.leftBoundVariables.sort()
+    _inProgress.rightBoundVariables.sort()
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">unless</span> _.isEqual(_inProgress.leftBoundVariables, _inProgress.rightBoundVariables)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>Everything matches so far: reset the list of bounded variables for the next quantifier sequence.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    _inProgress.leftBoundVariables = []
+    _inProgress.rightBoundVariables = []
+    _inProgress.quantifierType = quantifierType</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p><code>left</code> or <code>right</code> can be null when we reach the end of a sequence of quantifiers.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> left <span class="hljs-keyword">is</span> <span class="hljs-literal">null</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span> <span class="hljs-keyword">if</span> right <span class="hljs-keyword">is</span> <span class="hljs-literal">null</span> 
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">not</span> right.boundVariable?) <span class="hljs-comment">#I.e. if `right` isn't a quantifier.</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>Test whether expression1 is a quantifier: only quantifiers have <code>.boundVariable</code> properties.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> left.boundVariable?</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-22">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-22">&#182;</a>
+              </div>
+              <p>The number of quantifiers must match.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span> <span class="hljs-keyword">if</span> right <span class="hljs-keyword">is</span> <span class="hljs-literal">null</span>  <span class="hljs-comment">#Right isn't a quantifier either.</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">not</span> right.boundVariable?) <span class="hljs-comment">#I.e. if `right` isn't a quantifier either.</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-23">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-23">&#182;</a>
+              </div>
+              <p>From here on, we know that left is a quantifier.</p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-24">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-24">&#182;</a>
+              </div>
+              <p>The sequence of quantifier types must match.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">if</span> right <span class="hljs-keyword">is</span> <span class="hljs-literal">null</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> right.type? 
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">if</span> right.type <span class="hljs-keyword">isnt</span> quantifierType
+  
+  _inProgress.leftBoundVariables.push(left.boundVariable.name)
+  _inProgress.rightBoundVariables.push(right.boundVariable.name)
+  <span class="hljs-keyword">return</span> arePrefixedQuantifiersEquivalent left.left, right.left, _inProgress
+exports.arePrefixedQuantifiersEquivalent = arePrefixedQuantifiersEquivalent</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-25">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p><code>expression</code> must be in PNF.
+<code>expression</code> will be modified in place.
+Provides a canonical sorting  for identity statements.
+This helps with finding equivalent expressions.
+For identity statements containing two variables,
+the order in which the variables appear depends on the order of the quantifiers.
+So <code>exists y all x x=y</code> will become <code>exists y all x y=x</code> because y is first.
+Note: param <code>_variableOrder</code> should not normally be given (used for recursion).</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">sortIdentityStatements</span> = <span class="hljs-params">(expression, _variableOrder)</span> -&gt;</span>
+  <span class="hljs-keyword">if</span> _variableOrder <span class="hljs-keyword">is</span> <span class="hljs-literal">undefined</span>
+    _variableOrder = _getVariableOrder(expression)
+  <span class="hljs-keyword">return</span> expression <span class="hljs-keyword">unless</span> expression?.type?
+  
+  <span class="hljs-keyword">if</span> expression.type <span class="hljs-keyword">isnt</span> <span class="hljs-string">'identity'</span>
+    <span class="hljs-keyword">if</span> expression.left?
+      sortIdentityStatements expression.left, _variableOrder
+    <span class="hljs-keyword">if</span> expression.right?
+      sortIdentityStatements expression.right, _variableOrder
+    <span class="hljs-keyword">return</span> expression
+  
+  identity = expression
+  left = expression.termlist[<span class="hljs-number">0</span>]
+  right = expression.termlist[<span class="hljs-number">1</span>]</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-26">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-26">&#182;</a>
+              </div>
+              <p>First, deal with two names or one name and a variable.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> util.termComparator(left, right) <span class="hljs-keyword">is</span> <span class="hljs-number">1</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-27">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-27">&#182;</a>
+              </div>
+              <p>swap left and right</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    [left, right] = [right, left]</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-28">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-28">&#182;</a>
+              </div>
+              <p>Now deal with two variables.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> left.type <span class="hljs-keyword">is</span> <span class="hljs-string">'variable'</span> <span class="hljs-keyword">and</span> right.type <span class="hljs-keyword">is</span> <span class="hljs-string">'variable'</span>
+    leftRank = _variableOrder.indexOf(left.name)
+    rightRank = _variableOrder.indexOf(right.name)
+    <span class="hljs-keyword">if</span> leftRank &gt; rightRank
+      [left, right] = [right, left]
+      
+  expression.termlist = [left, right]
+  <span class="hljs-keyword">return</span> expression
+exports.sortIdentityStatements = sortIdentityStatements</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-29">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-29">&#182;</a>
+              </div>
+              <p>Returns a list of the names of variables bound by quantifiers where <code>expression</code> 
+is in PNF.
+The variables are ordered in such a way that alternation between different 
+types of quantifier (existential and universal) is preserved; but variables
+bound by a sequence of quantifiers of the same type are sorted by name.
+This is used by <code>sortIdentityStatements</code> to determine which variable to put first
+in identity statements like x=y.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">_getVariableOrder</span> = <span class="hljs-params">(expression, _inProgress)</span> -&gt;</span>
+  _inProgress ?= 
+    quantifierType : <span class="hljs-literal">null</span>
+    thisTypeBoundVariables : []
+    allBoundVariables : []
+  
+  quantifierType = expression?.type <span class="hljs-keyword">or</span> <span class="hljs-literal">null</span>
+  
+  <span class="hljs-keyword">if</span> _inProgress.quantifierType <span class="hljs-keyword">isnt</span> quantifierType</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-30">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-30">&#182;</a>
+              </div>
+              <p>New type of quantifier or end of sequence. </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    _inProgress.thisTypeBoundVariables.sort()
+    _inProgress.allBoundVariables.push (_inProgress.thisTypeBoundVariables)...
+    _inProgress.thisTypeBoundVariables = []
+    _inProgress.quantifierType = quantifierType
+  
+  <span class="hljs-keyword">if</span> quantifierType <span class="hljs-keyword">is</span> <span class="hljs-literal">null</span> <span class="hljs-keyword">or</span> <span class="hljs-keyword">not</span> expression.boundVariable?
+    <span class="hljs-keyword">return</span> _inProgress.allBoundVariables
+  
+  _inProgress.thisTypeBoundVariables.push(expression.boundVariable.name)
+  <span class="hljs-keyword">return</span> _getVariableOrder expression.left, _inProgress</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-31">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-31">&#182;</a>
+              </div>
+              <p>Only export this for testing.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>exports._getVariableOrder = _getVariableOrder</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-32">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-32">&#182;</a>
+              </div>
+              <p>Warning : convert to PNF first!  (This only works for PNF sentences)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">eliminateRedundancyInPNF</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+<span class="hljs-function">  <span class="hljs-title">fn</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+    <span class="hljs-keyword">for</span> name, sub <span class="hljs-keyword">of</span> substitute.subs_eliminate_redundancy
+      expression = substitute.doSubRecursive expression, sub
+    expression = sortPNFExpression(expression)
+  result = util.exhaust expression, fn
+  result = removeQuantifiersThatBindNothing result
+  <span class="hljs-keyword">return</span> result
+exports.eliminateRedundancyInPNF = eliminateRedundancyInPNF</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-33">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-33">&#182;</a>
+              </div>
+              <p>Returns <code>true</code> if the variable named <code>variableName</code> occurs free in <code>expression</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">isVariableFree</span> = <span class="hljs-params">(variableName, expression)</span> -&gt;</span>
+  <span class="hljs-keyword">if</span> expression.termlist?
+    termNames = (t.name <span class="hljs-keyword">for</span> t <span class="hljs-keyword">in</span> expression.termlist)
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span> <span class="hljs-keyword">if</span> variableName <span class="hljs-keyword">in</span> termNames
+  <span class="hljs-keyword">if</span> expression.boundVariable?
+    <span class="hljs-keyword">if</span> expression.boundVariable.name <span class="hljs-keyword">is</span> variableName
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
+  <span class="hljs-keyword">if</span> expression.left?
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span> <span class="hljs-keyword">if</span> isVariableFree(variableName, expression.left)
+  <span class="hljs-keyword">if</span> expression.right?
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span> <span class="hljs-keyword">if</span> isVariableFree(variableName, expression.right)
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
+exports.isVariableFree = isVariableFree</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-34">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-34">&#182;</a>
+              </div>
+              <p>This may modify <code>expression</code> in place but you need to use its
+return value as it does not always modify <code>expression</code> in place.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">removeQuantifiersThatBindNothing</span> = <span class="hljs-params">(expression)</span> -&gt;</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-35">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-35">&#182;</a>
+              </div>
+              <p>Add the <code>parent</code> property to help with deleting a quantifier.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  util.addParents expression 
+<span class="hljs-function">
+  <span class="hljs-title">fn</span> = <span class="hljs-params">(expression)</span> -&gt;</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-36">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-36">&#182;</a>
+              </div>
+              <p>There’s nothing to do if <code>expression</code> isn’t a quantifier.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> expression <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> expression.boundVariable?</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-37">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-37">&#182;</a>
+              </div>
+              <p><code>expression</code> is a quantifier.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    quantifier = expression
+    quantifiedExpression = expression.left</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-38">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-38">&#182;</a>
+              </div>
+              <p>There’s nothing to do if <code>quantifier</code> binds a variable that occurs 
+free in the expression it quantifies.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> expression <span class="hljs-keyword">if</span> isVariableFree(quantifier.boundVariable.name, quantifiedExpression)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-39">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-39">&#182;</a>
+              </div>
+              <p>We need to remove this quantifier.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> quantifier.parent
+      <span class="hljs-keyword">return</span> quantifiedExpression</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-40">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-40">&#182;</a>
+              </div>
+              <p>Quantifier has a parent, so we want to attach <code>quantifiedExpression</code> to its parent.
+We need to out work whether <code>quantifier</code> is the <code>.left</code> or <code>.right</code> child.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> quantifier.parent.left <span class="hljs-keyword">is</span> quantifier
+      quantifier.parent.left = quantifiedExpression
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> expression.parent.right <span class="hljs-keyword">is</span> expression
+      quantifier.parent.right = quantifiedExpression
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error <span class="hljs-string">"Could not work out how to remove quantifier from expression."</span>
+    <span class="hljs-keyword">return</span> quantifiedExpression
+        
+  <span class="hljs-keyword">return</span> util.walk expression, fn
+exports.removeQuantifiersThatBindNothing = removeQuantifiersThatBindNothing</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

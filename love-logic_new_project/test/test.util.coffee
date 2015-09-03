@@ -79,11 +79,47 @@ describe 'util', ->
       string = util.expressionToString expression1
       expression2 = fol.parse string
       expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
-    it "should parse into what it was: sentences with predicates"
-    it "should parse into what it was: sentences with identity"
-    it "should parse into what it was: sentences with quantifiers"
-    it "should parse into what it was: sentences with `expression_variable`s"
-    it "should parse into what it was: sentences with `term_metavariable`s"
+    it "should parse into what it was: sentences with predicates", ->
+      expression1 = fol.parse 'F(x) and R(a,y)'
+      string = util.expressionToString expression1
+      expression2 = fol.parse string
+      expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
+    it "should parse into what it was: sentences with identity", ->
+      expression1 = fol.parse 'not x=y or (a=b and x=a)'
+      string = util.expressionToString expression1
+      expression2 = fol.parse string
+      expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
+    it "should parse into what it was: sentences with quantifiers", ->
+      expression1 = fol.parse 'all x some y (F(x) and R(a,y))'
+      string = util.expressionToString expression1
+      expression2 = fol.parse string
+      expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
+    it "should parse into what it was: sentences with `expression_variable`s", ->
+      expression1 = fol.parse 'A or not (φ ↔ ψ)'
+      string = util.expressionToString expression1
+      expression2 = fol.parse string
+      expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
+    it "should parse into what it was: sentences with `term_metavariable`s", ->
+      expression1 = fol.parse 'all τ some y (F(τ) and R(a,y))'
+      string = util.expressionToString expression1
+      expression2 = fol.parse string
+      expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
+    it "should parse into what it was: sentences with everything", ->
+      expression1 = fol.parse 'all τ some y (F(τ) and R(a,y) and P and φ and a=x and not τ=y)'
+      string = util.expressionToString expression1
+      expression2 = fol.parse string
+      expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
+    it "should parse into what it was: sentences with everything and no extraneous properties", ->
+      expression1 = fol.parse 'all τ some y (F(τ) and R(a,y) and P and φ and a=x and not τ=y)'
+      
+      # `util.delExtraneousProperties` will remove information about the symbols used 
+      # in the original string (the input to `fol.parse`).
+      # So this test ensures that `util.expressionToString` is providing  ok replacements.
+      util.delExtraneousProperties expression1
+      
+      string = util.expressionToString expression1
+      expression2 = fol.parse string
+      expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
 
   describe 'sameElementsDeep', ->
     it "should ignore order", ->

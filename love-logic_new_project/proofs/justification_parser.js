@@ -72,12 +72,12 @@
   }
 */
 var parser = (function(){
-var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,6],$V1=[1,7],$V2=[10,11],$V3=[5,7];
+var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,5],$V1=[1,10],$V2=[1,11],$V3=[1,12],$V4=[1,13],$V5=[1,9],$V6=[1,14],$V7=[1,15],$V8=[5,18],$V9=[5,8,14,15,16,17,19,20],$Va=[5,8,16,17,18],$Vb=[5,8,14,15,18];
 var parser = {trace: function trace() { },
 yy: {},
-symbols_: {"error":2,"justification":3,"j":4,"EOF":5,"rule":6,"number":7,"connective":8,"variant":9,"elimination":10,"introduction":11,"left":12,"right":13,"and":14,"or":15,"$accept":0,"$end":1},
-terminals_: {2:"error",5:"EOF",7:"number",10:"elimination",11:"introduction",12:"left",13:"right",14:"and",15:"or"},
-productions_: [0,[3,2],[4,1],[4,2],[4,2],[6,2],[9,1],[9,1],[9,2],[9,2],[9,2],[9,2],[8,1],[8,1]],
+symbols_: {"error":2,"justification":3,"j":4,"EOF":5,"rule_name":6,"numberlist":7,"connective":8,"intronation":9,"rule_name_option0":10,"rule_name_option1":11,"side":12,"rule_name_group0":13,"elim":14,"intro":15,"left":16,"right":17,"number":18,"reit":19,"premise":20,"$accept":0,"$end":1},
+terminals_: {2:"error",5:"EOF",8:"connective",14:"elim",15:"intro",16:"left",17:"right",18:"number",19:"reit",20:"premise"},
+productions_: [0,[3,2],[4,1],[4,2],[4,2],[6,3],[6,3],[6,3],[6,3],[6,3],[6,3],[6,1],[9,1],[9,1],[12,1],[12,1],[7,1],[7,2],[10,0],[10,1],[11,0],[11,1],[13,1],[13,1]],
 performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate /* action[1] */, $$ /* vstack */, _$ /* lstack */) {
 /* this == yyval */
 
@@ -87,30 +87,69 @@ case 1:
  return $$[$0-1]; 
 break;
 case 2:
- this.$ = {rule:$$[$0], location:_$[$0]}; 
+ this.$ = {type: 'justification', rule:$$[$0], location:_$[$0]}; 
 break;
 case 3:
- this.$ = {rule:$$[$0-1], location:_$[$0-1], numbers:$$[$0] }; 
+ this.$ = {type: 'justification', rule:$$[$0-1], location:_$[$0-1], numbers:$$[$0] }; 
 break;
 case 4:
- this.$ = {rule:$$[$0], location:_$[$0], numbers:$$[$0-1]}; 
+ this.$ = {type: 'justification', rule:$$[$0], location:_$[$0], numbers:$$[$0-1]}; 
 break;
 case 5:
- this.$= {connective:$$[$0-1], variant:$$[$0]}; 
+ this.$= { type: 'rule', connective:$$[$0-2], 
+              variant:{type:'variant', intronation:$$[$0-1], side:$$[$0] }
+            }; 
 break;
-case 6: case 7:
- this.$=[$$[$0]]; 
+case 6:
+ this.$= { type: 'rule', connective:$$[$0-1], 
+              variant:{type:'variant', intronation:$$[$0-2], side:$$[$0] }
+            }; 
 break;
-case 8: case 9: case 10: case 11:
- this.$=[$$[$0-1],$$[$0]]; 
+case 7:
+ this.$= { type: 'rule', connective:$$[$0-1], 
+              variant:{type:'variant', intronation:$$[$0], side:$$[$0-2] }
+            }; 
 break;
-case 12: case 13:
- this.$=$$[$0] 
+case 8:
+ this.$= { type: 'rule', connective:$$[$0-2], 
+              variant:{type:'variant', intronation:$$[$0], side:$$[$0-1] }
+            }; 
+break;
+case 9:
+ this.$= { type: 'rule', connective:$$[$0], 
+              variant:{type:'variant', intronation:$$[$0-1], side:$$[$0-2] }
+            }; 
+break;
+case 10:
+ this.$= { type: 'rule', connective:$$[$0], 
+              variant:{type:'variant', intronation:$$[$0-2], side:$$[$0-1] }
+            }; 
+break;
+case 11:
+ this.$= {type: 'rule', connective:$$[$0], variant:{type:'variant', intronation:null, side: null }}; 
+break;
+case 12:
+ this.$='elim'; 
+break;
+case 13:
+ this.$='intro'; 
+break;
+case 14:
+ this.$='left'; 
+break;
+case 15:
+ this.$='right'; 
+break;
+case 16:
+ this.$ = [$$[$0]]; 
+break;
+case 17:
+ this.$ = [$$[$0-1]].concat($$[$0]); 
 break;
 }
 },
-table: [{3:1,4:2,6:3,7:[1,4],8:5,14:$V0,15:$V1},{1:[3]},{5:[1,8]},{5:[2,2],7:[1,9]},{6:10,8:5,14:$V0,15:$V1},{9:11,10:[1,12],11:[1,13]},o($V2,[2,12]),o($V2,[2,13]),{1:[2,1]},{5:[2,3]},{5:[2,4]},o($V3,[2,5]),o($V3,[2,6],{12:[1,14],13:[1,15]}),o($V3,[2,7],{12:[1,16],13:[1,17]}),o($V3,[2,10]),o($V3,[2,11]),o($V3,[2,8]),o($V3,[2,9])],
-defaultActions: {8:[2,1],9:[2,3],10:[2,4]},
+table: [{3:1,4:2,6:3,7:4,8:$V0,9:6,12:7,13:8,14:$V1,15:$V2,16:$V3,17:$V4,18:$V5,19:$V6,20:$V7},{1:[3]},{5:[1,16]},{5:[2,2],7:17,18:$V5},{6:18,8:$V0,9:6,12:7,13:8,14:$V1,15:$V2,16:$V3,17:$V4,19:$V6,20:$V7},{9:19,12:20,14:$V1,15:$V2,16:$V3,17:$V4},{8:[1,21],12:22,16:$V3,17:$V4},{8:[1,23],9:24,14:$V1,15:$V2},o($V8,[2,11]),o($V9,[2,16],{7:25,18:$V5}),o($Va,[2,12]),o($Va,[2,13]),o($Vb,[2,14]),o($Vb,[2,15]),o($V8,[2,22]),o($V8,[2,23]),{1:[2,1]},{5:[2,3]},{5:[2,4]},o($V8,[2,18],{10:26,12:27,16:$V3,17:$V4}),{9:28,14:$V1,15:$V2},o($V8,[2,20],{11:29,12:30,16:$V3,17:$V4}),{8:[1,31]},{9:32,14:$V1,15:$V2},{8:[1,33]},o($V9,[2,17]),o($V8,[2,5]),o($V8,[2,19]),o($V8,[2,8]),o($V8,[2,6]),o($V8,[2,21]),o($V8,[2,10]),o($V8,[2,7]),o($V8,[2,9])],
+defaultActions: {16:[2,1],17:[2,3],18:[2,4]},
 parseError: function parseError(str, hash) {
     if (hash.recoverable) {
         this.trace(str);
@@ -579,50 +618,86 @@ pushState:function pushState(condition) {
 stateStackSize:function stateStackSize() {
         return this.conditionStack.length;
     },
-options: {},
+options: {"flex":true,"case-insensitive":true},
 performAction: function anonymous(yy,yy_,$avoiding_name_collisions,YY_START) {
 var YYSTATE=YY_START;
 switch($avoiding_name_collisions) {
-case 0: return 7;                 
+case 0: yy_.yytext = yy.lexer.matches[1];  return 18; 
 break;
-case 1: return 10 ;            
+case 1: yy_.yytext = yy.lexer.matches[1]+"-"+yy.lexer.matches[2];  
+      return 18; 
+    
 break;
-case 2: return 11 ;           
+case 2: yy_.yytext = yy.lexer.matches[1]+"-"+yy.lexer.matches[2];  
+      return 18; 
+    
 break;
-case 3: return 'identity' ;               
+case 3: yy_.yytext = yy.lexer.matches[1];
+      return 18; 
 break;
-case 4: return 14 ;                    
+case 4: return 14; 
 break;
-case 5: return 'arrow' ;                  
+case 5: return 15; 
 break;
-case 6: return 'double_arrow';            
+case 6: yy_.yytext = 'or';
+      return 8; 
 break;
-case 7: return 15 ;                     
+case 7: yy_.yytext = 'identity';
+      return 8; 
 break;
-case 8: return 'not';                     
+case 8: yy_.yytext = 'and';
+      return 8; 
 break;
-case 9: return 'universal';    
+case 9: yy_.yytext = 'double_arrow';
+      return 8; 
 break;
-case 10: return 'existential';  
+case 10: yy_.yytext = 'arrow';
+      return 8; 
 break;
-case 11: return 12 ;                      
+case 11: yy_.yytext = 'not';
+      return 8; 
 break;
-case 12: return 13 ;                      
+case 12: yy_.yytext = 'contradiction';
+      return 8; 
 break;
-case 13: return '(' ;                      
+case 13: yy_.yytext = 'reit';
+      return 19; 
 break;
-case 14: return ')' ;                      
+case 14: yy_.yytext = 'premise';
+      return 20; 
 break;
-case 15: return ',' ;                      
+case 15: yy_.yytext = 'universal';
+      return 8; 
 break;
-case 16: /* skip these words */             
+case 16: yy_.yytext = 'existential';
+      return 8; 
 break;
-case 17: /* skip whitespace */             
+case 17: return 16; 
+break;
+case 18: return 17; 
+break;
+case 19: /*  Skip whitespace, commas and dashes. 
+      */ 
+    
+break;
+case 20: return 5; 
+break;
+case 21: 
+      /*  I would love to `return 'waffle';` and treat
+          waffle as a category because I want to allow 
+          some of the connectives to appear in waffle, e.g. 'not'.
+          But attempts to do this proved too tricky for me so far.
+      */ 
+    
+break;
+case 22: /* Ignore everything else */ 
+break;
+case 23:console.log(yy_.yytext);
 break;
 }
 },
-rules: [/^(?:[0-9]\S*)/,/^(?:elim|elimination\b)/,/^(?:intro|introduction\b)/,/^(?:=|identity\b)/,/^(?:and|conjunction|∧|•)/,/^(?:arrow|->|⇒|→|⊃)/,/^(?:double arrow|↔|≡|⇔)/,/^(?:or|∨|\+|ǀǀ)/,/^(?:not|¬|˜|!|negation\b)/,/^(?:all|∀|every|universal\b)/,/^(?:some|exists|∃|existential\b)/,/^(?:left\b)/,/^(?:right\b)/,/^(?:\()/,/^(?:\))/,/^(?:,)/,/^(?:to|from|using|applying|applied|since|because\b)/,/^(?:\s+)/],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17],"inclusive":true}}
+rules: [/^(?:([0-9][^,\s]*)(\s+and\s+)(?=[0-9]))/i,/^(?:([0-9][^,\s]*\s*)\sto\s\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*?)\s*(?:-+)\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*)(?:(\s*,)*))/i,/^(?:elimination|eliminate|elim)/i,/^(?:introduction|introduce|intro)/i,/^(?:or|∨|\+|ǀǀ)/i,/^(?:=|identity)/i,/^(?:and|conjunction|∧|•)/i,/^(?:double arrow|↔|≡|⇔)/i,/^(?:arrow|->|⇒|→|⊃)/i,/^(?:not|¬|˜|!|negation)/i,/^(?:⊥|contradiction)/i,/^(?:reit|reiteration)/i,/^(?:premise|assumption)/i,/^(?:all|∀|every|universal)/i,/^(?:some|exists|∃|existential)/i,/^(?:left)/i,/^(?:right)/i,/^(?:[\s,\-]+)/i,/^(?:$)/i,/^(?:\w+)/i,/^(?:.)/i,/^(?:.)/i],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23],"inclusive":true}}
 });
 return lexer;
 })();

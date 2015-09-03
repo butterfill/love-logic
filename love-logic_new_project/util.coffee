@@ -84,8 +84,9 @@ _expressionToString = (expression) ->
     left_bracket = " (" 
     right_bracket = " )" 
   
-  if expression.type is 'sentence_letter'
+  if expression.type in ['sentence_letter','expression_variable']
     return expression.letter
+    
   if expression.type is 'not'
     symbol = expression.symbol or expression.type
     return "#{symbol}#{left_bracket}#{expressionToString(expression.left)}#{right_bracket}"

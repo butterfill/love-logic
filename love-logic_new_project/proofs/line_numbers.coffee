@@ -1,5 +1,6 @@
 # Take a `block_parser.Block` and add line numbers to each line.
-# Line numbers are optional.  Any missing line numbers will be filled in.
+# Line numbers are optional: if none are used, missing line numbers will be filled in.
+# But if some lines are numbered, no numbers will be added.
 # Line number ranges are added to blocks.
 # 
 # It ignores everything other than `item.type in ['block','line'], so
@@ -26,13 +27,15 @@ addNumbers = (block) ->
   walker = { 
     usedLineNumbers : []
     lineCounter : 0
+    userNumberedLines : false
     visit : (item) ->
       return undefined if item.type isnt 'line'
       line = item
       @lineCounter += 1
       {lineNumber, rest} = split line
-      if lineNumber is null
-        lineNumber = "#{@lineCounter}" 
+      @userNumberedLines = true if lineNumber or lineNumber is 0
+      if lineNumber is null and not @userNumberedLines
+        lineNumber = "#{@lineCounter}"
       if lineNumber in @usedLineNumbers
         throw new Error "Duplicate line number '#{lineNumber}' used for the second time at line #{@lineCounter}.  Line numbers must be unique."
       @usedLineNumbers.push lineNumber

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>util.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page_wrapper">
+            <div id="jump_page">
+              
+                
+                <a class="source" href="block_parser.html">
+                  block_parser.coffee
+                </a>
+              
+                
+                <a class="source" href="evaluate.html">
+                  evaluate.coffee
+                </a>
+              
+                
+                <a class="source" href="substitute.html">
+                  substitute.coffee
+                </a>
+              
+                
+                <a class="source" href="symmetry.html">
+                  symmetry.coffee
+                </a>
+              
+                
+                <a class="source" href="util.html">
+                  util.coffee
+                </a>
+              
+            </div>
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>util.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>_ = <span class="hljs-built_in">require</span> <span class="hljs-string">'lodash'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Walk through <code>expression</code> depth-first applying <code>fn</code>.
+This will visit terms and bound variables.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">walk</span> = <span class="hljs-params">(expression, fn)</span> -&gt;</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span> <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> expression?
+  <span class="hljs-keyword">if</span> _.isArray(expression)  <span class="hljs-comment">#e.g. it's a termlist</span>
+    <span class="hljs-keyword">for</span> e <span class="hljs-keyword">in</span> expression
+      walk e, fn
+  <span class="hljs-keyword">if</span> expression.boundVariable?
+    walk expression.boundVariable, fn
+  <span class="hljs-keyword">if</span> expression.termlist?
+    walk expression.termlist, fn
+  <span class="hljs-keyword">if</span> expression.left?
+    walk expression.left, fn
+  <span class="hljs-keyword">if</span> expression.right?
+    walk expression.right, fn
+  <span class="hljs-keyword">return</span> fn(expression)
+exports.walk = walk</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>This modifies <code>expression</code> in place.
+It is useful when we want to compare expressions ignoring things like
+location information and symbols provided by the parser.  (See <code>areIdenticalExpressions</code>.)
+If you create a function that adds attributes to expressions, 
+update this function to be sure that it deletes them.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">delExtraneousProperties</span> = <span class="hljs-params">(expression)</span> -&gt;</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>For testing, this might be called indirectly with strings or numbers.
+When that happens, just return what was sent.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">return</span> expression <span class="hljs-keyword">unless</span> expression?.type?
+  
+  <span class="hljs-keyword">return</span> walk(expression, _delExtraneousProperties)
+<span class="hljs-function">
+<span class="hljs-title">_delExtraneousProperties</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+  <span class="hljs-keyword">for</span> attr <span class="hljs-keyword">in</span> [<span class="hljs-string">'location'</span>,<span class="hljs-string">'symbol'</span>,<span class="hljs-string">'parent'</span>]
+    <span class="hljs-keyword">delete</span>(expression[attr]) <span class="hljs-keyword">if</span> attr <span class="hljs-keyword">of</span> expression
+  <span class="hljs-keyword">return</span> expression
+exports.delExtraneousProperties = delExtraneousProperties
+<span class="hljs-function">
+<span class="hljs-title">cloneExpression</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+  <span class="hljs-keyword">return</span> delExtraneousProperties(_.cloneDeep(expression))
+exports.cloneExpression = cloneExpression
+<span class="hljs-function">
+
+<span class="hljs-title">areIdenticalExpressions</span> = <span class="hljs-params">(expression1, expression2)</span> -&gt;</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Deal with primitive values (might be useful when testing using recursion)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span> <span class="hljs-keyword">if</span> expression1 <span class="hljs-keyword">is</span> expression2</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Deal with null (useful in starting some loops with util.exhaust)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">if</span> expression1 <span class="hljs-keyword">is</span> <span class="hljs-literal">null</span> <span class="hljs-keyword">or</span> expression2 <span class="hljs-keyword">is</span> <span class="hljs-literal">null</span>
+    
+  e1 = cloneExpression expression1
+  e2 = cloneExpression expression2
+  delExtraneousProperties e1 
+  delExtraneousProperties e2 
+  <span class="hljs-keyword">return</span> _.isEqual(e1, e2)
+exports.areIdenticalExpressions = areIdenticalExpressions</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Create a string representation of a fol expression.
+It uses the symbols that were specified when the expression was parsed (where these exist).
+TODO: what cases does this not yet handle?
+TODO: check system for deciding when brackets are needed.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>_cleanUp = 
+  whitespace :
+    from : <span class="hljs-regexp">/\s+/g</span>
+    to : <span class="hljs-string">' '</span>
+  quantifier_space :
+    from : <span class="hljs-regexp">/([∀∃])\s+/g</span>
+    to : <span class="hljs-string">"$1"</span>
+<span class="hljs-function"><span class="hljs-title">expressionToString</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+  result = _expressionToString(expression)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Now clean up whitespace.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  result = result.trim()
+  <span class="hljs-keyword">for</span> k, rplc <span class="hljs-keyword">of</span> _cleanUp
+    result = result.replace(rplc.from, rplc.to)
+  <span class="hljs-keyword">return</span> result
+<span class="hljs-function"><span class="hljs-title">_expressionToString</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+  brackets_needed = expression.right?
+  left_bracket = <span class="hljs-string">" "</span>
+  right_bracket = <span class="hljs-string">" "</span>
+  <span class="hljs-keyword">if</span> brackets_needed 
+    left_bracket = <span class="hljs-string">" ("</span> 
+    right_bracket = <span class="hljs-string">" )"</span> 
+  
+  <span class="hljs-keyword">if</span> expression.type <span class="hljs-keyword">in</span> [<span class="hljs-string">'sentence_letter'</span>,<span class="hljs-string">'expression_variable'</span>]
+    <span class="hljs-keyword">return</span> expression.letter
+    
+  <span class="hljs-keyword">if</span> expression.type <span class="hljs-keyword">is</span> <span class="hljs-string">'not'</span>
+    symbol = expression.symbol <span class="hljs-keyword">or</span> expression.type
+    <span class="hljs-keyword">return</span> <span class="hljs-string">"<span class="hljs-subst">#{symbol}</span><span class="hljs-subst">#{left_bracket}</span><span class="hljs-subst">#{expressionToString(expression.left)}</span><span class="hljs-subst">#{right_bracket}</span>"</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Is <code>expression</code> a quantifier?</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> expression.boundVariable?
+    symbol = (expression.symbol <span class="hljs-keyword">or</span> expression.type)
+    symbol = <span class="hljs-string">'∀'</span> <span class="hljs-keyword">if</span> symbol <span class="hljs-keyword">is</span> <span class="hljs-string">'universal_quantifier'</span>
+    symbol = <span class="hljs-string">'∃'</span> <span class="hljs-keyword">if</span> symbol <span class="hljs-keyword">is</span> <span class="hljs-string">'existential_quantifier'</span>
+    variableName = expression.boundVariable.name
+    <span class="hljs-keyword">return</span> <span class="hljs-string">"<span class="hljs-subst">#{symbol}</span> <span class="hljs-subst">#{variableName}</span> <span class="hljs-subst">#{left_bracket}</span><span class="hljs-subst">#{expressionToString(expression.left)}</span><span class="hljs-subst">#{right_bracket}</span>"</span>
+  
+  <span class="hljs-keyword">if</span> expression.type <span class="hljs-keyword">is</span> <span class="hljs-string">'identity'</span>
+    symbol = (expression.symbol <span class="hljs-keyword">or</span> <span class="hljs-string">'='</span>)
+    <span class="hljs-keyword">return</span> termToString(expression.termlist[<span class="hljs-number">0</span>])+<span class="hljs-string">" <span class="hljs-subst">#{symbol}</span> "</span>+termToString(expression.termlist[<span class="hljs-number">1</span>])
+
+  <span class="hljs-keyword">if</span> expression.termlist?
+    symbol = (expression.name <span class="hljs-keyword">or</span> expression.symbol <span class="hljs-keyword">or</span> expression.type)
+    termStringList = (termToString(t) <span class="hljs-keyword">for</span> t <span class="hljs-keyword">in</span> expression.termlist)
+    <span class="hljs-keyword">return</span> <span class="hljs-string">"<span class="hljs-subst">#{symbol}</span>(<span class="hljs-subst">#{termStringList.join(<span class="hljs-string">','</span>)}</span>)"</span>
+  
+  result = [left_bracket]
+  <span class="hljs-keyword">if</span> expression.left?
+    result.push(expressionToString(expression.left))
+  <span class="hljs-keyword">if</span> expression.type?
+    result.push(expression.symbol <span class="hljs-keyword">or</span> expression.type <span class="hljs-keyword">or</span> <span class="hljs-string">"!unknown expression!"</span>)
+  <span class="hljs-keyword">if</span> expression.right?
+    result.push(expressionToString(expression.right))
+  result.push(right_bracket)
+  <span class="hljs-keyword">return</span> result.join(<span class="hljs-string">" "</span>)
+exports.expressionToString = expressionToString
+<span class="hljs-function">
+<span class="hljs-title">termToString</span> = <span class="hljs-params">(term)</span> -&gt;</span>
+  <span class="hljs-keyword">return</span> term.name
+exports.termToString = termToString</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Check whether two lists have the same elements.
+The default comparitor is _.isEqual (which does deep comparisons).
+(In the <code>symmetry</code> module, this will be used with comparator set to areEquivalent.)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">sameElementsDeep</span> = <span class="hljs-params">(list1, list2, comparator)</span> -&gt;</span>
+  comparator = comparator ? _.isEqual
+  
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">if</span> (list1.length <span class="hljs-keyword">isnt</span> list2.length)
+  
+  whatWeMatchedInList2 = []
+  <span class="hljs-keyword">for</span> target, targetIdx <span class="hljs-keyword">in</span> list1
+    <span class="hljs-keyword">for</span> candidate, candidateIdx <span class="hljs-keyword">in</span> list2</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>check we didn’t already match this element: each element can only be matched once</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> (candidateIdx <span class="hljs-keyword">in</span> whatWeMatchedInList2)
+        <span class="hljs-keyword">if</span> comparator(target, candidate)
+          whatWeMatchedInList2.push candidateIdx
+          <span class="hljs-keyword">break</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>end of attempt to match <code>target</code></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span> <span class="hljs-keyword">unless</span> (candidateIdx <span class="hljs-keyword">in</span> whatWeMatchedInList2)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>If we’re here:
+    (a) all elements of list1 were matched to distinct elements in list2
+    (b) list1 and list2 have the same length</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>
+
+exports.sameElementsDeep = sameElementsDeep</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>Apply <code>fn</code> to <code>expression</code> until doing so makes no difference 
+according to <code>comparitor</code> and then return the result.
+This function uses clones so <code>expression</code> itself will not be modified.
+Note: <code>fn</code> must return an expression.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">exhaust</span> = <span class="hljs-params">(expression, fn, comparator)</span> -&gt;</span>
+  comparator ?= areIdenticalExpressions
+  pre = <span class="hljs-literal">null</span>
+  post = expression
+  <span class="hljs-keyword">while</span> <span class="hljs-keyword">not</span> comparator(pre, post)
+    pre = post
+    post = fn(cloneExpression(pre))
+  <span class="hljs-keyword">return</span> post
+exports.exhaust = exhaust  
+<span class="hljs-function">
+
+<span class="hljs-title">listOfAtomicExpressionsComparator</span> = <span class="hljs-params">(left, right)</span> -&gt;</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>Shorter lists go first.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span> <span class="hljs-keyword">if</span> left.length &lt; right.length
+  <span class="hljs-keyword">return</span> <span class="hljs-number">1</span> <span class="hljs-keyword">if</span> left.length &gt; right.length
+  
+  <span class="hljs-keyword">for</span> leftElement, idx <span class="hljs-keyword">in</span> left
+    result = atomicExpressionComparator leftElement, right[idx]
+    <span class="hljs-keyword">return</span> result <span class="hljs-keyword">unless</span> result <span class="hljs-keyword">is</span> <span class="hljs-number">0</span>
+  
+  <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>
+exports.listOfAtomicExpressionsComparator = listOfAtomicExpressionsComparator
+<span class="hljs-function">
+
+<span class="hljs-title">atomicExpressionComparator</span> = <span class="hljs-params">(left, right)</span> -&gt;</span>
+  result = _typeComparator(left.type, right.type)
+  <span class="hljs-keyword">return</span> result <span class="hljs-keyword">unless</span> result <span class="hljs-keyword">is</span> <span class="hljs-number">0</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>Negated atomic statements are sorted according to the sort order of what they negate.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> left.type <span class="hljs-keyword">is</span> <span class="hljs-string">'not'</span> <span class="hljs-keyword">and</span> right.type <span class="hljs-keyword">isnt</span> <span class="hljs-string">'not'</span>
+    test = atomicExpressionComparator left.left, right
+    <span class="hljs-keyword">return</span> <span class="hljs-number">1</span> <span class="hljs-keyword">if</span> test <span class="hljs-keyword">is</span> <span class="hljs-number">0</span>  <span class="hljs-comment">#not comes after the unnegated thing</span>
+    <span class="hljs-keyword">return</span> test
+
+  <span class="hljs-keyword">if</span> left.type <span class="hljs-keyword">isnt</span> <span class="hljs-string">'not'</span> <span class="hljs-keyword">and</span> right.type <span class="hljs-keyword">is</span> <span class="hljs-string">'not'</span>
+    test = atomicExpressionComparator left, right.left
+    <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span> <span class="hljs-keyword">if</span> test <span class="hljs-keyword">is</span> <span class="hljs-number">0</span>  <span class="hljs-comment">#not comes after the unnegated thing</span>
+    <span class="hljs-keyword">return</span> test
+
+  <span class="hljs-keyword">if</span> left.type <span class="hljs-keyword">is</span> <span class="hljs-string">'not'</span> <span class="hljs-keyword">and</span> right.type <span class="hljs-keyword">is</span> <span class="hljs-string">'not'</span>
+    <span class="hljs-keyword">return</span> atomicExpressionComparator left.left, right.left</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>From now on, we know that <code>left</code> and <code>right</code> are of the same type.</p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>Truth values are sorted by value</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> left.value?
+    <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span> <span class="hljs-keyword">if</span> left.value &lt; right.value
+    <span class="hljs-keyword">return</span> <span class="hljs-number">1</span> <span class="hljs-keyword">if</span> left.value &gt; right.value
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>Sentence letters are sorted by name.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> left.letter?
+    <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span> <span class="hljs-keyword">if</span> left.letter &lt; right.letter
+    <span class="hljs-keyword">return</span> <span class="hljs-number">1</span> <span class="hljs-keyword">if</span> left.letter &gt; right.letter
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>Predicates are sorted by name.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> left.name?
+    <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span> <span class="hljs-keyword">if</span> left.name &lt; right.name
+    <span class="hljs-keyword">return</span> <span class="hljs-number">1</span> <span class="hljs-keyword">if</span> left.name &gt; right.name
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>Identity statements are sorted like this.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> left.termlist?
+    leftToCompare = max left.termlist[<span class="hljs-number">0</span>], left.termlist[<span class="hljs-number">1</span>], termComparator
+    rightToCompare = max right.termlist[<span class="hljs-number">0</span>], right.termlist[<span class="hljs-number">1</span>], termComparator
+    <span class="hljs-keyword">return</span> termComparator leftToCompare, rightToCompare
+  
+  <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error <span class="hljs-string">"Could not do a comparison for <span class="hljs-subst">#{JSON.stringify left,<span class="hljs-literal">null</span>,<span class="hljs-number">4</span>}</span>"</span>
+exports.atomicExpressionComparator = atomicExpressionComparator
+<span class="hljs-function">
+
+<span class="hljs-title">max</span> = <span class="hljs-params">(left, right, comparator)</span> -&gt;</span>
+  <span class="hljs-keyword">return</span> left <span class="hljs-keyword">unless</span> comparator(left,right)&gt;<span class="hljs-number">0</span>
+  <span class="hljs-keyword">return</span> right</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-22">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-22">&#182;</a>
+              </div>
+              <p>A comparator for variables and names only.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">termComparator</span> = <span class="hljs-params">(left, right)</span> -&gt;</span>
+  result =  _typeComparator(left.type, right.type)
+  <span class="hljs-keyword">return</span> result <span class="hljs-keyword">unless</span> result <span class="hljs-keyword">is</span> <span class="hljs-number">0</span>
+  
+  <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span> <span class="hljs-keyword">if</span> left.name &lt; right.name
+  <span class="hljs-keyword">return</span> <span class="hljs-number">1</span> <span class="hljs-keyword">if</span> left.name &gt; right.name
+  <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>
+exports.termComparator = termComparator</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-23">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-23">&#182;</a>
+              </div>
+              <p>A comparator for some expression types.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">_typeComparator</span> = <span class="hljs-params">(left, right)</span> -&gt;</span>
+  <span class="hljs-keyword">if</span> left <span class="hljs-keyword">is</span> <span class="hljs-string">'not'</span> <span class="hljs-keyword">or</span> right <span class="hljs-keyword">is</span> <span class="hljs-string">'not'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-24">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-24">&#182;</a>
+              </div>
+              <p>we do not sort nots</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>
+  order = {<span class="hljs-attribute">value</span>:<span class="hljs-number">5</span>, <span class="hljs-attribute">sentence_letter</span>:<span class="hljs-number">10</span>, <span class="hljs-attribute">predicate</span>:<span class="hljs-number">20</span>, <span class="hljs-attribute">identity</span>:<span class="hljs-number">30</span>, <span class="hljs-string">"name"</span>:<span class="hljs-number">50</span>, <span class="hljs-string">"variable"</span>:<span class="hljs-number">60</span>}
+  <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span> <span class="hljs-keyword">if</span>  order[left] &lt; order[right]
+  <span class="hljs-keyword">return</span> <span class="hljs-number">1</span> <span class="hljs-keyword">if</span>  order[left] &gt; order[right]
+  <span class="hljs-keyword">return</span> <span class="hljs-number">0</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-25">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p>Returns a list of terms in <code>expression</code>.
+(What is returned are the actual terms (objects), not their names.)
+This does not include variables bound by a quantifier.
+You should not normally set parameter <code>_terms</code> (this is used for recursion).</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">listTerms</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+  terms = []
+<span class="hljs-function">  <span class="hljs-title">fn</span> = <span class="hljs-params">(expression)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> expression.type <span class="hljs-keyword">in</span> [<span class="hljs-string">'variable'</span>,<span class="hljs-string">'name'</span>,<span class="hljs-string">'term_metavariable'</span>]
+      terms.push(expression)
+    <span class="hljs-keyword">return</span> terms
+  <span class="hljs-keyword">return</span> walk expression, fn
+
+exports.listTerms = listTerms</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-26">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-26">&#182;</a>
+              </div>
+              <p>Adds the <code>parent</code> property to expression and every component of it.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">addParents</span> =  <span class="hljs-params">(expression, _parent)</span> -&gt;</span>
+  _parent ?= <span class="hljs-literal">null</span>
+  expression.parent = _parent</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-27">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-27">&#182;</a>
+              </div>
+              <p>This expression is parent to all its children</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  _parent = expression
+  
+  <span class="hljs-keyword">if</span> _.isArray(expression)  <span class="hljs-comment">#e.g. it's a termlist</span>
+    <span class="hljs-keyword">for</span> e <span class="hljs-keyword">in</span> expression
+      addParents e, _parent
+  <span class="hljs-keyword">if</span> expression.boundVariable?
+    addParents expression.boundVariable, _parent
+  <span class="hljs-keyword">if</span> expression.termlist?
+    addParents expression.termlist, _parent
+  <span class="hljs-keyword">if</span> expression.left?
+    addParents expression.left, _parent
+  <span class="hljs-keyword">if</span> expression.right?
+    addParents expression.right, _parent
+  <span class="hljs-keyword">return</span> expression
+exports.addParents = addParents</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>
