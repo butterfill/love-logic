@@ -33,7 +33,9 @@ describe "add_justification", ->
 
     it "records error messages where justification can't be parsed", ->
       block = addJustification.to BLOCK
-      expect(block.goto(6).justificationErrors.slice(0,5)).to.equal('Parse')
+      line = block.goto(5)
+      #console.log util.inspect(line)
+      expect(line.justificationErrors.slice(0,5)).to.equal('Parse')
 
     it "doesn't mess with the text of lines missing justification", ->
       block = addJustification.to BLOCK
@@ -44,25 +46,25 @@ describe "add_justification", ->
       expect(block.goto(2).justification.rule.connective).to.equal('premise')
 
     it "adds doesn't add justification to non-premises", ->
-      block = bp.parse "1.\n2.\n"
+      block = bp.parse "1. A\n2. A\n A"
       block = addJustification.to block
       expect(block.goto(1).justification.rule.connective).to.equal('premise')
       expect(block.goto(2).justification?).to.be.false
 
     it "treats everything above the divider as a premise in the outer block", ->
-      block = bp.parse "1.\n2.\n---\n3."
+      block = bp.parse "1. A\n2. A\n---\n3. A"
       block = addJustification.to block
       expect(block.goto(2).justification.rule.connective).to.equal('premise')
 
     it "doesn't treats everything above the divider as a premise in inner blocks", ->
-      block = bp.parse "1.\n| |2.\n| |3.\n| |---\n| |4."
+      block = bp.parse "1. A\n| |2. A\n| |3. A\n| |---\n| |4. A"
       block = addJustification.to block
       expect(block.goto(2).justification.rule.connective).to.equal('premise')
       expect(block.goto(3).type).to.equal('line')
       expect(block.goto(3).justification?).to.be.false
       
     it "only treats the first divider as significant in working out what's a premise in the outer block", ->
-      block = bp.parse "1.\n2.\n---\n3.\n---\n4."
+      block = bp.parse "1. A\n2. A\n---\n3. A\n---\n4. A"
       block = addJustification.to block
       expect(block.goto(2).justification.rule.connective).to.equal('premise')
       expect(block.goto(4).type).to.equal('line')
@@ -77,7 +79,7 @@ describe "add_justification", ->
       
     it "enables a line to get you the block it references", ->
       input = '''
-        1. 
+        1. A
         | 2. A
         | 3. contradiction
         4. not A // not elim 2-3
@@ -89,5 +91,5 @@ describe "add_justification", ->
       line4 = block.goto 4
       # console.log input
       # console.log block.toString()
-      expect(line4.getReferencedBlock()).to.equal(expected)
+      expect(line4.getCitedBlock()).to.equal(expected)
     

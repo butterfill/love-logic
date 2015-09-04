@@ -18,7 +18,7 @@
 
 \s+                     { /* skip whitespace */             }
 "true"                  { return 'true' ;                   }
-"false"|"⊥"             { return 'false' ;                  }
+"false"|"⊥"|"contradiction"  { return 'false' ;                  }
 "="                     { return 'identity' ;               }
 "and"|"&"|"∧"|"•"       { return 'and' ;                    }
 "arrow"|"->"|"⇒"|"→"|"⊃"            { return 'arrow' ;                  }

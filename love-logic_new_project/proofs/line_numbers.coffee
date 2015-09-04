@@ -8,9 +8,15 @@
 
 _ = require 'lodash'
 
-block_parser = require './block_parser'
+# Identifies a number:
+#   ^           --- match from the start of input
+#   ([|\s])*    --- there may be |s and whitespace
+#   \(?         --- there may be a bracket
+#   ([0-9]\S*)  --- a number is a digit followed by non-spaces
+#   ([|\s]*)    --- match and group any |s and whitespace after the number
+#   ([\s\S]*)   --- match and group everything after the number  
+_GET_NUMBER = /^([|\s])*\(?([0-9]\S*)([|\s]*)([\s\S]*)/
 
-_GET_NUMBER = /^\(?([0-9]\S*)([\s\S]*)/
 _DROP_TRAILING_DOTS_AND_BRACKET = /\.*\)?$/
 
 cleanNumber = (lineNumber) ->
@@ -20,9 +26,9 @@ exports.cleanNumber = cleanNumber
 split = (line) ->
   m = line.content.match _GET_NUMBER
   if m
-    lineNumber = m[1]
+    lineNumber = m[2]
     lineNumber = cleanNumber lineNumber
-    return { lineNumber, rest:m[2] } 
+    return { lineNumber, rest:m[4] } 
   return { lineNumber:null, rest: line.content }
   
 

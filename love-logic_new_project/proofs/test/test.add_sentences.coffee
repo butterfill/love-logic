@@ -20,7 +20,7 @@ ln.addNumbers BLOCK
 addJustification.to BLOCK
 
 describe "add_sentences", ->
-  describe "to", ->
+  describe ".to", ->
     it "doesn't throw", ->
       addSentences.to BLOCK
       #console.log BLOCK.toString()
@@ -33,7 +33,8 @@ describe "add_sentences", ->
       expect( BLOCK.goto(2).sentence.type ).to.equal('universal_quantifier')
     it "adds error messages", ->
       addSentences.to BLOCK
-      expect( BLOCK.goto(5).sentenceErrors.slice(0,5) ).to.equal('Parse')  
+      lineWithError = BLOCK.goto(4)
+      expect( lineWithError.sentenceErrors.slice(0,5) ).to.equal('Parse')  
     it "enables lines to tell you whether they are identical to another expression", ->
       addSentences.to BLOCK
       line1 = BLOCK.goto(1)

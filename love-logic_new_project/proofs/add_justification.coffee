@@ -46,8 +46,10 @@ to = (block) ->
       line.findLine = findLine
       line.findBlock = findBlock
       line.findLineOrBlock = findLineOrBlock
-      line.getReferencedLine = getReferencedLine
-      line.getReferencedBlock = getReferencedBlock
+      line.getCitedLine = getCitedLine
+      line.getCitedLines = getCitedLines
+      line.getCitedBlock = getCitedBlock
+      line.getCitedBlocks = getCitedBlocks
       
       return undefined  # Keep walking.
   block.walk walker
@@ -154,21 +156,31 @@ findBlock = (targetNumber) ->
 # user who wrote the proof.
 findLineOrBlock = (targetNumber) ->
   return @find( (item) ->
+    return undefined if (item.type isnt 'block' and item.type isnt 'line')
     return true if item.number is targetNumber
     return undefined
   )
 
 # This should only be used if this line references a single line.
-getReferencedLine = ->
-  targetNumber = @justification.numbers[0]
-  return @findLine( targetNumber )
+getCitedLine = ->
+  return @getCitedLines()[0]
+getCitedLines = ->
+  citedLines = []
+  for targetNumber in @justification.numbers
+    result = @findLine( targetNumber )
+    if result isnt false
+      citedLines.push result
+  return citedLines
 
 # This should only be used if this line references a single block.
-getReferencedBlock = ->
-  targetNumber = @justification.numbers[0]
-  return @find( (item) ->
-    return undefined if item.type isnt 'block'
-    return true if item.number is targetNumber
-    return undefined
-  )
+getCitedBlock = ->
+  return @getCitedBlocks()[0]
+
+getCitedBlocks = ->
+  citedBlocks = []
+  for targetNumber in @justification.numbers
+    result = @findBlock( targetNumber )
+    if result isnt false
+      citedBlocks.push result
+  return citedBlocks
 

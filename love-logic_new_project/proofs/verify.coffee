@@ -1,6 +1,16 @@
 # Verify whether a proof is correct.
+#
+# Terminology:
+#    a 'block' is a subproof.
+#
 
 _ = require 'lodash'
+
+nodeutil = require 'util'
+
+# Only required for testing.
+util = require '../util'
+
 
 blockParser = require './block_parser'
 lineNumbers = require './line_numbers'
@@ -14,6 +24,7 @@ parseProof = (proofText) ->
   addJustification.to block
   addSentences.to block
   return block
+exports._parseProof = parseProof
 
 # Verifies whether the line at `lineNumber` is correct, 
 # returning error messages if not.
@@ -91,6 +102,11 @@ checkRequirements = (line, result) ->
 
   reqList = requirements[connective]
   if intronation
+    
+    # This check is only for debugging.
+    if not reqList?[intronation]?
+      throw new Error "#{connective} #{intronation} is not implemented yet."
+    
     reqList = reqList[intronation]
     
   if not reqList.both? and not reqList.left?
@@ -150,73 +166,123 @@ test = {}
 test.throw = ->
   throw new Error "Not implemented yet!"
 
-test.singleNumberCited = (line) ->
+test.singleLineCited = (line) ->
   if line.justification.numbers?.length isnt 1
     # The test has failed, so we return a function that updates `result`.
     return (result) ->
       # Note: when a sentence in message starts lowercase, it will be prefixed
       # with something appropriate like "This step is incorrect because ".
       result.addMessage "you must cite exactly one line with #{line.getRuleName()}."
-  if line.getReferencedLine().type isnt 'line'
+  if line.getCitedLines().length isnt 1
     return (result) ->
       result.addMessage "you must cite a line, not a block, with #{line.getRuleName()}."
   return true # Test passed
 
-test.twoNumbersCited = (line) ->
-  if line.justification.numbers.length isnt 2
-    # The test has failed, so we return a function that updates `result`.
+test.singleBlockCited = (line) ->
+  if line.justification.numbers?.length isnt 1
     return (result) ->
-      # Note: when a sentence in message starts lowercase, it will be prefixed
-      # with something appropriate like "This step is incorrect because ".
-      result.addMessage "you must cite exactly one line with #{line.getRuleName()}."
-  # console.log "singleNumberCited passed"
-  return true # Test passed
+      result.addMessage "you must cite exactly one subproof with #{line.getRuleName()}."
+  if line.getCitedLine().type isnt 'block'
+    return (result) ->
+      result.addMessage "you must cite a block, not a line, with #{line.getRuleName()}."
+  return true 
 
-test.lineIsReferencedLine = (line) ->
-  return true if line.isIdenticalExpression( line.getReferencedLine() )
+test.twoLinesCited = (line) ->
+  if line.justification.numbers.length isnt 2
+    return (result) ->
+      result.addMessage "you must cite exactly two lines with #{line.getRuleName()}."
+  # TODO : simplify this -- getCitedLines only finds lines!  So can use line.getCitedLines().length!
+  for citedLine in line.getCitedLines()
+    if citedLine.type isnt 'line'
+      return (result) ->
+        result.addMessage "you may only cite lines, not blocks, with #{line.getRuleName()}."
+  return true 
+
+test.lineAndBlockCited = (line) ->
+  citedLines = line.getCitedLines()
+  citedBlocks = line.getCitedBlocks()
+  if citedLines.length isnt 1 or citedBlocks.length isnt 1
+    console.log "citedLines = #{nodeutil.inspect(citedLines)}"
+    console.log "citedBlocks = #{nodeutil.inspect(citedBlocks)}"
+    return (result) ->
+      result.addMessage "you must cite one line and one subproof with #{line.getRuleName()}; you cited #{citedLines.length} lines and #{citedBlocks.length} blocks."
+  return true 
+
+test.lineIsCitedLine = (line) ->
+  return true if line.isIdenticalExpression( line.getCitedLine().sentence )
   return (result) ->
+    # console.log "line = #{util.expressionToString line.sentence}, line.getCitedLine() = #{util.expressionToString line.getCitedLine().sentence}"
     result.addMessage "the line you cite with  #{line.getRuleName()} must be identical to this line."
 
-test.lineIsLeftJunctOfReferencedLine = (line) ->
-  return true if line.getReferencedLine().leftIsIdenticalExpression(line.sentence)
+test.lineIsLeftJunctOfCitedLine = (line) ->
+  return true if line.getCitedLine().leftIsIdenticalExpression(line.sentence)
   return (result) ->
     result.addMessage "the left part of line you cite must be identical to this line when you use #{line.getRuleName()}."
 
-test.lineIsRightJunctOfReferencedLine = (line) ->
-  return true if line.getReferencedLine().rightIsIdenticalExpression(line.sentence)
+test.lineIsRightJunctOfCitedLine = (line) ->
+  return true if line.getCitedLine().rightIsIdenticalExpression(line.sentence)
   return (result) ->
     result.addMessage "the right part of line you cite must be identical to this line when you use #{line.getRuleName()}."
-test.referencedLineConnectiveIs = (connective) ->
+
+test.connectiveIs = (connective) ->
   return (line) ->
-    otherLine = line.getReferencedLine()
+    return true if line.sentence.type is connective
+    return (result) ->
+      result.addMessage "the main connective in this line must be #{connective} with #{line.getRuleName()}."
+
+test.connectiveIs = (connective) ->
+  return (line) ->
+    return true if line.sentence.type is connective
+    return (result) ->
+      result.addMessage "you can only use #{line.getRuleName()} on lines where the main connective is #{connective}."
+
+test.citedLineConnectiveIs = (connective) ->
+  return (line) ->
+    otherLine = line.getCitedLine()
     return true if otherLine.sentence.type is connective
     return (result) ->
       result.addMessage "with #{line.getRuleName()}, the main connective in the line you cite must be #{connective}."
 
+test.citedLinesAreTheJunctsOfThisLine = (line) ->
+  [citedLine1, citedLine2] = line.getCitedLines()
+  if not citedLine1.isIdenticalExpression( line.sentence.left )
+    return  citedLine2.isIdenticalExpression( line.sentence.left ) and citedLine1.isIdenticalExpression( line.sentence.right ) 
+  else
+    return citedLine2.isIdenticalExpression( line.sentence.right )
 
 requirements = 
   premise : [ test.throw ]
   reit : [  
-    test.singleNumberCited
-    test.lineIsReferencedLine
+    test.singleLineCited
+    test.lineIsCitedLine
   ]
 requirements.and =
   'elim'  : 
     'both' : [
-      test.singleNumberCited
-      test.referencedLineConnectiveIs('and')
+      test.singleLineCited
+      test.citedLineConnectiveIs 'and' 
     ]
     'left' : [ 
-      test.lineIsLeftJunctOfReferencedLine     
+      test.lineIsLeftJunctOfCitedLine     
     ]
     'right' : [
-      test.lineIsRightJunctOfReferencedLine     
+      test.lineIsRightJunctOfCitedLine     
     ]
-  'intro' : 
-    'both' : [
-      test.twoNumbersCited
-    ]
-    'left' : []
-    'right' : []
+  'intro' : [
+    test.twoLinesCited
+    test.connectiveIs 'and'
+    test.citedLinesAreTheJunctsOfThisLine
+  ]
         
-    
+requirements.existential = 
+  'elim' : [
+    test.lineAndBlockCited
+    test.throw
+  ]
+  'intro' : [
+    test.singleLineCited
+    test.connectiveIs 'existential_quantifier'
+    test.throw
+  ]
+  
+exports._test = test
