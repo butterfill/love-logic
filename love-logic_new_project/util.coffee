@@ -77,6 +77,8 @@ expressionToString = (expression) ->
     result = result.replace(rplc.from, rplc.to)
   return result
 _expressionToString = (expression) ->
+  if expression is undefined or expression is null
+    return "[undefined or null expression]"
   brackets_needed = expression.right?
   left_bracket = " "
   right_bracket = " "

@@ -319,7 +319,15 @@ class Block
       @_depth = 1
     else
       @_depth = @parent._depth+1
+
+  # Note: this is mislabelled as it returns whatever is first, which may be a blank
+  # line or a block.
+  getFirstLine : ->
+    return @content[0] if @content.length>0
+    return null
     
+  # Note: this is mislabelled as it returns whatever is last, which may be a blank
+  # line or a block.
   getLastLine : ->
     return _.last @content if @content.length>0
     return null
@@ -337,7 +345,6 @@ class Block
     lineObject.find = (matcher) ->
       current = @
       while current?
-        console.log "found line : #{current.content}" if matcher(current)
         return current if matcher(current)
         if not current.prev? and current.parent?
           # Move on to the parent if there's no previous item.

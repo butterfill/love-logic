@@ -54,10 +54,9 @@ describe "the verify module:", ->
         2. A        // and elim
       '''
       result = verify.line 2, proof
-      console.log "result.message = #{result.message}"
+      #console.log "result.message = #{result.message}"
       expect(result.verified).to.be.false
       
-
     it "tells you when you incorrectly cite a block rather than a line", ->
       proof = '''
         1. hello      // premise
@@ -66,7 +65,7 @@ describe "the verify module:", ->
         4. A          // and elim 2-3.
       '''
       result = verify.line 4, proof
-      console.log "result.message = #{result.message}"
+      #console.log "result.message = #{result.message}"
       expect(result.verified).to.be.false
 
     it "tells you when you incorrectly cite a line from later in the proof", ->
@@ -128,6 +127,16 @@ describe "the verify module:", ->
       result = verify._test.lineAndBlockCited(line)
       expect(result).not.to.equal(true)
       
+    it "tells you when you use a rule that doesn't exist (e.g. and intro left)", ->
+      proof = '''
+        1. A          
+        2. B
+        3. A and B    // and intro left 1, 2
+      ''' 
+      result = verify.line 3, proof
+      console.log "result.message = #{result.message}" if result.verified is false
+      expect(result.verified).to.be.false
+      
 
 
   describe "proofs with reit", ->
@@ -137,7 +146,7 @@ describe "the verify module:", ->
         2. A          // reit 1
       '''
       result = verify.line 2, proof
-      console.log "result.message = #{result.message}"
+      console.log "result.message = #{result.message}" if result.verified is false
       expect(result.verified).to.be.true
 
     it "detects incorrect use of reit", ->
@@ -146,7 +155,7 @@ describe "the verify module:", ->
         2. A          // reit 1
       '''
       result = verify.line 2, proof
-      console.log "result.message = #{result.message}"
+      # console.log "result.message = #{result.message}"
       expect(result.verified).to.be.false
 
   describe "proofs with the rules for and", ->
@@ -206,7 +215,7 @@ describe "the verify module:", ->
       result = verify.line 2, proof
       expect(result.verified).to.be.false
 
-    it "identifies incorrect use of and intro ", ->
+    it "verifies correct use of `and intro` ", ->
       proof = '''
         1. A           // premise
         2. B
@@ -215,7 +224,7 @@ describe "the verify module:", ->
       result = verify.line 3, proof
       expect(result.verified).to.be.true
 
-    it "identifies correct use of and intro for A and A citing the same line twice", ->
+    it "verifies correct use of and intro for A and A citing the same line twice", ->
       proof = '''
         1. A           // premise
         2. B
@@ -250,7 +259,7 @@ describe "the verify module:", ->
         2. exists x F(x)  // exists intro 1
       '''
       result = verify.line 2, proof
-      console.log "result.message = #{result.message}"
+      #console.log "result.message = #{result.message}"
       expect(result.verified).to.be.true
 
     it "spots mistaken use of exists intro (wrong premise)", ->
@@ -259,7 +268,6 @@ describe "the verify module:", ->
         2. exists x F(x)  // exists intro 1
       '''
       result = verify.line 2, proof
-      console.log "result.message = #{result.message}"
       expect(result.verified).to.be.false
 
     it "spots mistaken use of exists intro (wrong conclusion)", ->
@@ -268,7 +276,6 @@ describe "the verify module:", ->
         2. exists x G(x)  // exists intro 1
       '''
       result = verify.line 2, proof
-      console.log "result.message = #{result.message}"
       expect(result.verified).to.be.false
 
     it "spots mistaken use of exists intro (wrong quantifier)", ->
@@ -277,7 +284,6 @@ describe "the verify module:", ->
         2. some x G(x)  // exists intro 1
       '''
       result = verify.line 2, proof
-      console.log "result.message = #{result.message}"
       expect(result.verified).to.be.false
 
     it "verifies correct use of exists elim", ->
@@ -288,7 +294,6 @@ describe "the verify module:", ->
         4. contradiction    // exists elim 1, 2-3
       '''
       result = verify.line 4, proof
-      console.log "result.message = #{result.message}"
       expect(result.verified).to.be.true
 
     it "spots mistaken use of exists elim where the conclusion doesn't match the conclusion of the subproof", ->
@@ -299,7 +304,6 @@ describe "the verify module:", ->
         4. contradiction    // exists elim 1, 2-3
       '''
       result = verify.line 4, proof
-      console.log "result.message = #{result.message}"
       expect(result.verified).to.be.false
 
     it "spots mistaken use of exists elim where the new name is in the conclusion", ->
@@ -310,6 +314,5 @@ describe "the verify module:", ->
         4. F(a)             // exists elim 1, 2-3
       '''
       result = verify.line 4, proof
-      console.log "result.message = #{result.message}"
       expect(result.verified).to.be.false
 

@@ -75,13 +75,27 @@ describe 'substitute', ->
       matches = substitute.findMatches expression, pattern
       expectedMatches = {}
       expect(matches).not.to.be.false
-      expect(matches).to.deep.equal({})
       
     it "should not match different sentences (no expression variables)", ->
       pattern = fol.parse 'A or A'
       expression = fol.parse 'B or B'
       matches = substitute.findMatches expression, pattern
       expect(matches).to.be.false
+
+    it "should return a matches object with .addMatches method that allows merging matches", ->
+      pattern = fol.parse 'φ1 or φ1'
+      expression = fol.parse 'A or A'
+      matches = substitute.findMatches expression, pattern
+      pattern2 = fol.parse 'φ2'
+      expression2 = fol.parse 'B'
+      matches2 = substitute.findMatches expression2, pattern2
+      matches.addMatches matches2
+      expectedMatches =
+        φ1 : fol.parse("A")
+        φ2 : fol.parse("B")
+      expect(util.areIdenticalExpressions(matches.φ, expectedMatches.φ)).to.be.true
+      expect(util.areIdenticalExpressions(matches.φ2, expectedMatches.φ2)).to.be.true
+      
     
 
   describe 'findMatches with expressions that are not closed wffs', ->

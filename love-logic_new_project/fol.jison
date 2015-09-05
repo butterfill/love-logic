@@ -22,16 +22,16 @@
 "="                     { return 'identity' ;               }
 "and"|"&"|"∧"|"•"       { return 'and' ;                    }
 "arrow"|"->"|"⇒"|"→"|"⊃"            { return 'arrow' ;                  }
-"↔"|"≡"|"⇔"           { return 'double_arrow';            }
-[oO][rR]|"∨"|"+"|"ǀǀ"       { return 'or' ;                     }
-[nN][oO][tT]|"¬"|"˜"|"!"       { return 'not';                     }
-[nN][oO][rR]|"↓"               { return 'nor';                     }
-[nN][aA][nN][dD]|"↑"              { return 'nand';                     }
-[aA][lL][lL]|"∀"|[eE][vV][eE][rR][yY]       { return 'universal_quantifier';    }
-[sS][oO][mM][eE]|[eE][xX][iI][sS][tT][sS]|"∃"     { return 'existential_quantifier';  }
-"("                     { return '(' ;                      }
-")"                     { return ')' ;                      }
-","                     { return ',' ;                      }
+"↔"|"≡"|"⇔"                                 { return 'double_arrow'; }
+[oO][rR]|"∨"|"+"|"ǀǀ"                        { return 'or'; }
+[nN][oO][tT]|"¬"|"˜"|"!"                      { return 'not'; }
+[nN][oO][rR]|"↓"                              { return 'nor'; }
+[nN][aA][nN][dD]|"↑"                          { return 'nand'; }
+[aA][lL][lL]|"∀"|[eE][vV][eE][rR][yY]         { return 'universal_quantifier'; }
+[sS][oO][mM][eE]|[eE][xX][iI][sS][tT][sS]|"∃" { return 'existential_quantifier'; }
+"("                     { return '('; }
+")"                     { return ')'; }
+","                     { return ','; }
 
 /*  Predicates.
     A predicate starts with a capital letter and is followed by a bracket.

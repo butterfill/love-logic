@@ -5,6 +5,7 @@
 #
 
 fol = require '../fol'
+substitute = require '../substitute'
 util = require '../util'
 
 
@@ -27,12 +28,13 @@ to = (block) ->
       
       item.isIdenticalExpression = (e) ->
         return util.areIdenticalExpressions(@sentence, e)
-      # Now we add some functions that may be useful later.
       item.leftIsIdenticalExpression = (e) ->
         return util.areIdenticalExpressions(@sentence.left, e)
-      # Now we add some functions that may be useful later.
       item.rightIsIdenticalExpression = (e) ->
         return util.areIdenticalExpressions(@sentence.right, e)
+      
+      item.matches = (pattern, _matches, o) ->
+        return substitute.findMatches @sentence, pattern, _matches, o
       
       return undefined  # Keep walking.
   block.walk walker

@@ -6,8 +6,6 @@
 
 _ = require 'lodash'
 
-nodeutil = require 'util'
-
 # Only required for testing.
 util = require '../util'
 
@@ -17,6 +15,7 @@ lineNumbers = require './line_numbers'
 addJustification = require './add_justification'
 addSentences = require './add_sentences'
 
+rule = require './rule'
 
 parseProof = (proofText) ->
   block = blockParser.parse proofText
@@ -42,8 +41,14 @@ line = (lineNumber, proofText) ->
   result = 
     verified: false 
     message : ''
+    messages : []
     addMessage : (txt) -> 
+      @messages.push txt
       @message = "#{@message} #{txt}".trim()
+    popMessage : () ->
+      msg = @messages.pop()
+      @message = "#{@message}"
+      return msg
     areThereErrors : ->
       return true if @sentenceErrors? or @justificationErrors?
       return false
@@ -101,66 +106,107 @@ checkRequirements = (line, result) ->
   side = line.justification.rule.variant.side
 
   reqList = requirements[connective]
-  if intronation
-    
-    # This check is only for debugging.
-    if not reqList?[intronation]?
-      throw new Error "#{connective} #{intronation} is not implemented yet."
-    
-    reqList = reqList[intronation]
-    
-  if not reqList.both? and not reqList.left?
-    return checkTheseRequirements(reqList, line, result)
-  
-  if not reqList.both? and side
-    reqList = reqList[side]
-    return checkTheseRequirements(reqList, line, result)
-  
-  result = checkTheseRequirements(reqList.both, line, result)
-  if not result.verified
+
+  if not reqList
+    result.addMessage ("the rule you specified, `#{connective} #{intronation or ''} #{side or ''}` does not exist (or, if it does, you are not allowed to use it in this proof).".replace /\s\s+/g,'')
+    result.verified = false 
     return result
   
-  if side 
-    if not reqList[side]?
+  if not intronation
+    # We need to check the rule specified is complete.
+    if _.isArray(reqList) or reqList.type is 'rule'
+      return checkTheseRequirements(reqList, line, result)
+    # The rule specified is incomplete.
+    result.addMessage "you only partially specified the rule: `#{connective}` needs something extra (intro? elim?)."
+    result.verified = false 
+    return result
+  
+  # From here on, we know that `intronation` is specified.
+  
+  reqList = reqList[intronation]
+  if not reqList
+    result.addMessage "you specified the rule #{connective} *#{intronation}* but there is no ‘#{intronation}’ version of the rule for #{connective} (or, if there is, you are not allowed to use it in this proof)."
+    result.verified = false
+    return result
+  
+  if not side
+    # Now there are two cases.  The simple case is where the rule specification
+    # doesn't involve left or right either.  
+    if _.isArray(reqList) or reqList.type is 'rule'
+      return checkTheseRequirements(reqList, line, result)
+    
+    # We are in the tricky case where there are left and right rules, plus maybe a 'both'.
+    # In this case, the 'both' requirement must be met and at least one of the 'left' and 'right'
+    # requirements must be met.
+    if reqList.both?
+      result = checkTheseRequirements(reqList.both, line, result)
+      if not result.verified
+        return result
+
+    # Now we check left and, if that fails, check right.
+    # We also want to provide a disjunctive message if neither left nor right
+    # requirements are met.
+    if reqList.left?
+      result = checkTheseRequirements(reqList.left, line, result)
+      if result.verified 
+        # meeting the `left` requirement is sufficient when no `side is specified 
+        return result 
+    if reqList.right?
+      leftMessage = result.popMessage()
+      result = checkTheseRequirements(reqList.right, line, result)
+      if not result.verified 
+        rightMessage = result.popMessage()
+        # TODO: This will look weird if there is only one message (e.g. when ad hoc rule 
+        # restrictions apply).
+        result.addMessage "Either #{leftMessage}, or else #{rightMessage}."
       return result
-    return checkTheseRequirements(reqList[side], line, result)
+    else
+      # There are no further checks we can do.  
+      return result
   
-  if not reqList.left?
+  # From here on, we know that `side` is specified.
+  
+  # Preliminary check : if `side` is specified, there must be a corresponding rule.
+  if  not reqList[side]?
+    result.addMessage "you specified the rule #{connective} #{intronation} *#{side}* but there is no ‘#{side}’ version of  #{connective} #{intronation} (or, if there is, you are not allowed to use it in this proof)."
+    result.verified = false
     return result
   
-  # In some cases we will have to check both left and right
-  # versions of a rule.  Success with either counts as success.
-  oldMessage = result.message
-  result.message = ''
-  result = checkTheseRequirements(reqList.left, line, result)
-  if result.verified 
-    result.message = oldMessage
-    return result 
-  leftMessage = result.message
-  result.message = ''
-  result = checkTheseRequirements(reqList.right, line, result)
-  if result.verified
-    # Remove any fail message from having checked the left requirements.
-    result.message = oldMessage
-  rightMessage = result.message 
-  # Remove any closing period from the end of `leftMessage`.
-  leftMessage = leftMessage.replace /\.$/, ''
-  result.message = oldMessage + "Either: #{leftMessage}, or else #{rightMessage}"
-  return result
-  
+  # When `side` is specified, success involves meeting any `.both` requirements as 
+  # well as the `.side` requirements.
+  if reqList.both?
+    result = checkTheseRequirements(reqList.both, line, result)
+    if not result.verified
+      return result
+  return checkTheseRequirements(reqList[side], line, result)  
+
   
 checkTheseRequirements = (reqList, line, result) ->
-  for req in reqList
-    itPassed = req(line)
-    if itPassed isnt true
-      result.verified = false
-      update = itPassed
-      update result
-      return result
-  # It passed all the requirements.
-  result.verified = true
-  return result
+  # Currently we have two ways of expressing requirements.
+  # The first is an array of functions that take a line and return either true or 
+  # a function which adds a message to result.
+  if _.isArray reqList
+    for req in reqList
+      itPassed = req(line)
+      if itPassed isnt true
+        result.verified = false
+        update = itPassed
+        update result
+        return result
+    # It passed all the requirements.
+    result.verified = true
+    return result
 
+  # The alternative way of expressing requirements uses the `rules` module.
+  req = reqList
+  outcome = req.check(line)
+  if outcome is true
+    result.verified = true
+  else
+    result.verified = false
+    msg = outcome.getMessage()
+    result.addMessage(msg)
+  return result
       
 test = {}
 test.throw = ->
@@ -191,19 +237,15 @@ test.twoLinesCited = (line) ->
   if line.justification.numbers.length isnt 2
     return (result) ->
       result.addMessage "you must cite exactly two lines with #{line.getRuleName()}."
-  # TODO : simplify this -- getCitedLines only finds lines!  So can use line.getCitedLines().length!
-  for citedLine in line.getCitedLines()
-    if citedLine.type isnt 'line'
-      return (result) ->
-        result.addMessage "you may only cite lines, not blocks, with #{line.getRuleName()}."
+  if line.getCitedLines().length isnt 2
+    return (result) ->
+      result.addMessage "you may only cite lines, not blocks, with #{line.getRuleName()}."
   return true 
 
 test.lineAndBlockCited = (line) ->
   citedLines = line.getCitedLines()
   citedBlocks = line.getCitedBlocks()
   if citedLines.length isnt 1 or citedBlocks.length isnt 1
-    console.log "citedLines = #{nodeutil.inspect(citedLines)}"
-    console.log "citedBlocks = #{nodeutil.inspect(citedBlocks)}"
     return (result) ->
       result.addMessage "you must cite one line and one subproof with #{line.getRuleName()}; you cited #{citedLines.length} lines and #{citedBlocks.length} blocks."
   return true 
@@ -252,27 +294,24 @@ test.citedLinesAreTheJunctsOfThisLine = (line) ->
 
 requirements = 
   premise : [ test.throw ]
-  reit : [  
-    test.singleLineCited
-    test.lineIsCitedLine
-  ]
+
+requirements.reit = rule.from('φ').to('φ')
+
 requirements.and =
-  'elim'  : 
-    'both' : [
-      test.singleLineCited
-      test.citedLineConnectiveIs 'and' 
-    ]
-    'left' : [ 
-      test.lineIsLeftJunctOfCitedLine     
-    ]
-    'right' : [
-      test.lineIsRightJunctOfCitedLine     
-    ]
-  'intro' : [
-    test.twoLinesCited
-    test.connectiveIs 'and'
-    test.citedLinesAreTheJunctsOfThisLine
-  ]
+  elim : 
+    left : rule.from('φ and ψ').to('φ')
+    right : rule.from('φ and ψ').to('ψ')
+  intro : rule.from('φ').and('ψ').to('φ and ψ')
+
+requirements.or = 
+  elim  : rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ') ).to('χ' )
+  intro : 
+    left  : rule.from('φ or ψ').to('φ')
+    right : rule.from('φ or ψ').to('ψ')
+
+requirements.not = 
+  elim : rule.from('not not φ').to('φ') 
+  intro : rule.from( rule.subproof('φ','contradiction') ).to('not φ') 
         
 requirements.existential = 
   'elim' : [

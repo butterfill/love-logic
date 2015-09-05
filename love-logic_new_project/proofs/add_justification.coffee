@@ -88,8 +88,6 @@ split = (text) ->
   try 
     justification = jp.parse justificationText
   catch e 
-    # console.log "caught error #{e.message}"
-    # console.log "justificationText #{justificationText}"
     return { justification: null, rest, justificationErrors:e.message, justificationText }
   return { justification, rest, justificationErrors:null }
 
@@ -165,6 +163,7 @@ findLineOrBlock = (targetNumber) ->
 getCitedLine = ->
   return @getCitedLines()[0]
 getCitedLines = ->
+  return [] if not @justification.numbers
   citedLines = []
   for targetNumber in @justification.numbers
     result = @findLine( targetNumber )
@@ -177,6 +176,7 @@ getCitedBlock = ->
   return @getCitedBlocks()[0]
 
 getCitedBlocks = ->
+  return [] if not @justification.numbers
   citedBlocks = []
   for targetNumber in @justification.numbers
     result = @findBlock( targetNumber )

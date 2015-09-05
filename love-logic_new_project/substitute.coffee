@@ -211,11 +211,16 @@ exports.doSubRecursive = doSubRecursive
 # @param expression is like `fol.parse("not not (P and Q)")`
 # @param pattern is like `fol.parse("not not φ")` (extraneous properties will be removed)
 # Note: `fol.parse "φ"` creates an expression with type  `expression_variable`
-# @param _matches should be null (is used internally to keep track of what is already matched).
+# @param _matches should normally be null 
+# (is used internally to keep track of what is already matched), but you 
+# might also use it if keeping track of multiple matches where one constains another.
 # Note: this function only attempts to match `expression` itself 
 # (it does not look for matches with components of `expression`).
 findMatches = (expression, pattern, _matches, o) ->
-  _matches ?= {}
+  _matches ?= {
+    addMatches : (moreMatches) ->
+      _.defaults @, moreMatches
+  }
   o ?= {}
   o.symmetricIdentity ?= false
   o._notFirstCall ?= false
