@@ -295,33 +295,60 @@ test.citedLinesAreTheJunctsOfThisLine = (line) ->
 requirements = 
   premise : [ test.throw ]
 
-requirements.reit = rule.from('φ').to('φ')
+  reit : rule.from('φ').to('φ')
 
-requirements.and =
-  elim : 
-    left : rule.from('φ and ψ').to('φ')
-    right : rule.from('φ and ψ').to('ψ')
-  intro : rule.from('φ').and('ψ').to('φ and ψ')
+  'and' :
+    elim : 
+      left : rule.from('φ and ψ').to('φ')
+      right : rule.from('φ and ψ').to('ψ')
+    intro : rule.from('φ').and('ψ').to('φ and ψ')
 
-requirements.or = 
-  elim  : rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ') ).to('χ' )
-  intro : 
-    left  : rule.from('φ or ψ').to('φ')
-    right : rule.from('φ or ψ').to('ψ')
+  'or' :
+    elim  : rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ') ).to('χ' )
+    intro : 
+      left  : rule.from('φ or ψ').to('φ')
+      right : rule.from('φ or ψ').to('ψ')
 
-requirements.not = 
-  elim : rule.from('not not φ').to('φ') 
-  intro : rule.from( rule.subproof('φ','contradiction') ).to('not φ') 
+  'not' : 
+    elim : rule.from('not not φ').to('φ') 
+    intro : rule.from( rule.subproof('φ','contradiction') ).to('not φ') 
+
+  contradiction :
+    elim : rule.from('contradiction').to('φ') 
+    intro : rule.from('φ').and('not φ').to('contradiction')
+    
+  arrow :
+    # Note: in checking this rule, it is essential to match `φ arrow ψ` before `φ`.
+    # This is because `φ` will also match anything `φ arrow ψ` matches.
+    # We therefore require that the `rule` checker first attempts to find matches 
+    # in the order we specify clauses.
+    # TODO: have the `rule` checker sort out which order to check things in, so that
+    # `rule.from('φ').and('φ arrow ψ').to('ψ')` would also work.
+    elim : rule.from('φ arrow ψ').and('φ').to('ψ')
+    intro : rule.from( rule.subproof('φ','ψ') ).to('φ arrow ψ')
+    
+#   [['double_arrow','intro'], '↔intro']
+#   [['double_arrow','elim'], '↔elim']
+#   [['reit',null], 'reit']
+#   [['identity','intro'], '=intro']
+#   [['identity','elim'], '=elim']
+#   [['universal','intro'], '∀intro']
+#   [['universal','elim'], '∀elim']
+#   [['existential','intro'], '∃intro']
+#   [['existential','elim'], '∃elim']
+
         
-requirements.existential = 
-  'elim' : [
-    test.lineAndBlockCited
-    test.throw
-  ]
-  'intro' : [
-    test.singleLineCited
-    test.connectiveIs 'existential_quantifier'
-    test.throw
-  ]
+# requirements.existential =
+#   # This is rule requires tests to be done in a particular order (don't know what α is 
+#   #  in the conclusion until done subproof, and doing that require doing first line).
+#   #  Solution: have a while loop in the checker attempting each check in turn (whatever order) 
+#   #  until all checks are done.
+#   # 
+#   elim : rule.from('exists τ φ').and( rule.subproof('[α]φ[τ->α]', 'ψ') ).to('ψ[α->aa]')
+#   intro : rule.from('φ[τ->α]').to('exists τ φ')
+#
+# requirements.universal =
+#   elim : rule.from('all τ φ').to('φ[τ->α]')
+#   intro : rule( rule.subproof('[α]', 'φ') ).to('all τ φ[α->τ]')
   
 exports._test = test

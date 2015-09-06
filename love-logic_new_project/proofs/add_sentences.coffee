@@ -1,10 +1,10 @@
 # Takes a `block_parser.Block` with extracted line numbers and justification
-# but otherwise unprocessed strings of a yaFOL proof as its lines, 
-# extracts and parses the yaFOL expressions (using `fol`),
+# but otherwise unprocessed strings of a awFOL proof as its lines, 
+# extracts and parses the awFOL expressions (using `fol`),
 # and adds the expressions the lines of the `Block`, noting any errors.
 #
 
-fol = require '../fol'
+fol = require '../parser/awFOL'
 substitute = require '../substitute'
 util = require '../util'
 

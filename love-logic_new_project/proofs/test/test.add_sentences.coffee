@@ -6,7 +6,7 @@ chai = require('chai')
 assert = chai.assert
 expect = chai.expect
 
-fol = require '../../fol'
+fol = require '../../parser/awFOL'
 
 
 bp = require '../block_parser'

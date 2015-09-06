@@ -52,7 +52,7 @@ describe "`rule`", ->
         1. A or B    // premise
         2.    A         // assumption
         3.    C         // 
-        99blank.
+        
         4.    B
         5.    C
         6. C          // or elim 1, 2-3, 4-5
@@ -70,7 +70,7 @@ describe "`rule`", ->
         1. A or B    // premise
         2.    A         // assumption
         3.    C         // 
-        99blank.
+        
         4.    B
         5.    C
         6. C          // or elim 1, 2-3
@@ -157,5 +157,62 @@ describe "`rule`", ->
       console.log result2.getMessage() if result2 isnt true
       expect(result2).to.be.true
       
-      
-                        
+  describe "In cases where the order in which matches are made matters", ->
+    it "can detect incorrect use of arrow elim", ->
+      proof = '''
+        1. A arrow B
+        2. A
+        3. A            // arrow elim 1, 2
+      ''' 
+      proof = verify._parseProof proof
+      arrowElim = rule.from('φ arrow ψ').and('φ').to('ψ')
+      result = arrowElim.check proof.goto(3)
+      expect(result).not.to.be.true
+
+    it "can verify correct use of arrow elim", ->
+      proof = '''
+        1. A arrow B
+        2. A
+        3. B            // arrow elim 1, 2
+      ''' 
+      proof = verify._parseProof proof
+      arrowElim = rule.from('φ arrow ψ').and('φ').to('ψ')
+      result = arrowElim.check proof.goto(3)
+      expect(result).to.be.true
+
+    it "can verify correct use of arrow elim regardless of the order in which the `.from` requirements occur in the proof", ->
+      proof = '''
+        1. A
+        2. A  arrow B
+        3. B            // arrow elim 1, 2
+      ''' 
+      proof = verify._parseProof proof
+      arrowElim = rule.from('φ arrow ψ').and('φ').to('ψ')
+      result = arrowElim.check proof.goto(3)
+      expect(result).to.be.true
+
+    it "can verify correct use of arrow elim regardless of the order in which the `.from` requirements are specified in defining the rule"
+      # This test works fine.
+      # The problem is just that the `rule.LineChecker` can't cope with this yet. (TODO)
+      # , ->
+      # proof = '''
+      #   1. A
+      #   2. A  arrow B
+      #   3. B            // arrow elim 1, 2
+      # '''
+      # proof = verify._parseProof proof
+      # arrowElim = rule.from('φ').and('φ arrow ψ').to('ψ')
+      # result = arrowElim.check proof.goto(3)
+      # expect(result).to.be.true
+      # proof2 = '''
+      #   1. A arrow B
+      #   2. A
+      #   3. B            // arrow elim 1, 2
+      # '''
+      # proof2 = verify._parseProof proof2
+      # arrowElim = rule.from('φ').and('φ arrow ψ').to('ψ')
+      # result = arrowElim.check proof2.goto(3)
+      # console.log result.getMessage() if result isnt true
+      # expect(result).to.be.true
+
+        

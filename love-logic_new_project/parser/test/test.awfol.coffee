@@ -1,8 +1,9 @@
 chai = require('chai')
 assert = chai.assert
 expect = chai.expect
-fol = require('../fol')
-util = require('../util')
+
+fol = require '../awFOL'
+util = require '../../util'
 
 # Below we are going to want to compare components of an expression with
 # the result of parsing just that expression, as in:
@@ -304,5 +305,121 @@ describe 'fol', ->
     it "should not recognise xx1 as a variable in quantifier expressions", ->
       expect(-> fol.parse "all(xx1) P").to.throw
     
-    
+  describe "boxes at the start of expressions", ->
+    it "should recognise boxes", ->
+      result = fol.parse("F(a)")
+      expect(result.box?).to.be.false
+      result = fol.parse("[a] F(a)")
+      expect(result.box?).to.be.true
+      
+    it "should recognise boxes with term metavariables", ->
+      result = fol.parse("[τ] F(a)")
+      expect(result.box?).to.be.true
+      
+    it "should record what is in the box (for names)", ->
+      result = fol.parse("[a] F(a)")
+      console.log "#{JSON.stringify result.box, null, 4}"
+      expect(result.box.term.type).to.equal('name')
+      expect(result.box.term.name).to.equal('a')
+
+    it "should record what is in the box (for τ)", ->
+      result = fol.parse("[τ] F(a)")
+      expect(result.box.term.type).to.equal('term_metavariable')
+      expect(result.box.term.name).to.equal('τ')
+
+    it "adding a box should not change how an expression is parsed", ->
+      noBox = fol.parse("exists x (F(a) and F(x))")
+      expect(noBox.box?).to.be.false
+      withBox = fol.parse("[a] exists x (F(a) and F(x))")
+      expect(withBox.box?).to.be.true
+      delete withBox.box
+      util.delExtraneousProperties noBox
+      util.delExtraneousProperties withBox
+      expect(noBox).to.deep.equal(withBox)
+
+      
+  describe "substitutions like φ[τ->α]", ->
+    it "recognises substitutions for terms", ->
+      noSub = fol.parse("φ")
+      expect(noSub.substitutions?).to.be.false
+      withSub = fol.parse("φ[τ->a]")
+      expect(withSub.substitutions?).to.be.true
+    it "each substitution has type set to 'substitution'", ->
+      withSub = fol.parse("φ[τ->a]")
+      expect(withSub.substitutions[0].type).to.equal('substitution')
+    it "each substitution has `.from` and `.to` properties", ->
+      withSub = fol.parse("φ[τ->a]")
+      expect(withSub.substitutions[0].from?).to.be.true
+      expect(withSub.substitutions[0].to?).to.be.true
+    it "recognises substitutions for expressions", ->
+      withSub = fol.parse("(A and φ)[φ->B and C]")
+      expect(withSub.substitutions?).to.be.true
+    it "recognises substitutions for `sentence_letter`s", ->
+      withSub = fol.parse("(A and B)[A->B and C]")
+      expect(withSub.substitutions?).to.be.true
+    it "recognises multiple substitutions (alternative comma notation)", ->
+      withSub = fol.parse("(φ and ψ)[φ->B and C,ψ->A]")
+      expect(withSub.substitutions.length).to.equal(2)
+      # console.log "\n\n\n.substitutions[0]: #{JSON.stringify withSub,null,4}"
+      expect(withSub.substitutions[0].from.letter).to.equal('φ')
+      expect(withSub.substitutions[0].to.type).to.equal('and')
+      expect(withSub.substitutions[1].from.type).to.equal('expression_variable')
+      expect(withSub.substitutions[1].from.letter).to.equal('ψ')
+      expect(withSub.substitutions[1].to.type).to.equal('sentence_letter')
+      
+    it "treats ']' as having higher precedence than a substitution list", ->
+      toCheck = fol.parse "ψ[φ->B and C][ψ->A]"
+      expect(toCheck.substitutions.length).to.equal(2)
+      expected = fol.parse "ψ[φ->B and C,ψ->A]" 
+      expect(expected.substitutions.length).to.equal(2)
+      notExpected = fol.parse "(ψ[φ->B and C])[ψ->A]"
+      expect(notExpected.substitutions.length).to.equal(1)
+      # console.log "\n\n toCheck: \n #{JSON.stringify toCheck,null,4}"
+      # console.log "\n\n expected: \n #{JSON.stringify expected,null,4}"
+      util.delExtraneousProperties toCheck
+      util.delExtraneousProperties expected
+      expect(toCheck).to.deep.equal(expected)
+      
+    it "recognises multiple substitutions", ->
+      # This test also confirms that 
+      #       `(φ and ψ)[φ->B and C][ψ->A]`
+      # is interpreted as 
+      #       `(φ and ψ)([φ->B and C][ψ->A])`
+      # rather than as 
+      #       `((φ and ψ)[φ->B and C])[ψ->A]`
+      withSub = fol.parse("(φ and ψ)[φ->B and C][ψ->A]")
+      expect(withSub.substitutions.length).to.equal(2)
+
+    it "records what the substitution is (when substituting terms)", ->
+      withSub = fol.parse("φ[τ->a]")
+      theSub = withSub.substitutions[0]
+      expect(theSub.from.type).to.equal('term_metavariable')
+      expect(theSub.from.name).to.equal('τ')
+      expect(theSub.to.type).to.equal('name')
+      expect(theSub.to.name).to.equal('a')
+    it "records what the substitution is (when substituting expressions)", ->
+      withSub = fol.parse("(A and φ)[φ->B and C]")
+      theSub = withSub.substitutions[0]
+      expect(theSub.from.type).to.equal('expression_variable')
+      expect(theSub.from.letter).to.equal('φ')
+      expect(theSub.to.type).to.equal('and')
+      # This last one is fragile as it depends on how `util.expressionToString`
+      # represents things:
+      expect(util.expressionToString(theSub.to)).to.equal('B and C')
+    it "treats substitutions as having high precedence", ->
+      expression = fol.parse("F(a)[a->α] arrow B[B->B and C]")
+      # console.log "expression: #{JSON.stringify expression,null,4}"
+      # console.log "expression.substitutions : #{JSON.stringify expression.substitutions,null,4}"
+      # console.log "expression.left.substitutions[0] #{JSON.stringify expression.left.substitutions[0],null,4}"
+      # console.log "expression.right.substitutions[0] #{JSON.stringify expression.right.substitutions[0],null,4}"
+      expect(expression.substitutions?).to.be.false
+      expect(expression.left.substitutions[0].from.type).to.equal("name")
+      expect(expression.left.substitutions[0].from.name).to.equal("a")
+      expect(expression.right.substitutions[0].from.type).to.equal("sentence_letter")
+
+    it "copes with nested substitutions", ->
+      expression = fol.parse("A[A->B[B->C]]")
+      expect(expression.substitutions.length).to.equal(1)
+      expect(expression.substitutions[0].to.substitutions.length).to.equal(1)
+      
     

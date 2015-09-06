@@ -2,7 +2,7 @@ chai = require('chai')
 assert = chai.assert
 expect = chai.expect
 substitute = require('../substitute')
-fol = require('../fol')
+fol = require '../parser/awFOL'
 util = require('../util')
 symmetry = require('../symmetry')
 

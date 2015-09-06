@@ -151,7 +151,7 @@ exports.getPrefixedQuantifiers = getPrefixedQuantifiers
 
 
 # `quantifiers` is a pseudo-expression containing some quantifiers.
-# `expression` is a yaFOL expression.
+# `expression` is a awFOL expression.
 # It modifies `quantifiers` in place, attaching expression the end of them.
 attachExpressionToQuantifiers = (expression, quantifiers) ->
   if quantifiers is null

@@ -1,9 +1,9 @@
-# Takes a `block_parser.Block` with unprocessed strings of a yaFOL proof
+# Takes a `block_parser.Block` with unprocessed strings of a awFOL proof
 # as its lines, extracts and parses the justification (using `justification_parser`),
 # and adds the justification objects to the lines of the `Block`.
 #
 # Currently we take justification to start with '//', '\\' or '--'.
-# So a line should look like `<yaFOL expression> // <justification>`
+# So a line should look like `<awFOL expression> // <justification>`
 #
 # After `addJustification`, a `Block.line` should have:
 #     `.justification`        -- the object produced by `justification_parser`

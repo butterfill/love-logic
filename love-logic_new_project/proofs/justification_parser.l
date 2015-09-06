@@ -1,5 +1,5 @@
 /*  Defines a JISON lexer for the justification part of 
-    proof lines in the yaFOL language.
+    proof lines in the awFOL language.
     
     Tested against JISON version 0.4.15.
 */

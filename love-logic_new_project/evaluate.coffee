@@ -1,5 +1,5 @@
 _ = require 'lodash'
-fol = require './fol'
+fol = require './parser/awFOL'
 
     
 # evaluates `sentenceText` (a sentence of FOL)

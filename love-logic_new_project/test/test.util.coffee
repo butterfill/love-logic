@@ -4,7 +4,7 @@ chai = require('chai')
 assert = chai.assert
 expect = chai.expect
 substitute = require('../substitute')
-fol = require('../fol')
+fol = require '../parser/awFOL' 
 util = require('../util')
 
 
@@ -36,7 +36,7 @@ describe 'util', ->
       expect(e.location?).to.be.false
       
   describe 'cloneExpression', ->
-    it "should clone an expression of yAFOL", ->
+    it "should clone an expression of awFOL", ->
       expression = fol.parse("A and B")
       clone = util.cloneExpression expression
       expect(expression).to.not.equal(clone)

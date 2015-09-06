@@ -1,4 +1,4 @@
-# Apply various substitutions to yaFOL expressions,
+# Apply various substitutions to awFOL expressions,
 # including converting an arbitrary formula to prenex normal form.
 #
 # apply substitutions to formulae like
@@ -11,7 +11,7 @@
 _ = require 'lodash'
 
 util = require './util'
-fol = require './fol'  # TODO remove dependence (only required for compiling subs)
+fol = require './parser/awFOL'  # TODO remove dependence (only required for compiling subs)
 symmetry = require './symmetry'
 
 
@@ -220,6 +220,10 @@ findMatches = (expression, pattern, _matches, o) ->
   _matches ?= {
     addMatches : (moreMatches) ->
       _.defaults @, moreMatches
+    
+    # apply these matches to `pattern` and return the result
+    apply : (pattern) ->
+      return applyMatches(pattern, @)
   }
   o ?= {}
   o.symmetricIdentity ?= false
@@ -373,7 +377,7 @@ exports.replace = replace
 
 # Go through expression and rename variables so that each 
 # quantifier binds a distinct variable.
-# This may use variable names that are illegal in the yaFOL lexer (e.g. xx1, xx2).
+# This may use variable names that are illegal in the awFOL lexer (e.g. xx1, xx2).
 # (This isn't strictly necessary: it just provides a visual marker that things have been changed.)
 #
 # The new variable names will have the form `newVariableBaseName[0-9]+` .
@@ -385,7 +389,7 @@ renameVariables = (expression, newVariableBaseName, _varStack, _newVarIdx) ->
   
   # Note: `expression.boundVariable?` is currently equivalent to 
   # `(expression.type in ['existential_quantifier','universal_quantifier'])`.  
-  # But what follows should generalise in case new quantifiers are added to yaFOL.
+  # But what follows should generalise in case new quantifiers are added to awFOL.
   if expression.boundVariable?
     quantifier = expression
     variableNameToRename = quantifier.boundVariable.name
@@ -397,7 +401,7 @@ renameVariables = (expression, newVariableBaseName, _varStack, _newVarIdx) ->
     if newVariableBaseName[0] in ['α','β','γ','τ']
       quantifier.boundVariable.type = 'term_metavariable'
     renameVariables quantifier.left, newVariableBaseName, _varStack, _newVarIdx
-    # None of the yaFOL quantifiers currently have `.right` but we would rename
+    # None of the awFOL quantifiers currently have `.right` but we would rename
     # `quantifier.right` as well if they did.
     if quantifier.right?
       renameVariables quantifier.right, newVariableBaseName, _varStack, _newVarIdx

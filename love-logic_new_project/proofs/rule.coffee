@@ -9,7 +9,7 @@ nodeutil = require 'util'
 _ = require 'lodash'
 
 util = require '../util'
-fol = require '../fol'
+fol = require '../parser/awFOL'
 
 class _From
   constructor: (requirement) ->
@@ -34,7 +34,6 @@ class _From
     return @
 
   check : (line) ->
-    console.log "@_requirements = #{nodeutil.inspect @_requirements}"
     return new LineChecker(line, @_requirements).check()
     
 from = (requirement) ->
@@ -72,15 +71,18 @@ class LineChecker
     @citedLinesUsed = []
     @citedBlocks = @line.getCitedBlocks()
     @citedBlocksUsed = []
-    @ruleName = @line.getRuleName()
+
+    # The @message will provide an explanation of any mistakes for
+    # the person writing a proof.
     @message = ''
+
+    @ruleName = @line.getRuleName()
     
     # This property is used to keep track of `substitute.findMacthes` that
     # will constrain test of the requirements.
     @matches = null
     
   check : () ->
-    console.log "checking ..."
     return @ unless @citedTypesAreCorrect()
     #return @ unless @toRequirementIsMet()
     if not @toRequirementIsMet()
@@ -94,7 +96,16 @@ class LineChecker
   
   addMessage : (text) ->
     @message = "#{@message} #{text}"
-  
+
+  # An 'although' message is one that describes something correct about the
+  # use of the rule. (e.g. 'although your conclusion has the right form ...')
+  addAlthoughMessage : (text) ->
+    if @_addedAlthough?
+      @addMessage "and although #{text}"
+    else
+      @addMessage "although #{text}"
+      @_addedAlthough = true
+      
   getMessage : () ->
     return "You cannot do this because #{@message.trim()}"
 
@@ -142,7 +153,8 @@ class LineChecker
           # being able to cite the same line twice.
           # @citedBlocksUsed.push block
           return true 
-      @addMessage "you must cite a subproof whose premise is of the form #{util.expressionToString(req.startReq)}  and whose conclusion is of the form #{util.expressionToString(req.endReq)} when using the rule #{@ruleName}."
+      expressionsAsMatched = "#{util.expressionToString @matches.apply(req.startReq)} ... #{util.expressionToString @matches.apply(req.endReq)}"
+      @addMessage "you must cite a subproof whose premise is of the form #{util.expressionToString(req.startReq)}  and whose conclusion is of the form #{util.expressionToString(req.endReq)} (which would be #{expressionsAsMatched} in this case) when using the rule #{@ruleName}."
       return false 
     
     # `req` is a requirement on a line
@@ -152,7 +164,9 @@ class LineChecker
         # being able to cite the same line twice.
         # @citedLinesUsed.push aLine
         return true
-    @addMessage "you must cite a line with the form #{util.expressionToString req} when using the rule #{@ruleName}."
+    # We have found an error.  Try to explain what went wrong.
+    expressionAsMatched = @matches.apply(req)
+    @addMessage "you must cite a line with the form #{util.expressionToString req} (#{util.expressionToString expressionAsMatched} in this case) when using the rule #{@ruleName}."
     return false
   
   subproofMeetsRequirement : (block, req) ->
@@ -176,6 +190,8 @@ class LineChecker
     else
       @addMatches firstLineMatches
       @addMatches lastLineMatches
+      expressionsAsMatched = "#{util.expressionToString @matches.apply(req.startReq)} ... #{util.expressionToString @matches.apply(req.endReq)}"
+      @addAlthoughMessage "although you correctly cited a subproof with the form '#{util.expressionToString req.startReq} ... #{util.expressionToString req.endReq}' (#{expressionsAsMatched} in this case),"
       return true
 
   
@@ -186,6 +202,12 @@ class LineChecker
     newMatches = aLine.matches req, @matches
     if newMatches isnt false
       @addMatches newMatches
+      
+      # We didn't find an error yet, but add a message that will help to 
+      # explain any subsequent error.
+      expressionAsMatched = @matches.apply(req)
+      @addAlthoughMessage "you correctly cited a line with the form '#{util.expressionToString req}' (namely #{util.expressionToString expressionAsMatched}),"
+      
       return true
     return false
   
@@ -200,6 +222,9 @@ class LineChecker
     newMatches = @line.matches(@requirements.to, @matches)
     if newMatches isnt false
       @addMatches newMatches
+      # In case there is an error later, adding this clause to the message 
+      # explaining the error will make the explanation clearer later.
+      @addAlthoughMessage "although your conclusion has the correct form ('#{util.expressionToString @requirements.to}'),"
       return true 
     @addMessage "your sentence must have the form #{util.expressionToString @requirements.to} when using the rule #{@ruleName}."
     return false

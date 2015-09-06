@@ -4,11 +4,35 @@ _ = require 'lodash'
   
 # Walk through `expression` depth-first applying `fn`.
 # This will visit terms and bound variables.
+# It will also visit substitutions (like φ[τ->α]) and boxes (like [a]φ).
 walk = (expression, fn) ->
   return null if not expression?
+
   if _.isArray(expression)  #e.g. it's a termlist
     for e in expression
       walk e, fn
+
+  # Special case: the expression contains a box.
+  if expression.box?
+    fn._inBox = true
+    walk expression.term, fn
+    fn._inBox = undefined     # Set this to undefined so that fn._inBox? works.
+  
+  # Special case: the expression contains one or more subtitutions.
+  # Note: we use _inSubCount because it's possible for substitutions to be nested.
+  if expression.substitutions?
+    fn._inSubCount ?= 0
+    fn._inSubCount += 1
+    fn._inSub = true
+    # Note `expression.substitutions` is an array of substitutions.
+    walk expression.substitutions, fn
+    fn._inSubCount -= 1
+    fn._inSub = undefined if fn._inSubCount is 0    # Set this to undefined so that fn._inSub? works.
+  if expression.type is 'substitution'
+    walk expression.from, fn
+    walk expression.to, fn
+
+  # The standard parts of an expression.
   if expression.boundVariable?
     walk expression.boundVariable, fn
   if expression.termlist?
@@ -17,6 +41,7 @@ walk = (expression, fn) ->
     walk expression.left, fn
   if expression.right?
     walk expression.right, fn
+  
   return fn(expression)
 exports.walk = walk  
 
@@ -63,19 +88,24 @@ exports.areIdenticalExpressions = areIdenticalExpressions
 # TODO: what cases does this not yet handle?
 # TODO: check system for deciding when brackets are needed.
 _cleanUp = 
-  whitespace :
+  remove_extra_whitespace :
     from : /\s+/g
     to : ' '
-  quantifier_space :
+  remove_quantifier_space :
     from : /([∀∃])\s+/g
     to : "$1"
+  remove_outer_brackets :
+    #   (^\s*\()    --- start of line, any amount of space, left bracket
+    #   ([\s\S]*)   --- anything at all
+    #   (\)\s*$)    --- right bracket, any amount of space, end of line
+    from : /(^\s*\()([\s\S]*)(\)\s*$)/
+    to : '$2'
+    
 expressionToString = (expression) ->
   result = _expressionToString(expression)
-  # Now clean up whitespace.
-  result = result.trim()
   for k, rplc of _cleanUp
     result = result.replace(rplc.from, rplc.to)
-  return result
+  return result.trim()
 _expressionToString = (expression) ->
   if expression is undefined or expression is null
     return "[undefined or null expression]"
@@ -91,7 +121,7 @@ _expressionToString = (expression) ->
     
   if expression.type is 'not'
     symbol = expression.symbol or expression.type
-    return "#{symbol}#{left_bracket}#{expressionToString(expression.left)}#{right_bracket}"
+    return "#{symbol}#{left_bracket}#{_expressionToString(expression.left)}#{right_bracket}"
   
   # Is `expression` a quantifier?
   if expression.boundVariable?
@@ -99,7 +129,7 @@ _expressionToString = (expression) ->
     symbol = '∀' if symbol is 'universal_quantifier'
     symbol = '∃' if symbol is 'existential_quantifier'
     variableName = expression.boundVariable.name
-    return "#{symbol} #{variableName} #{left_bracket}#{expressionToString(expression.left)}#{right_bracket}"
+    return "#{symbol} #{variableName} #{left_bracket}#{_expressionToString(expression.left)}#{right_bracket}"
   
   if expression.type is 'identity'
     symbol = (expression.symbol or '=')
@@ -112,11 +142,11 @@ _expressionToString = (expression) ->
   
   result = [left_bracket]
   if expression.left?
-    result.push(expressionToString(expression.left))
+    result.push(_expressionToString(expression.left))
   if expression.type?
     result.push(expression.symbol or expression.type or "!unknown expression!")
   if expression.right?
-    result.push(expressionToString(expression.right))
+    result.push(_expressionToString(expression.right))
   result.push(right_bracket)
   return result.join(" ")
 exports.expressionToString = expressionToString

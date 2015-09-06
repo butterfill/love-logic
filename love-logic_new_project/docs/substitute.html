@@ -65,7 +65,7 @@
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-1">&#182;</a>
               </div>
-              <p>Apply various substitutions to yaFOL expressions,
+              <p>Apply various substitutions to awFOL expressions,
 including converting an arbitrary formula to prenex normal form.</p>
 <p>apply substitutions to formulae like</p>
 <pre><code>     sub =
@@ -727,7 +727,7 @@ exports.replace = replace</pre></div></div>
               </div>
               <p>Go through expression and rename variables so that each 
 quantifier binds a distinct variable.
-This may use variable names that are illegal in the yaFOL lexer (e.g. xx1, xx2).
+This may use variable names that are illegal in the awFOL lexer (e.g. xx1, xx2).
 (This isn’t strictly necessary: it just provides a visual marker that things have been changed.)</p>
 <p>The new variable names will have the form <code>newVariableBaseName[0-9]+</code> .
 If you want to create a pattern to match, set <code>newVariableBaseName</code> to ‘τ’.</p>
@@ -749,7 +749,7 @@ If you want to create a pattern to match, set <code>newVariableBaseName</code> t
                 <a class="pilcrow" href="#section-27">&#182;</a>
               </div>
               <p>Note: <code>expression.boundVariable?</code> is currently equivalent to 
-<code>(expression.type in [&#39;existential_quantifier&#39;,&#39;universal_quantifier&#39;])</code>.<br>But what follows should generalise in case new quantifiers are added to yaFOL.</p>
+<code>(expression.type in [&#39;existential_quantifier&#39;,&#39;universal_quantifier&#39;])</code>.<br>But what follows should generalise in case new quantifiers are added to awFOL.</p>
 
             </div>
             
@@ -774,7 +774,7 @@ If you want to create a pattern to match, set <code>newVariableBaseName</code> t
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-28">&#182;</a>
               </div>
-              <p>None of the yaFOL quantifiers currently have <code>.right</code> but we would rename
+              <p>None of the awFOL quantifiers currently have <code>.right</code> but we would rename
 <code>quantifier.right</code> as well if they did.</p>
 
             </div>
