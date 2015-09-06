@@ -329,13 +329,8 @@ requirements =
     
 #   [['double_arrow','intro'], '↔intro']
 #   [['double_arrow','elim'], '↔elim']
-#   [['reit',null], 'reit']
 #   [['identity','intro'], '=intro']
 #   [['identity','elim'], '=elim']
-#   [['universal','intro'], '∀intro']
-#   [['universal','elim'], '∀elim']
-#   [['existential','intro'], '∃intro']
-#   [['existential','elim'], '∃elim']
 
         
 # requirements.existential =
