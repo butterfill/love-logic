@@ -15,7 +15,7 @@ walk = (expression, fn) ->
   # Special case: the expression contains a box.
   if expression.box?
     fn._inBox = true
-    walk expression.term, fn
+    walk expression.box.term, fn
     fn._inBox = undefined     # Set this to undefined so that fn._inBox? works.
   
   # Special case: the expression contains one or more subtitutions.
@@ -34,7 +34,9 @@ walk = (expression, fn) ->
 
   # The standard parts of an expression.
   if expression.boundVariable?
+    fn._inBoundVariable = true
     walk expression.boundVariable, fn
+    fn._inBoundVariable = false
   if expression.termlist?
     walk expression.termlist, fn
   if expression.left?
@@ -44,6 +46,52 @@ walk = (expression, fn) ->
   
   return fn(expression)
 exports.walk = walk  
+
+# `fn` takes an expression, term, substitutions, or termlist and returns an 
+# expression, term, termlist or substitutions .
+# `walkMutate` `walk`s through expression replacing every component.
+# Note that the walk will involving visiting any `.box` and `.substitutions` as 
+# well as `boundVariable`s.
+walkMutate = (expression, fn) ->
+  if _.isArray(expression)  #e.g. it's a termlist, or `substitutions`
+    return (walkMutate(e,fn) for e in expression)
+
+  console.log "walkMutate got #{expressionToString expression}"
+
+  # Special case: the expression contains a box.
+  if expression.box?
+    fn._inBox = true
+    expression.box.term = walkMutate expression.box.term, fn
+    fn._inBox = undefined     # Set this to undefined so that fn._inBox? works.
+  
+  # Special case: the expression contains one or more subtitutions.
+  # Note: we use _inSubCount because it's possible for substitutions to be nested.
+  if expression.substitutions?
+    fn._inSubCount ?= 0
+    fn._inSubCount += 1
+    fn._inSub = true
+    # Note `expression.substitutions` is an array of substitutions.
+    expression.substitutions = walkMutate expression.substitutions, fn
+    fn._inSubCount -= 1
+    fn._inSub = undefined if fn._inSubCount is 0    # Set this to undefined so that fn._inSub? works.
+  if expression.type is 'substitution'
+    expression.from = walkMutate expression.from, fn
+    expression.to = walkMutate expression.to, fn
+
+  # The standard parts of an expression.
+  if expression.boundVariable?
+    fn._inBoundVariable = true
+    expression.boundVariable = walkMutate expression.boundVariable, fn
+    fn._inBoundVariable = false
+  if expression.termlist?
+    expression.termlist = walkMutate expression.termlist, fn
+  if expression.left?
+    expression.left = walkMutate expression.left, fn
+  if expression.right?
+    expression.right = walkMutate expression.right, fn
+    
+  return fn(expression)
+exports.walkMutate = walkMutate
 
 
 # This modifies `expression` in place.
@@ -61,6 +109,9 @@ delExtraneousProperties = (expression) ->
 _delExtraneousProperties = (expression) ->
   for attr in ['location','symbol','parent']
     delete(expression[attr]) if attr of expression
+  for own attr, value of expression
+    if _.isFunction value
+      delete(expression[attr])
   return expression
 exports.delExtraneousProperties = delExtraneousProperties
 
@@ -102,7 +153,11 @@ _cleanUp =
     to : '$2'
     
 expressionToString = (expression) ->
-  result = _expressionToString(expression)
+  # Does the expression have a box?  (This only makes sense at the root.)
+  prefix = ''
+  if expression.box
+    prefix = "[#{termToString(expression.box.term)}]"
+  result = "#{prefix}#{_expressionToString(expression)}"
   for k, rplc of _cleanUp
     result = result.replace(rplc.from, rplc.to)
   return result.trim()
@@ -115,6 +170,12 @@ _expressionToString = (expression) ->
   if brackets_needed 
     left_bracket = " (" 
     right_bracket = " )" 
+  
+  if expression.type in ['variable','name','term_metavariable']
+    return termToString(expression)
+  
+  if expression.type is 'box'
+    return "[#{termToString(expression.term)}]"
   
   if expression.type in ['sentence_letter','expression_variable']
     return expression.letter
@@ -135,10 +196,14 @@ _expressionToString = (expression) ->
     symbol = (expression.symbol or '=')
     return termToString(expression.termlist[0])+" #{symbol} "+termToString(expression.termlist[1])
 
+  if expression.type is 'value'
+    return "#{((expression.symbol if expression.symbol?) or ('⊥' if expression.value is false) or expression.value)}"
+
   if expression.termlist?
     symbol = (expression.name or expression.symbol or expression.type)
     termStringList = (termToString(t) for t in expression.termlist)
     return "#{symbol}(#{termStringList.join(',')})"
+  
   
   result = [left_bracket]
   if expression.left?
@@ -149,12 +214,24 @@ _expressionToString = (expression) ->
     result.push(_expressionToString(expression.right))
   result.push(right_bracket)
   return result.join(" ")
-exports.expressionToString = expressionToString
 
 termToString = (term) ->
   return term.name
 exports.termToString = termToString
 
+# Now modify _expressionToString to add substitutions.
+_old = _expressionToString
+_expressionToString = (expression) ->
+  string = _old(expression)
+  if expression.substitutions?
+    string = "#{string}[#{(substitutionToString(s) for s in expression.substitutions).join(', ')}]"
+  return string
+  
+exports.expressionToString = expressionToString
+
+substitutionToString = (s) ->
+  symbol = (s.symbol if s.symbol?) or "→"
+  return "#{_expressionToString(s.from)}#{symbol}#{_expressionToString(s.to)}"
 
 # Check whether two lists have the same elements.
 # The default comparitor is _.isEqual (which does deep comparisons).

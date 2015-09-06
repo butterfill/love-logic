@@ -1,3 +1,5 @@
+_ = require 'lodash'
+
 chai = require('chai')
 assert = chai.assert
 expect = chai.expect
@@ -48,19 +50,19 @@ describe 'substitute', ->
       expect(util.areIdenticalExpressions(matches.φ, expectedMatches.φ)).to.be.true
       expect(util.areIdenticalExpressions(matches.ψ, expectedMatches.ψ)).to.be.true
 
-    it "should not match 'φ or φ' in 'A or B'", ->
+    it "does not match 'φ or φ' in 'A or B'", ->
       pattern = fol.parse 'φ or φ'
       expression = fol.parse 'A or B'
       matches = substitute.findMatches expression, pattern
       expect(matches).to.be.false
 
-    it "should not match 'φ or φ' in 'A or not A'", ->
+    it "does not match 'φ or φ' in 'A or not A'", ->
       pattern = fol.parse 'φ or φ'
       expression = fol.parse 'A or not A'
       matches = substitute.findMatches expression, pattern
       expect(matches).to.be.false
 
-    it "should not match 'φ or φ' in 'A or A'", ->
+    it "does not match 'φ or φ' in 'A or A'", ->
       pattern = fol.parse 'φ or φ'
       expression = fol.parse 'A or A'
       matches = substitute.findMatches expression, pattern
@@ -76,7 +78,7 @@ describe 'substitute', ->
       expectedMatches = {}
       expect(matches).not.to.be.false
       
-    it "should not match different sentences (no expression variables)", ->
+    it "does not match different sentences (no expression variables)", ->
       pattern = fol.parse 'A or A'
       expression = fol.parse 'B or B'
       matches = substitute.findMatches expression, pattern
@@ -96,6 +98,22 @@ describe 'substitute', ->
       expect(util.areIdenticalExpressions(matches.φ, expectedMatches.φ)).to.be.true
       expect(util.areIdenticalExpressions(matches.φ2, expectedMatches.φ2)).to.be.true
       
+  describe 'findMatches with boxes', ->
+    it "matches a pattern to [a] (empty expression)", ->
+      pattern = fol.parse '[α]'
+      expression = fol.parse '[a]'
+      matches = substitute.findMatches expression, pattern
+      expect(matches).not.to.be.false
+    it "matches pattern '[α] A' to 'A'", ->
+      pattern = fol.parse '[α] A'
+      expression = fol.parse '[a] A'
+      matches = substitute.findMatches expression, pattern
+      expect(matches).not.to.be.false
+    it "doesn't match pattern '[α] A' to 'A'", ->
+      pattern = fol.parse '[α] A'
+      expression = fol.parse 'A'
+      matches = substitute.findMatches expression, pattern
+      expect(matches).to.be.false
     
 
   describe 'findMatches with expressions that are not closed wffs', ->
@@ -159,7 +177,7 @@ describe 'substitute', ->
 
 
   describe 'findMatches where identity can be treated as symmetric', ->
-    it "should not find match 'α1=α2 and α1=α2' when identity is not symmetric", ->
+    it "does not find match 'α1=α2 and α1=α2' when identity is not symmetric", ->
       pattern = fol.parse 'α1=α2 and α1=α2'
       expression = fol.parse 'a=b and b=a'
       matches = substitute.findMatches expression, pattern
@@ -191,7 +209,7 @@ describe 'substitute', ->
 
 
   describe 'replace (replaces one expression or term with another)', ->    
-    it "should help with testing whether a=b, F(a) therefore F(b) is ok", ->
+    it "helps with testing whether a=b, F(a) therefore F(b) is ok", ->
       pattern = fol.parse 'α=β'
       expression1 = fol.parse 'a=b'
       matches = substitute.findMatches expression1, pattern
@@ -200,7 +218,7 @@ describe 'substitute', ->
       expression3 = fol.parse 'F(b)'
       expect(util.areIdenticalExpressions(result,expression3)).to.be.true
       
-    it "should help with testing whether a=b, F(a) therefore G(b) is ok", ->
+    it "helps with testing whether a=b, F(a) therefore G(b) is ok", ->
       pattern = fol.parse 'α=β'
       expression1 = fol.parse 'a=b'
       matches = substitute.findMatches expression1, pattern
@@ -209,7 +227,7 @@ describe 'substitute', ->
       expression3 = fol.parse 'G(b)'
       expect(util.areIdenticalExpressions(result,expression3)).to.be.false
       
-    it "should help with testing whether a=b, F(b) therefore F(a) is ok", ->
+    it "helps with testing whether a=b, F(b) therefore F(a) is ok", ->
       pattern = fol.parse 'α=β'
       expression1 = fol.parse 'a=b'
       matches = substitute.findMatches expression1, pattern
@@ -218,7 +236,7 @@ describe 'substitute', ->
       expression3 = fol.parse 'F(a)'
       expect(util.areIdenticalExpressions(result,expression3)).to.be.false
     
-    it "should allow us to replace a variable with a `term_metavariable`", ->
+    it "allows us to replace a variable with a `term_metavariable`", ->
       expression = fol.parse "Loves(x,a)"
       whatToReplace = 
         from : VARIABLE_X
@@ -227,7 +245,7 @@ describe 'substitute', ->
       expectedResult = fol.parse "Loves(τ,a)"
       expect( util.areIdenticalExpressions(result,expectedResult) ).to.be.true
     
-    it "should replace all instances of a variable with a `term_metavariable`", ->
+    it "replaces all instances of a variable with a `term_metavariable`", ->
       expression = fol.parse "Loves(x,a) and F(x) arrow G(x)"
       whatToReplace = 
         from : VARIABLE_X
@@ -236,7 +254,7 @@ describe 'substitute', ->
       expectedResult = fol.parse "Loves(τ,a) and F(τ) arrow G(τ)"
       expect( util.areIdenticalExpressions(result,expectedResult) ).to.be.true
 
-    it "should allow us to tell whether 'F(a)' is an instance of 'all x F(x)'", ->
+    it "allows us to tell whether 'F(a)' is an instance of 'all x F(x)'", ->
       expression = fol.parse "all x F(x)"
       boundVariable = expression.boundVariable
       expressionMinusQuantifier = expression.left
@@ -248,7 +266,7 @@ describe 'substitute', ->
       theMatch = substitute.findMatches aCandidateInstance, thePattern
       expect(theMatch).not.to.be.false
       
-    it "should allow us to tell whether 'G(a)' is an instance of 'all x F(x)'", ->
+    it "allows us to tell whether 'G(a)' is an instance of 'all x F(x)'", ->
       expression = fol.parse "all x F(x)"
       boundVariable = expression.boundVariable
       expressionMinusQuantifier = expression.left
@@ -260,7 +278,7 @@ describe 'substitute', ->
       theMatch = substitute.findMatches aCandidateInstance, thePattern
       expect(theMatch).to.be.false
       
-    it "should allow us to tell whether 'F(b) and G(b)' is an instance of 'all y (F(y) and G(y))'", ->
+    it "allows us to tell whether 'F(b) and G(b)' is an instance of 'all y (F(y) and G(y))'", ->
       expression = fol.parse "all y (F(y) & G(y))"
       boundVariable = expression.boundVariable
       expressionMinusQuantifier = expression.left
@@ -272,7 +290,7 @@ describe 'substitute', ->
       theMatch = substitute.findMatches aCandidateInstance, thePattern
       expect(theMatch).not.to.be.false
       
-    it "should allow us to tell whether 'F(a) and G(b)' is an instance of 'all y (F(y) and G(y))'", ->
+    it "allows us to tell whether 'F(a) and G(b)' is an instance of 'all y (F(y) and G(y))'", ->
       expression = fol.parse "all y (F(y) & G(y))"
       boundVariable = expression.boundVariable
       expressionMinusQuantifier = expression.left
@@ -283,10 +301,69 @@ describe 'substitute', ->
       aCandidateInstance = fol.parse "F(a) & G(b)"
       theMatch = substitute.findMatches aCandidateInstance, thePattern
       expect(theMatch).to.be.false
+    
+    it "replaces things in the box (as in '[a]F(a)')", ->
+      expression = fol.parse "[a]F(a)"
+      whatToReplace = 
+        from : NAME_A
+        to : NAME_B
+      result = substitute.replace expression, whatToReplace
+      expect(result.box.term.name).to.equal('b')
+      expect(result.termlist[0].name).to.equal('b')
       
+    it "replaces `term_metavariable`s in the box (as in '[τ]F(a)')", ->
+      expression = fol.parse "[τ]F(a)"
+      whatToReplace = 
+        from : TERM_METAVARIABLE_T
+        to : NAME_A
+      result = substitute.replace expression, whatToReplace
+      expect(result.box.term.name).to.equal('a')
+
+    it "allows us to get from A to B", ->
+      expression = fol.parse "A"
+      whatToReplace =
+        from : fol.parse "A"
+        to : fol.parse "B"
+      result = substitute.replace expression, whatToReplace
+      expect(result.letter).to.equal('B')
+      
+    it "allows us to get from A[A->B] to B", ->
+      expression = fol.parse "A[A->B]"
+      whatToReplace =
+        from : expression.substitutions[0].from
+        to : expression.substitutions[0].to
+      # Note : if we don't delete the substitutions, this won't work.
+      delete expression.substitutions
+      result = substitute.replace expression, whatToReplace
+      expect(result.letter).to.equal('B')
+
+    it "allows us to get from (A and B)[A->C] to A and C", ->
+      expression = fol.parse "(A and B)[A->C]"
+      whatToReplace =
+        from : expression.substitutions[0].from
+        to : expression.substitutions[0].to
+      result = substitute.replace expression, whatToReplace
+      expect(result.left.letter).to.equal('C')
+
+    it "allows us to get from (a=b)[a->c] to c=b", ->
+      expression = fol.parse "(a=b)[a->c]"
+      whatToReplace =
+        from : expression.substitutions[0].from
+        to : expression.substitutions[0].to
+      result = substitute.replace expression, whatToReplace
+      expect(result.termlist[0].name).to.equal('c')
+
+    it "allows us to get from (a=b)[a->τ] to τ=b", ->
+      expression = fol.parse "(a=b)[a->τ]"
+      whatToReplace =
+        from : expression.substitutions[0].from
+        to : expression.substitutions[0].to
+      result = substitute.replace expression, whatToReplace
+      expect(result.termlist[0].name).to.equal('τ')
+
 
   describe 'applyMatches', ->
-    it "should correctly apply a simple match to a pattern", ->
+    it "correctly applies a simple match to a pattern", ->
       pattern = fol.parse 'not not φ'
       matches = 
         φ : fol.parse 'A'
@@ -294,7 +371,7 @@ describe 'substitute', ->
       expectedResult = fol.parse 'not not A'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
 
-    it "should correctly apply a simple match to a pattern when the match occurs more than once", ->
+    it "correctly applies a simple match to a pattern when the match occurs more than once", ->
       pattern = fol.parse 'not not (φ and (φ or φ))'
       matches = 
         φ : fol.parse 'A'
@@ -302,7 +379,7 @@ describe 'substitute', ->
       expectedResult = fol.parse 'not not (A and (A or A))'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
 
-    it "should correctly apply a match with multiple `expression_variable`s to a pattern", ->
+    it "correctly applies a match with multiple `expression_variable`s to a pattern", ->
       pattern = fol.parse 'not (φ and not ψ)'
       matches = 
         φ : fol.parse 'A'
@@ -311,17 +388,70 @@ describe 'substitute', ->
       expectedResult = fol.parse 'not (A and not (B or C))'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
 
-    it "should correctly apply a match a `term_metavariable` to a pattern", ->
+    it "correctly applies a match a `term_metavariable` to a pattern", ->
       pattern = fol.parse 'Loves(α,b) and not α=b'
       matches = 
         α : fol.parse('F(a)').termlist[0] #i.e. {type='name', name='a', ...}
       result = substitute.applyMatches pattern, matches
       expectedResult = fol.parse 'Loves(a,b) and not a=b'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+    
+    it "does not mutate its parameters", ->
+      pattern = fol.parse 'not not φ'
+      matches = 
+        φ : fol.parse 'A'
+      prePattern = _.cloneDeep pattern
+      preMatches = _.cloneDeep matches
+      substitute.applyMatches pattern, matches
+      expect(pattern).to.deep.equal(prePattern)
+      expect(matches).to.deep.equal(preMatches)
 
+  describe 'applyMatches to expressions with substitutions', ->
+    it "applies matches within a substitution (terms, lhs)", ->
+      pattern = fol.parse 'Loves(a,b)[α->c]'
+      matches = 
+        α : fol.parse('F(a)').termlist[0] #i.e. {type='name', name='a', ...}
+      result = substitute.applyMatches pattern, matches
+      expectedResult = fol.parse 'Loves(a,b)[a->c]'
+      console.log util.expressionToString(result)
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+    it "applies matches within a substitution (terms, rhs)", ->
+      pattern = fol.parse 'Loves(a,b)[b->α]'
+      matches = 
+        α : fol.parse('F(a)').termlist[0] #i.e. {type='name', name='a', ...}
+      result = substitute.applyMatches pattern, matches
+      expectedResult = fol.parse 'Loves(a,b)[b->a]'
+      console.log util.expressionToString(result)
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+    it "applies matches within a substitution (expressions, lhs)", ->
+      pattern = fol.parse '(A and B)[φ->C]'
+      matches = 
+        φ : fol.parse 'A'
+      result = substitute.applyMatches pattern, matches
+      expectedResult = fol.parse '(A and B)[A->C]'
+      console.log util.expressionToString(result)
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+    it "applies matches within a substitution (expressions, rhs)", ->
+      pattern = fol.parse '(A and B)[A->φ]'
+      matches = 
+        φ : fol.parse 'C'
+      result = substitute.applyMatches pattern, matches
+      expectedResult = fol.parse '(A and B)[A->C]'
+      console.log util.expressionToString(result)
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+
+  describe 'applyMatches to expressions with boxes', ->
+    it "applies a match to a term_metavariable in a box", ->
+      pattern = fol.parse '[α] Loves(α,b)'
+      matches = 
+        α : fol.parse('F(a)').termlist[0] #i.e. {type='name', name='a', ...}
+      result = substitute.applyMatches pattern, matches
+      expectedResult = fol.parse '[a] Loves(a,b)'
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+      
 
   describe 'doSub', ->
-    it "should do a double-negation substitution", ->
+    it "does a double-negation substitution", ->
       sub = 
         from : fol.parse 'not not φ'
         to : fol.parse 'φ'
@@ -330,7 +460,7 @@ describe 'substitute', ->
       expectedResult = fol.parse 'A'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
 
-    it "should be fine when a double-negation substitution can't be done", ->
+    it "is fine when a double-negation substitution can't be done", ->
       sub = 
         from : fol.parse 'not not φ'
         to : fol.parse 'φ'
@@ -339,7 +469,7 @@ describe 'substitute', ->
       expectedResult = fol.parse 'not A'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
 
-    it "should do a deMorgan substitution", ->
+    it "does a deMorgan substitution", ->
       sub = 
         from : fol.parse 'not (φ and ψ)'
         to : fol.parse '(not φ) or (not ψ)'
@@ -348,7 +478,7 @@ describe 'substitute', ->
       expectedResult = fol.parse '(not (A arrow B)) or (not C)'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
 
-    it 'should do a "φ or true" substitution', ->
+    it 'does a "φ or true" substitution', ->
       sub = 
         from : fol.parse 'φ or true'
         to : fol.parse 'true'
@@ -357,7 +487,7 @@ describe 'substitute', ->
       expectedResult = fol.parse 'true'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
 
-    it "should not modify `expression` in place ", ->
+    it "does not modify `expression` in place ", ->
       sub = 
         from : fol.parse 'φ or true'
         to : fol.parse 'true'
@@ -366,10 +496,11 @@ describe 'substitute', ->
       substitute.doSub expression, sub
       post = util.cloneExpression expression
       expect(pre).to.deep.equal(post)
+    it "does a double-negation substitution", ->
 
 
   describe 'doSubRecursive', ->
-    it "should do a double-negation substitution", ->
+    it "does a double-negation substitution", ->
       sub = 
         from : fol.parse 'not not φ'
         to : fol.parse 'φ'
@@ -378,7 +509,7 @@ describe 'substitute', ->
       expectedResult = fol.parse 'A'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
 
-    it "should do a double-negation substitution when the double neg is nested", ->
+    it "does a double-negation substitution when the double neg is nested", ->
       sub = 
         from : fol.parse 'not not φ'
         to : fol.parse 'φ'
@@ -388,7 +519,7 @@ describe 'substitute', ->
       expectedResult = fol.parse 'not (A and B)'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
       
-    it "should not modify `expression` in place ", ->
+    it "does not modify `expression` in place ", ->
       sub = 
         from : fol.parse 'not not φ'
         to : fol.parse 'φ'
@@ -400,71 +531,71 @@ describe 'substitute', ->
 
 
   describe 'subs, the built-in substitutions', ->
-    it "should do not_exists substitution", ->
+    it "does not_exists substitution", ->
       sub = substitute.subs.not_exists
       expression = fol.parse 'not exists y ( F(y))'
       result = substitute.doSub expression, sub
       expectedResult = fol.parse 'all y (not F(y))'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
       
-    it "should do deMorgan1", ->
+    it "does deMorgan1", ->
       expression = fol.parse 'not (not A and not (B or not C))'
       sub = substitute.subs.demorgan1
       result = substitute.doSub expression, sub
       expectedResult = fol.parse 'not not A or not not (B or not C)'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
       
-    it "should convert arrow correctly", ->
+    it "converts arrow correctly", ->
       expression = fol.parse 'A arrow B'
       sub = substitute.subs.replace_arrow
       result = substitute.doSub expression, sub
       expectedResult = fol.parse 'not A or B'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
         
-    it "should convert arrow correctly (when antecedent is complex)", ->
+    it "converts arrow correctly (when antecedent is complex)", ->
       expression = fol.parse '(A and B) arrow (C and D)'
       sub = substitute.subs.replace_arrow
       result = substitute.doSub expression, sub
       expectedResult = fol.parse 'not (A and B) or (C and D)'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
         
-    it "should do replace_double_arrow", ->
+    it "does replace_double_arrow", ->
       expression = fol.parse '(A ↔ B) ↔ (B and (A ↔ (A ↔ C)))'
       doubleArrowSymbol = expression.type
       result = substitute.doSubRecursive expression, substitute.subs.replace_double_arrow
       resultString = util.expressionToString result
       expect(resultString.indexOf(doubleArrowSymbol)).to.equal(-1)
     
-    it "should do not_all substitution", ->
+    it "does not_all substitution", ->
       sub = substitute.subs.not_all
       expression = fol.parse 'not all z ( Loves(a,z))'
       result = substitute.doSub expression, sub
       expectedResult = fol.parse 'exists z (not Loves(a,z))'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
 
-    it "should do all_and_left substitution", ->
+    it "does all_and_left substitution", ->
       sub = substitute.subs.all_and_left
       expression = fol.parse 'P and all z ( Loves(a,z))'
       result = substitute.doSub expression, sub
       expectedResult = fol.parse 'all z (P and Loves(a,z))'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
       
-    it "should do all_and_right substitution", ->
+    it "does all_and_right substitution", ->
       sub = substitute.subs.all_and_right
       expression = fol.parse 'all z ( R(a,z)) and P'
       result = substitute.doSub expression, sub
       expectedResult = fol.parse 'all z (R(a,z) and P)'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
 
-    it "should do all_or_left substitution", ->
+    it "does all_or_left substitution", ->
       sub = substitute.subs.all_or_left
       expression = fol.parse 'exists x F(x) or all z G(z)'
       result = substitute.doSub expression, sub
       expectedResult = fol.parse 'all z (exists x F(x) or G(z))'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
-      
-    it "should not alter the truth table of propositional sentences"
-    # TODO
+    
+    it "does not alter the truth table of propositional sentences"
+    # TODO (can't yet because don't have truth tables)
 
 
   describe 'subs_eliminate_redundancy', ->
@@ -517,7 +648,7 @@ describe 'substitute', ->
       substitute.renameVariables expression
       expect(expression.left.termlist[0].name).to.equal('xx1')
     
-    it "should not repeat a variable name", ->
+    it "does not repeat a variable name", ->
       expression = fol.parse '(exists x F(x)) and (exists x G(x))'
       substitute.renameVariables expression
       quantifier1 = expression.left
@@ -561,7 +692,7 @@ describe 'substitute', ->
         symmetry.sortIdentityStatements(e)
         e = symmetry.eliminateRedundancyInPNF(e)
         console.log "the F : #{util.expressionToString e} "
-      throw "E"
+      # throw "E"
 
 
   describe "isPNF", ->
@@ -625,7 +756,35 @@ describe 'substitute', ->
       expect(test).to.be.true
       
 
+  describe "`.applySubstitutions` (as in `A[A->B]`)", ->
+    it "applies a simple substitution (to the main expression)", ->
+      expression = fol.parse "A[A->B]"
+      result = substitute.applySubstitutions expression
+      expect(result.letter).to.equal('B')
 
+    it "applies a simple substitution (to a component expression)", ->
+      expression = fol.parse "(A and D)[A->B]"
+      result = substitute.applySubstitutions expression
+      expect(result.left.letter).to.equal('B')
+
+    it "applies a substitution which is not at the root expression", ->
+      expression = fol.parse "(A[A->B] and D)"
+      result = substitute.applySubstitutions expression
+      expect(result.left.letter).to.equal('B')
+
+    it "applies two substitutions in the right order", ->
+      # NOTE: This may fail if there is a problem with the awFOL parser.
+      expression = fol.parse "((A and D)[A->B])[B->C]"
+      console.log "expression = #{util.expressionToString(expression)}"
+      result = substitute.applySubstitutions expression
+      expect(result.left.letter).to.equal('C')
+    
+    it "takes `(A[A->B] and C)[B->D]` to `D and C`", ->
+      expression = fol.parse "(A[A->B] and C)[B->D]"
+      result = substitute.applySubstitutions expression
+      expect(result.type).to.equal('and')
+      expect(result.left.letter).to.equal('D')
+      expect(result.right.letter).to.equal('C')
 
 
 

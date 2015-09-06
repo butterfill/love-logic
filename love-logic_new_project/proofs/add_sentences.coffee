@@ -4,7 +4,7 @@
 # and adds the expressions the lines of the `Block`, noting any errors.
 #
 
-fol = require '../parser/awFOL'
+fol = require '../fol'
 substitute = require '../substitute'
 util = require '../util'
 
@@ -23,18 +23,6 @@ to = (block) ->
         line.sentence = fol.parse line.sentenceText
       catch e
         line.sentenceErrors = e.message
-      
-      # Now we add some functions that may be useful later.
-      
-      item.isIdenticalExpression = (e) ->
-        return util.areIdenticalExpressions(@sentence, e)
-      item.leftIsIdenticalExpression = (e) ->
-        return util.areIdenticalExpressions(@sentence.left, e)
-      item.rightIsIdenticalExpression = (e) ->
-        return util.areIdenticalExpressions(@sentence.right, e)
-      
-      item.matches = (pattern, _matches, o) ->
-        return substitute.findMatches @sentence, pattern, _matches, o
       
       return undefined  # Keep walking.
   block.walk walker

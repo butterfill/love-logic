@@ -365,4 +365,96 @@ describe "block_parser", ->
       subBlock2 = block.content[3]
       expect(subBlock2.type).to.equal('block')
       expect(block.indentation.length < subBlock2.indentation.length)
-            
+  
+  describe "in some tricky cases", ->
+    it "does ok with blank line first followed by a subblock", ->
+      proof = '''
+           | 
+        1. | | A              // assumption
+        2. | | contradiction  // contradiction intro 1,2
+        3. | not A            // not intro 1-2
+      '''
+      block = bp.parse proof
+      subBlock = block.content[1]
+      expect(subBlock.type).to.equal('block')
+      expect(subBlock.content.length).to.equal(2)
+      
+    it "does ok with blank line first followed by a subblock (indentation with spaces)", ->
+      # Note: the spaces on the first line are critical here!
+      proof = '''
+        1. 
+        2.    A               // assumption
+        3.    contradiction   // contradiction intro 1,2
+        4. not A              // not intro 1-2
+      '''
+      block = bp.parse proof
+      subBlock = block.content[1]
+      expect(subBlock.type).to.equal('block')
+      expect(subBlock.content.length).to.equal(2)
+
+    it "deals with dividers that run the length of a line", ->
+      proof = '''
+        1. | 
+        2. | | A              // assumption
+        -------------
+        3. | | contradiction  // contradiction intro 1,2
+        4. | not A            // not intro 1-2
+      '''
+      block = bp.parse proof
+      subBlock = block.content[1]
+      expect(subBlock.type).to.equal('block')
+      expect(subBlock.content.length).to.equal(3)
+
+    it "deals with dividers that come after indentation", ->
+      proof = '''
+        1. | 
+        2. | | A              // assumption
+        3. | | ----------
+        4. | | contradiction  // contradiction intro 1,2
+        5. | not A            // not intro 1-2
+      '''
+      block = bp.parse proof
+      subBlock = block.content[1]
+      expect(subBlock.type).to.equal('block')
+      expect(subBlock.content.length).to.equal(3)
+
+    it "deals with dividers that come after indentation (divider is not numbered)", ->
+      proof = '''
+        1. | 
+        2. | | A              // assumption
+           | | ----------
+        4. | | contradiction  // contradiction intro 1,2
+        5. | not A            // not intro 1-2
+      '''
+      block = bp.parse proof
+      subBlock = block.content[1]
+      expect(subBlock.type).to.equal('block')
+      expect(subBlock.content.length).to.equal(3)
+
+    it "deals with dividers that come after indentation (using spaces for indentation)", ->
+      # Note: the spaces on the first line are critical here!
+      proof = '''
+        1. 
+        2.   A              // assumption
+        3.   ----------
+        4.   contradiction  // contradiction intro 1,2
+        5. not A            // not intro 1-2
+      '''
+      block = bp.parse proof
+      subBlock = block.content[1]
+      expect(subBlock.type).to.equal('block')
+      expect(subBlock.content.length).to.equal(3)
+
+    it "deals with dividers that come after indentation (using spaces for indentation and no number on the divider line)", ->
+      # Note: the spaces on the first line are critical here!
+      proof = '''
+        1. 
+        2.   A              // assumption
+             ----------
+        4.   contradiction  // contradiction intro 1,2
+        5. not A            // not intro 1-2
+      '''
+      block = bp.parse proof
+      subBlock = block.content[1]
+      expect(subBlock.type).to.equal('block')
+      expect(subBlock.content.length).to.equal(3)

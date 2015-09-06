@@ -100,14 +100,10 @@
 expressions
     : e EOF
         { return $1; }
+    | box EOF
+        { return $1; }
     | box e EOF
         { $2.box = $1; return $2; }
-/*
-    | e substitution_list EOF
-        { $1.substitutions = $2; return $1; }
-    | box e substitution_list EOF
-        { $2.box = $1; $2.substitutions = $3; return $2; }
-*/
     ;
 
 e
@@ -150,7 +146,14 @@ e
         Note that `substitution_list` is `.reverse()`d here.
     */
     | e substitution_list
-      { $1.substitutions = $2.reverse(); $$ = $1; }
+      {
+         if( $1.substitutions && $1.substitutions.length ) {
+           $1.substitutions.concat($2.reverse());
+         } else {
+           $1.substitutions = $2.reverse();
+         }
+         $$ = $1; 
+      }
 
     ;
 
@@ -223,9 +226,9 @@ substitution
     
 bare_substitution 
     : term arrow term 
-        { $$ = {type:'substitution', from:$1, to:$3}; }
+        { $$ = {type:'substitution', from:$1, to:$3, symbol:$2}; }
     | sentence_letter_or_expression_variable arrow e  
-        { $$ = {type:'substitution', from:$1, to:$3}; }
+        { $$ = {type:'substitution', from:$1, to:$3, symbol:$2}; }
     ;
 
 bare_substitution_list

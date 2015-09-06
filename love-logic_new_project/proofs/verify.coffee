@@ -212,85 +212,6 @@ test = {}
 test.throw = ->
   throw new Error "Not implemented yet!"
 
-test.singleLineCited = (line) ->
-  if line.justification.numbers?.length isnt 1
-    # The test has failed, so we return a function that updates `result`.
-    return (result) ->
-      # Note: when a sentence in message starts lowercase, it will be prefixed
-      # with something appropriate like "This step is incorrect because ".
-      result.addMessage "you must cite exactly one line with #{line.getRuleName()}."
-  if line.getCitedLines().length isnt 1
-    return (result) ->
-      result.addMessage "you must cite a line, not a block, with #{line.getRuleName()}."
-  return true # Test passed
-
-test.singleBlockCited = (line) ->
-  if line.justification.numbers?.length isnt 1
-    return (result) ->
-      result.addMessage "you must cite exactly one subproof with #{line.getRuleName()}."
-  if line.getCitedLine().type isnt 'block'
-    return (result) ->
-      result.addMessage "you must cite a block, not a line, with #{line.getRuleName()}."
-  return true 
-
-test.twoLinesCited = (line) ->
-  if line.justification.numbers.length isnt 2
-    return (result) ->
-      result.addMessage "you must cite exactly two lines with #{line.getRuleName()}."
-  if line.getCitedLines().length isnt 2
-    return (result) ->
-      result.addMessage "you may only cite lines, not blocks, with #{line.getRuleName()}."
-  return true 
-
-test.lineAndBlockCited = (line) ->
-  citedLines = line.getCitedLines()
-  citedBlocks = line.getCitedBlocks()
-  if citedLines.length isnt 1 or citedBlocks.length isnt 1
-    return (result) ->
-      result.addMessage "you must cite one line and one subproof with #{line.getRuleName()}; you cited #{citedLines.length} lines and #{citedBlocks.length} blocks."
-  return true 
-
-test.lineIsCitedLine = (line) ->
-  return true if line.isIdenticalExpression( line.getCitedLine().sentence )
-  return (result) ->
-    # console.log "line = #{util.expressionToString line.sentence}, line.getCitedLine() = #{util.expressionToString line.getCitedLine().sentence}"
-    result.addMessage "the line you cite with  #{line.getRuleName()} must be identical to this line."
-
-test.lineIsLeftJunctOfCitedLine = (line) ->
-  return true if line.getCitedLine().leftIsIdenticalExpression(line.sentence)
-  return (result) ->
-    result.addMessage "the left part of line you cite must be identical to this line when you use #{line.getRuleName()}."
-
-test.lineIsRightJunctOfCitedLine = (line) ->
-  return true if line.getCitedLine().rightIsIdenticalExpression(line.sentence)
-  return (result) ->
-    result.addMessage "the right part of line you cite must be identical to this line when you use #{line.getRuleName()}."
-
-test.connectiveIs = (connective) ->
-  return (line) ->
-    return true if line.sentence.type is connective
-    return (result) ->
-      result.addMessage "the main connective in this line must be #{connective} with #{line.getRuleName()}."
-
-test.connectiveIs = (connective) ->
-  return (line) ->
-    return true if line.sentence.type is connective
-    return (result) ->
-      result.addMessage "you can only use #{line.getRuleName()} on lines where the main connective is #{connective}."
-
-test.citedLineConnectiveIs = (connective) ->
-  return (line) ->
-    otherLine = line.getCitedLine()
-    return true if otherLine.sentence.type is connective
-    return (result) ->
-      result.addMessage "with #{line.getRuleName()}, the main connective in the line you cite must be #{connective}."
-
-test.citedLinesAreTheJunctsOfThisLine = (line) ->
-  [citedLine1, citedLine2] = line.getCitedLines()
-  if not citedLine1.isIdenticalExpression( line.sentence.left )
-    return  citedLine2.isIdenticalExpression( line.sentence.left ) and citedLine1.isIdenticalExpression( line.sentence.right ) 
-  else
-    return citedLine2.isIdenticalExpression( line.sentence.right )
 
 requirements = 
   premise : [ test.throw ]
@@ -315,7 +236,10 @@ requirements =
 
   contradiction :
     elim : rule.from('contradiction').to('φ') 
-    intro : rule.from('φ').and('not φ').to('contradiction')
+    # TODO: this rule will not always work as things stand, because it will 
+    # only try to match the `.from` clause before the `.and` clause.
+    # (It is essential to try matching in different orders.)
+    intro : rule.from('not φ').and('φ').to('contradiction')
     
   arrow :
     # Note: in checking this rule, it is essential to match `φ arrow ψ` before `φ`.
@@ -327,23 +251,34 @@ requirements =
     elim : rule.from('φ arrow ψ').and('φ').to('ψ')
     intro : rule.from( rule.subproof('φ','ψ') ).to('φ arrow ψ')
     
-#   [['double_arrow','intro'], '↔intro']
-#   [['double_arrow','elim'], '↔elim']
-#   [['identity','intro'], '=intro']
-#   [['identity','elim'], '=elim']
+  double_arrow :
+    elim : 
+      left : rule.from('φ↔ψ').and('φ').to('ψ')
+      right : rule.from('φ↔ψ').and('ψ').to('φ')
+    intro : rule.from( rule.subproof('φ','ψ') ).and( rule.subproof('ψ','φ') ).to('φ↔ψ')
 
+  identity :
+    intro : rule.to('α=α')
+    elim : 
+      left : rule.from('α=β').and('φ').to('φ[α->β]')
+      right : rule.from('α=β').and('φ').to('φ[β->α]')
         
-# requirements.existential =
-#   # This is rule requires tests to be done in a particular order (don't know what α is 
-#   #  in the conclusion until done subproof, and doing that require doing first line).
-#   #  Solution: have a while loop in the checker attempting each check in turn (whatever order) 
-#   #  until all checks are done.
-#   # 
-#   elim : rule.from('exists τ φ').and( rule.subproof('[α]φ[τ->α]', 'ψ') ).to('ψ[α->aa]')
-#   intro : rule.from('φ[τ->α]').to('exists τ φ')
-#
-# requirements.universal =
-#   elim : rule.from('all τ φ').to('φ[τ->α]')
-#   intro : rule( rule.subproof('[α]', 'φ') ).to('all τ φ[α->τ]')
-  
+  existential :
+    # This is rule requires tests to be done in a particular order (don't know what α is
+    # in the conclusion until done subproof, and doing that require doing first line).
+    # Solution: have a while loop in the checker attempting each check in turn (whatever order)
+    # until all checks are done.
+    #
+    # Note: in the `.to('ψ[α->nul]')`, the `[α->nul]` substitution means ensure that α
+    # does not occur in ψ.
+    # elim : rule.from('exists τ φ').and( rule.subproof('[α]φ[τ->α]', 'ψ') ).to('ψ[α->nul]')
+
+    # Note: this rule will not work as things stand because it requires matching the `.to` before
+    # the `.from`
+    intro : rule.from('φ[τ->α]').to('exists τ φ')
+
+  universal :
+    elim : rule.from('all τ φ').to('φ[τ->α]')
+    intro : rule.from( rule.subproof('[α]', 'φ') ).to('all τ φ[α->τ]')
+
 exports._test = test

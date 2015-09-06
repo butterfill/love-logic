@@ -306,23 +306,23 @@ describe 'fol', ->
       expect(-> fol.parse "all(xx1) P").to.throw
     
   describe "boxes at the start of expressions", ->
-    it "should recognise boxes", ->
+    it "recognises boxes", ->
       result = fol.parse("F(a)")
       expect(result.box?).to.be.false
       result = fol.parse("[a] F(a)")
       expect(result.box?).to.be.true
       
-    it "should recognise boxes with term metavariables", ->
+    it "recognises boxes with term metavariables", ->
       result = fol.parse("[τ] F(a)")
       expect(result.box?).to.be.true
       
-    it "should record what is in the box (for names)", ->
+    it "records what is in the box (for names)", ->
       result = fol.parse("[a] F(a)")
       console.log "#{JSON.stringify result.box, null, 4}"
       expect(result.box.term.type).to.equal('name')
       expect(result.box.term.name).to.equal('a')
 
-    it "should record what is in the box (for τ)", ->
+    it "records what is in the box (for τ)", ->
       result = fol.parse("[τ] F(a)")
       expect(result.box.term.type).to.equal('term_metavariable')
       expect(result.box.term.name).to.equal('τ')
@@ -336,6 +336,11 @@ describe 'fol', ->
       util.delExtraneousProperties noBox
       util.delExtraneousProperties withBox
       expect(noBox).to.deep.equal(withBox)
+    
+    it "allows an expression to consist of just a box", ->
+      onlyBox = fol.parse '[a]'
+      expect(onlyBox.type).to.equal('box')
+      
 
       
   describe "substitutions like φ[τ->α]", ->
@@ -422,4 +427,6 @@ describe 'fol', ->
       expect(expression.substitutions.length).to.equal(1)
       expect(expression.substitutions[0].to.substitutions.length).to.equal(1)
       
-    
+    it "doesn't overwrite substitutions when brackets are involved",->
+      expression = fol.parse "((A and D)[A->B])[B->C]"
+      expect(expression.substitutions.length).to.equal(2)

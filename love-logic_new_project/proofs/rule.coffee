@@ -153,6 +153,8 @@ class LineChecker
           # being able to cite the same line twice.
           # @citedBlocksUsed.push block
           return true 
+      console.log "\n\n req.endReq = #{JSON.stringify req.endReq,null,4}"
+      console.log "\n\n @matches.apply(req.endReq) = #{JSON.stringify @matches.apply(req.endReq),null,4}"
       expressionsAsMatched = "#{util.expressionToString @matches.apply(req.startReq)} ... #{util.expressionToString @matches.apply(req.endReq)}"
       @addMessage "you must cite a subproof whose premise is of the form #{util.expressionToString(req.startReq)}  and whose conclusion is of the form #{util.expressionToString(req.endReq)} (which would be #{expressionsAsMatched} in this case) when using the rule #{@ruleName}."
       return false 
@@ -177,14 +179,14 @@ class LineChecker
     # We don't yet know whether we will want to update @matches with 
     # these matches (it depends on the last line of the subproof matching too).
     tempMatches = _.cloneDeep @matches
-    firstLineMatches = firstLine.matches req.startReq, tempMatches
+    firstLineMatches = firstLine.sentence.matches req.startReq, tempMatches
     return false if firstLineMatches is false
     
     # Here we want to impose the `firstLineMatches` on subsequent matches.
     # But we don't want to add these to `@matches` yet in case this
     # subproof fails and we have to try another one.
     tempMatches.addMatches firstLineMatches
-    lastLineMatches = lastLine.matches req.endReq, tempMatches
+    lastLineMatches = lastLine.sentence.matches req.endReq, tempMatches
     if lastLineMatches is false
       return false 
     else
@@ -199,7 +201,7 @@ class LineChecker
   # `req` is a pattern suitable for use with `substitute.findMatch`.
   lineMeetsRequirement : (aLine, req) ->
     # console.log "Checking #{util.expressionToString(aLine.sentence)} against #{util.expressionToString(req)} with matches #{nodeutil.inspect(@matches)}"
-    newMatches = aLine.matches req, @matches
+    newMatches = aLine.sentence.matches req, @matches
     if newMatches isnt false
       @addMatches newMatches
       
@@ -219,7 +221,7 @@ class LineChecker
   toRequirementIsMet : () ->
     # If no requirement is specified, the test passes.
     return true if not @requirements.to
-    newMatches = @line.matches(@requirements.to, @matches)
+    newMatches = @line.sentence.matches(@requirements.to, @matches)
     if newMatches isnt false
       @addMatches newMatches
       # In case there is an error later, adding this clause to the message 

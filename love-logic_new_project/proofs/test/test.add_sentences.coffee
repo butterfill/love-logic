@@ -35,13 +35,4 @@ describe "add_sentences", ->
       addSentences.to BLOCK
       lineWithError = BLOCK.goto(4)
       expect( lineWithError.sentenceErrors.slice(0,5) ).to.equal('Parse')  
-    it "enables lines to tell you whether they are identical to another expression", ->
-      addSentences.to BLOCK
-      line1 = BLOCK.goto(1)
-      e = fol.parse "A and B"
-      e2 = fol.parse "A"
-      expect( line1.isIdenticalExpression(e) ).to.be.true
-      expect( line1.isIdenticalExpression(e2) ).to.be.false
-      expect( line1.leftIsIdenticalExpression(e2) ).to.be.true
-      expect( line1.rightIsIdenticalExpression( fol.parse("B")) ).to.be.true
       

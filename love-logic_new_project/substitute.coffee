@@ -341,6 +341,14 @@ applyMatches = (pattern, matches) ->
     res.termlist = (applyMatches(t,matches) for t in pattern.termlist)
   if pattern.boundVariable?
     res.boundVariable = applyMatches(pattern.boundVariable, matches)
+  if pattern.box?
+    res.box = _.cloneDeep pattern.box
+    res.box.term = applyMatches(res.box.term, matches)
+  if pattern.substitutions?
+    res.substitutions = _.cloneDeep pattern.substitutions
+    for s in res.substitutions
+      s.from = applyMatches s.from, matches
+      s.to = applyMatches s.to, matches
   # add everything from `pattern` to `res` except where `res` already contains it
   return _.defaults(res, pattern)
   
@@ -358,6 +366,7 @@ exports.applyMatches = applyMatches
 replace =  (expression, whatToReplace) ->
   toFind = whatToReplace.from
   toReplace = whatToReplace.to
+  console.log "replace: #{util.expressionToString toFind} with #{util.expressionToString toReplace} in #{util.expressionToString(expression)}"
   if util.areIdenticalExpressions(expression, toFind)
     return util.cloneExpression(toReplace)
   result = {}
@@ -369,11 +378,37 @@ replace =  (expression, whatToReplace) ->
     result.termlist = (replace(t,whatToReplace) for t in expression.termlist)
   if expression.boundVariable?
     result.boundVariable = replace(expression.boundVariable, whatToReplace)
+  if expression.box?
+    result.box = _.cloneDeep expression.box
+    result.box.term = replace(expression.box.term, whatToReplace)
   # add everything from `expression` to `result` except where `result` already contains it
   return _.defaults(result, expression)  
   
 exports.replace = replace
 
+# Given `A[A->B]` as the `expression`, return `B`.
+# (This is not to be confused with doSub, doSubRecursive (TODO: rename, reorganize).)
+# `expression` will not be modified.
+applySubstitutions = (expression) ->
+  # We are going to do this by starting at a point innermost in the expression
+  # and walking outwards, so that `(A[A->B] and C)[B->D]` returns `D and C`.
+  doit = (e) ->
+    return e if not e.substitutions?
+    console.log "at expression #{util.expressionToString(e)}"
+    theSubs = _.cloneDeep e.substitutions
+    delete e.substitutions
+    for s in theSubs
+      whatToReplace =
+        from : s.from
+        to : s.to
+      console.log "aS: replace: #{util.expressionToString whatToReplace.from} with #{util.expressionToString whatToReplace.to} in #{util.expressionToString(e)}"
+      e = replace(e, whatToReplace)
+    # Note : if we don't delete the substitutions, this won't work.
+    return e
+    
+  e = _.cloneDeep expression
+  return util.walkMutate(e, doit)
+exports.applySubstitutions = applySubstitutions
 
 # Go through expression and rename variables so that each 
 # quantifier binds a distinct variable.

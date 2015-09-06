@@ -186,9 +186,6 @@ clean = (lines) ->
   # TODO replace ' ' with | if there are no | at the start of a line
   # TODO remove spaces at the start of a line.
 
-# This regular expression matches |s and whitespace at the start of a line.
-_INDENTATION_AT_START_OF_LINE = /^([|\s]+)/ 
-
 
 extractIndentationAndContentFrom = (lines) ->
   # How are the lines formatted, number then indentation or
@@ -205,10 +202,22 @@ extractIndentationAndContentFrom = (lines) ->
       type = 'divider'
     result.push( { indentation, content, idx:idx+1, type, originalText : line })
   
+  # Now check for the indentation strategy (spaces or |).
+  # I using |, remove all the spaces (which can avoid problems with blank lines).
+  usingBars = false
+  for i in (l.indentation for l in result)
+    if '|' in i
+      usingBars = true
+      break
+  if usingBars
+    for r in result
+      r.indentation = r.indentation.replace /\s+/g, ''
+  
+  
   return result
 
-
-
+# This regular expression matches |s and whitespace at the start of a line.
+_INDENTATION_AT_START_OF_LINE = /^([|\s]+)/ 
 
 # Return true for:
 # ```
@@ -221,10 +230,14 @@ extractIndentationAndContentFrom = (lines) ->
 #   2.    indented
 # ```
 # Note: If any line has indentation before a number, this returns true.
+# Note: Blank lines and dividers are ignored.
 areLinesFormattedIndentationFirst = (lines) ->
   return true if not lines or lines.length is 0
   indentationAtStartOfFirstLine = (lines[0].match _INDENTATION_AT_START_OF_LINE)?[1]
   for line in lines
+    # if the line is blank or contains only a divider, ignore it
+    if line.replace(/[|-\s]/g,'') is ''
+      continue
     m = line.match _INDENTATION_AT_START_OF_LINE
     indent = m?[1]
     if m isnt null and indent isnt indentationAtStartOfFirstLine
@@ -265,7 +278,7 @@ split = (line, indentationFirst) ->
       return { indentation:postLineNumberIndentation, content:"#{lineNumber} #{everythingElse}" }
     else
       # When there is no number, we need to return the pre-number indentation.
-      # (Note: there is no post-number indentation ni this case.)
+      # (Note: there is no post-number indentation in this case.)
       return { indentation:preLineNumberIndentation, content:"#{everythingElse}" }
 # This is only exported for testing.
 exports.split = split

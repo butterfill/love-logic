@@ -98,46 +98,6 @@ describe "the verify module:", ->
       expect(result.verified).to.be.false
       # console.log "result.message = #{result.message}"
 
-  # The `test` object provides conditions used in verifying rules.
-  describe "the `test` object", ->
-    it "detects when a block and line is cited", ->
-      proofText = '''
-        1. hello
-        2.    block start
-        3.    block end
-        4. cite block and line  // exists elim 1, 2-3
-      ''' 
-      proof = verify._parseProof proofText
-      line = proof.goto 4
-      result = verify._test.lineAndBlockCited(line)
-      expect(result).to.equal(true)
-      
-    it "detects when a block and line is not cited", ->
-      proofText = '''
-        1. hello
-        2.    block start
-        3.    block end
-        99blank.
-        4.    block2 start
-        5.    block2 end
-        6. cite block and line  // exists elim 2-3, 5-6
-      ''' 
-      proof = verify._parseProof proofText
-      line = proof.goto 6
-      result = verify._test.lineAndBlockCited(line)
-      expect(result).not.to.equal(true)
-      
-    it "tells you when you use a rule that doesn't exist (e.g. and intro left)", ->
-      proof = '''
-        1. A          
-        2. B
-        3. A and B    // and intro left 1, 2
-      ''' 
-      result = verify.line 3, proof
-      console.log "result.message = #{result.message}" if result.verified is false
-      expect(result.verified).to.be.false
-      
-
 
   describe "proofs with reit", ->
     it "confirms correct use of reit", ->
@@ -157,6 +117,7 @@ describe "the verify module:", ->
       result = verify.line 2, proof
       # console.log "result.message = #{result.message}"
       expect(result.verified).to.be.false
+
 
   describe "proofs with the rules for and", ->
     it "verifies correct use of and elim left", ->
@@ -315,4 +276,126 @@ describe "the verify module:", ->
       '''
       result = verify.line 4, proof
       expect(result.verified).to.be.false
+
+
+  describe "proofs with the rules for not", ->
+    it "verifies correct use of not elim", ->
+      proof = '''
+        1. not not A    // premise
+        2. A            // not elim 1
+      '''
+      result = verify.line 2, proof
+      expect(result.verified).to.be.true
+    it "spots an incorrect use of not elim", ->
+      proof = '''
+        1. not not B    // premise
+        2. A            // not elim 1
+      '''
+      result = verify.line 2, proof
+      expect(result.verified).to.be.false
+    it "verifies correct use of not intro", ->
+      proof = '''
+           |
+        1. | | A              // assumption
+           | |-------
+        2. | | contradiction  // contradiction intro 1,2
+        3. | not A            // not intro 1-2
+      '''
+      result = verify.line 3, proof
+      expect(result.verified).to.be.true
+    it "spots an correct use of not intro", ->
+      proof = '''
+           |
+        1. | | A              // assumption
+           | |-------
+        2. | | B              // contradiction intro 1,2
+        3. | not A            // not intro 1-2
+      '''
+      result = verify.line 3, proof
+      expect(result.verified).to.be.false
+
+  describe "proofs with the rules for not", ->
+    it "verifies correct use of contradiction elim", ->
+      proof = '''
+        1. contradiction    // premise
+        2. A            // contradiction elim 1
+      '''
+      result = verify.line 2, proof
+      expect(result.verified).to.be.true
+    it "spots incorrect use of contradiction elim", ->
+      proof = '''
+        1. A          // premise
+        2. A            // contradiction elim 1
+      '''
+      result = verify.line 2, proof
+      expect(result.verified).to.be.false
+    it "verifies correct use of contradiction intro", ->
+      proof = '''
+        1. A              // premise
+        2. not A          // premise
+        3. contradiction  // contradiction intro 1,2
+      '''
+      result = verify.line 3, proof
+      expect(result.verified).to.be.true
+    it "verifies correct use of contradiction intro (not first)", ->
+      proof = '''
+        1. not A              // premise
+        2. A          // premise
+        3. contradiction  // contradiction intro 1,2
+      '''
+      result = verify.line 3, proof
+      expect(result.verified).to.be.true
+    it "verifies correct use of contradiction intro (tricky case, not first)", ->
+      # This test fails while `rule`'s methods for checking do not 
+      # consider making matches for requirements in differnt orders.
+      proof = '''
+        1. not A              // premise
+        2. not not A          // premise
+        3. contradiction  // contradiction intro 1,2
+      '''
+      result = verify.line 3, proof
+      expect(result.verified).to.be.true
+    it "verifies correct use of contradiction intro (tricky case, not first)", ->
+      # This test could fail because `rule`'s methods for checking do not 
+      # consider making matches for requirements in differnt orders.
+      proof = '''
+        1. not not A              // premise
+        2. not A          // premise
+        3. contradiction  // contradiction intro 1,2
+      '''
+      result = verify.line 3, proof
+      expect(result.verified).to.be.true
+      
+  describe "proofs with the rules for arrow", ->
+    it "we need some tests"
+  describe "proofs with the rules for double_arrow", ->
+    it "we need some tests"
+    
+  describe "proofs with the rules for identity", ->
+    it "confirms correct use of =intro", ->
+      proof = '''
+        1. b=b              // identity intro
+      '''
+      result = verify.line 1, proof
+      expect(result.verified).to.be.true
+    it "detects incorrect use of =intro", ->
+      proof = '''
+        1. b=c              // identity intro
+      '''
+      result = verify.line 1, proof
+      expect(result.verified).to.be.false
+    
+    it "we need some more tests"
+    
+  describe "proofs with the rules for universal", ->
+    it "we need some tests"
+
+  describe "verifying premises and assumptions", ->
+    it "allows lines at the start of a proof to be premises"
+    it "does not allow lines below a non-premise to be premises"
+    it "does not allow lines below the first divider to be premises"
+    it "allows the first line of a subproof to be a premise"
+    it "does not allow the second line of a subproof to be a premise"
+  
+
 
