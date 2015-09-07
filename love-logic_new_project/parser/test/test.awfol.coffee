@@ -15,7 +15,7 @@ util = require '../../util'
 #
 
 
-describe 'fol', ->
+describe 'awFOL', ->
   describe 'parse', ->
     it 'should parse sentence  "true"', ->
       res = fol.parse("true")
@@ -103,6 +103,20 @@ describe 'fol', ->
       assert.deepEqual util.delExtraneousProperties(res.left), util.delExtraneousProperties(fol.parse "true")
       assert.deepEqual util.delExtraneousProperties(res.right), util.delExtraneousProperties(fol.parse "A arrow false")
 
+  
+  describe "upper and lower case", ->
+    it 'is fine with title case', ->
+      e1 = fol.parse "Contradiction Or (True And (A Arrow False))"
+      e2 = fol.parse "contradiction or (true and (A arrow false))"
+      util.delExtraneousProperties e1
+      util.delExtraneousProperties e2
+      expect(e1).to.deep.equal(e2)
+    it 'is fine with capitals', ->
+      e1 = fol.parse "CONTRADICTION OR TRUE AND (A ARROW FALSE)"
+      e2 = fol.parse "contradiction or true and (A arrow false)"
+      util.delExtraneousProperties e1
+      util.delExtraneousProperties e2
+      expect(e1).to.deep.equal(e2)
 
   describe 'parse (predicates)', ->
     it 'should parse  "Fish(a)"', ->
@@ -372,15 +386,19 @@ describe 'fol', ->
       expect(withSub.substitutions[1].from.letter).to.equal('ψ')
       expect(withSub.substitutions[1].to.type).to.equal('sentence_letter')
       
-    it "treats ']' as having higher precedence than a substitution list", ->
+    it "treats ψ[sub1][sub1] and ψ[sub1,sub2]as equivalent", ->
       toCheck = fol.parse "ψ[φ->B and C][ψ->A]"
       expect(toCheck.substitutions.length).to.equal(2)
       expected = fol.parse "ψ[φ->B and C,ψ->A]" 
       expect(expected.substitutions.length).to.equal(2)
-      notExpected = fol.parse "(ψ[φ->B and C])[ψ->A]"
-      expect(notExpected.substitutions.length).to.equal(1)
-      # console.log "\n\n toCheck: \n #{JSON.stringify toCheck,null,4}"
-      # console.log "\n\n expected: \n #{JSON.stringify expected,null,4}"
+      util.delExtraneousProperties toCheck
+      util.delExtraneousProperties expected
+      expect(toCheck).to.deep.equal(expected)
+    it "treats ψ[sub1][sub1] (ψ[sub1])[sub2] as equivalent", ->
+      toCheck = fol.parse "ψ[φ->B and C][ψ->A]"
+      expect(toCheck.substitutions.length).to.equal(2)
+      expected = fol.parse "(ψ[φ->B and C])[ψ->A]"
+      expect(expected.substitutions.length).to.equal(2)
       util.delExtraneousProperties toCheck
       util.delExtraneousProperties expected
       expect(toCheck).to.deep.equal(expected)
@@ -430,3 +448,11 @@ describe 'fol', ->
     it "doesn't overwrite substitutions when brackets are involved",->
       expression = fol.parse "((A and D)[A->B])[B->C]"
       expect(expression.substitutions.length).to.equal(2)
+
+  describe "substitutions with null like φ[τ->null]", ->
+    it "recognises term->null", ->
+      e = fol.parse("φ[τ->null]")
+      expect(e.substitutions[0].to).to.equal(null)
+    it "recognises PROP->null", ->
+      e = fol.parse("φ[φ->null]")
+      expect(e.substitutions[0].to).to.equal(null)

@@ -18,11 +18,12 @@
 \s+                     { /* skip whitespace */             }
 
 /*  Connectives.  */
-"true"                       { return 'true'; }
-"false"|"⊥"|"contradiction"  { return 'false'; }
+[tT][rR][uU][eE]             { return 'true'; }
+[fF][aA][lL][sS][eE]|"⊥"|[cC][oO][nN][tT][rR][aA][dD][iI][cC][tT][iI][oO][nN]  
+                             { return 'false'; }
 "="                          { return 'identity'; }
-"and"|"&"|"∧"|"•"            { return 'and'; }
-"arrow"|"->"|"⇒"|"→"|"⊃"    { return 'arrow'; }
+[aA][nN][dD]|"&"|"∧"|"•"            { return 'and'; }
+[aA][rR][rR][oO][wW]|"->"|"⇒"|"→"|"⊃"    { return 'arrow'; }
 "↔"|"≡"|"⇔"                { return 'double_arrow'; }
 [oO][rR]|"∨"|"+"|"ǀǀ"        { return 'or'; }
 [nN][oO][tT]|"¬"|"˜"|"!"     { return 'not'; }
@@ -53,6 +54,10 @@
      /      -- the lex symbol for look ahead
      (\s)*  -- allow any amount of whitespace
      \(     -- match a bracket (the bracket is escaped)
+    
+    Note that this only works because connectives like and are 
+    defined first and the lexer matches in the order things are defined.
+    Otherwise the `And` in `A And (B Or C)` could be a predicate.
 */
 [A-Z][A-Za-z0-9]*/((\s)*\()  { return 'predicate';               }    
 
@@ -65,18 +70,21 @@
     the `A` in `A(x)` is parsed as a predicate rather than as a sentence 
     letter.
 */  
-[A-Z][0-9]*            { return 'sentence_letter';         }
+[A-Z][0-9]*             { return 'sentence_letter'; }
 
-[a-d][0-9]*             { return 'name';                    }
-[etxyzw][0-9]*          { return 'variable';                }
+[a-d][0-9]*             { return 'name'; }
+[etxyzw][0-9]*          { return 'variable'; }
 
 /*  Variables for terms and expressions. */
-[φψχ][0-9]*              { return 'expression_variable';     }
-[αβγτ][0-9]*               { return 'term_metavariable';       }
+[φψχ][0-9]*           { return 'expression_variable'; }
+[αβγτ][0-9]*           { return 'term_metavariable'; }
+
+/* null is permitted only in substitutions like `φ[α->null]` and `φ[ψ->null]` */
+[nN][uU][lL][lL]        { return 'null'; }
 
 /* Misc. */
-<<EOF>>                 { return 'EOF' ;                    }
-.                       { return 'invalid_character' ;      }
+<<EOF>>                 { return 'EOF'; }
+.                       { return 'invalid_character'; }
 
 /lex
 
@@ -84,12 +92,24 @@
 
 /* operator associations and precedence */
 
+/*  arrow 
+    i.  `A and B arrow C` is `(A and B) arrow C`
+    ii. `nonassoc` so that A arrow B arrow C is not an expression
+*/
 %nonassoc 'arrow' 'double_arrow'
+
 %left 'and' 'or' 'nand' 'nor'
-%left 'not'
+
+/* `not A and B` is `(not A) and B` */
+%left 'not'     
+
+/* `exists x F(x) and A` is `(exists x F(x)) and A` */
 %left existential_quantifier universal_quantifier
-%left substitution_list
+
+/* `A and not A[A->B]` is `A and not (A[A->B])` */
 %left '[' ']'
+
+
 
 /* This tells JISON where to start: */
 %start expressions
@@ -145,12 +165,12 @@ e
     /*  Substitutions -- see below.
         Note that `substitution_list` is `.reverse()`d here.
     */
-    | e substitution_list
+    | e '[' substitution_list ']'
       {
          if( $1.substitutions && $1.substitutions.length ) {
-           $1.substitutions.concat($2.reverse());
+           $1.substitutions = $1.substitutions.concat($3);
          } else {
-           $1.substitutions = $2.reverse();
+           $1.substitutions = $3;
          }
          $$ = $1; 
       }
@@ -197,45 +217,32 @@ term
     Substitutions that may appear after an expression
     (e.g. '(A and B)[A->(C and D)]).
     
-    This is tricky because we allow two notations for multiple substitutions:
+    We allow two notations for multiple substitutions:
         `(A and B)[A->P,B->Q]`
     and 
         `(A and B)[A->P][B->Q]`
     
-    Note that recursive clauses must all be tail first
-    (e.g. `substitution_list substitution`, and not the other way around).
-    (This is because making one of them tail-first avoids errors 
-    in the grammar, and making them all tail-first ensures that
-    lists of substitutions are ordered in a consistent way.)
+    (The second is allowed because the rule above says that
+    `e[sub]` is an expression; it follows that `(e[sub])[sub2]` 
+    is an expression too.)
 */
+  
 substitution_list
-    /*  Allow [sub1,sub2,...] 
-        Note that this allows a single substitution.
-    */
-    : '[' bare_substitution_list ']'
-        { $$ = $2; }
-    /*  Allow [sub1][sub2]... */
-    | substitution_list substitution
-        { $$ = [$2].concat($1) }
+    : substitution
+        { $$ = [$1] }
+    |  substitution ',' substitution_list
+        { $$ = [$1].concat($3) }
     ;
 
-substitution
-    : '[' bare_substitution ']'
-        { $$ = $2 }
-    ;
-    
-bare_substitution 
+substitution 
     : term arrow term 
         { $$ = {type:'substitution', from:$1, to:$3, symbol:$2}; }
+    | term arrow null 
+        { $$ = {type:'substitution', from:$1, to:null, symbol:$2}; }
     | sentence_letter_or_expression_variable arrow e  
         { $$ = {type:'substitution', from:$1, to:$3, symbol:$2}; }
-    ;
-
-bare_substitution_list
-    : bare_substitution
-        { $$ = [$1] }
-    | bare_substitution_list ',' bare_substitution 
-        { $$ = [$3].concat($1) }
+    | sentence_letter_or_expression_variable arrow null
+        { $$ = {type:'substitution', from:$1, to:null, symbol:$2}; }
     ;
 
 
