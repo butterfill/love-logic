@@ -157,7 +157,7 @@ describe "justification_parser", ->
       expect(num).to.equal('1-2')
 
   # # This is really tricky to do with the lexer; I decided to 
-  # # do it with `line_numbers.cleanNumber` instead.  This has the 
+  # # do it with `add_line_numbers.cleanNumber` instead.  This has the 
   # # advantage that we do the same thing to the citation numbers 
   # # as we do to the numbers at the start of a line.
   # it "gets rid of one trailing period", ->

@@ -11,9 +11,11 @@ _ = require 'lodash'
 util = require '../util'
 fol = require '../fol'
 
+
+# All ways of describing a `rule` use this class.
 class _From
   constructor: (requirement) ->
-    requirement = parseIfNecessaryAndDecorate requirement
+    requirement = _parseIfNecessaryAndDecorate requirement
     @_requirements = {
       from : ([requirement] if requirement) or []
       to : undefined
@@ -22,19 +24,20 @@ class _From
   type : 'rule'
 
   'and' : (requirement) ->
-    requirement = parseIfNecessaryAndDecorate requirement
+    requirement = _parseIfNecessaryAndDecorate requirement
     @_requirements.from.push requirement
     return @ 
 
   to : (requirement) ->
     if @_requirements.to
-      throw new Error "You cannot specify .to more than once."
-    requirement = parseIfNecessaryAndDecorate requirement
+      throw new Error "You cannot specify `.to` more than once in a single rule."
+    requirement = _parseIfNecessaryAndDecorate requirement
     @_requirements.to = requirement
     return @
 
   check : (line) ->
     return new LineChecker(line, @_requirements).check()
+
 
 # `from` is the main entry point for this module.  Use it
 # like: `rule.from('φ and ψ').to('φ')`. 
@@ -49,28 +52,32 @@ to = (requirement) ->
   return from().to(requirement)
 exports.to = to
 
+
 # When the prerequisites for a rule include subproofs,
 # specify them using `rule.subproof` as in:
 # `rule.from( rule.subproof('φ','contradiction') ).to('not φ')`.
 subproof = (startReq, endReq) ->
+  startReq = _parseIfNecessaryAndDecorate startReq
+  endReq = _parseIfNecessaryAndDecorate endReq
   return { 
     type : 'subproof'
-    startReq : parseIfNecessaryAndDecorate startReq
-    endReq : parseIfNecessaryAndDecorate endReq
+    startReq 
+    endReq 
   }
 exports.subproof = subproof
+
 
 # Use `rule.premise()` when the line in question
 # must be a premise or assumption.
 premise = () ->
-  # We will start with the empty rule (which checks that no
+  # We start with the empty rule (which checks that no
   # lines are cited for us) and elaborate its check method.
   emptyRule = from()
   baseCheck = emptyRule.check.bind(emptyRule)
   newCheck = (line) ->
     result = baseCheck(line)
     return result if result isnt true
-    # The first line in any proof can be a premise.
+    # The first line of any proof or subproof can be a premise.
     return true if not line.prev
     if line.parent.parent?
       # Line is in a subproof and not the first line of it.
@@ -104,7 +111,7 @@ _notImplementedYet = (line) ->
 exports._notImplementedYet = _notImplementedYet
 
 
-parseIfNecessaryAndDecorate = (requirement) ->
+_parseIfNecessaryAndDecorate = (requirement) ->
   return requirement if not requirement   # Using `.to` creates undefined requirements.
   if _.isString requirement
     requirement = fol.parse requirement
@@ -112,7 +119,15 @@ parseIfNecessaryAndDecorate = (requirement) ->
   return requirement
 
 
+# ------------------
+# The following provide a way of checking whether a line citing
+# a rule is correct.  (You should only need to use these via `rule.from`.)
+# ------------------
 
+
+# Objects of this class (a) check whether the right number of lines and subproofs 
+# have been cited; and (b) transform the requirements into `RequirementChecker`
+# objects to pass on to a `Pathfinder`.
 class LineChecker
   constructor : (@line, @requirements) ->
     @citedLines = @line.getCitedLines()
@@ -147,7 +162,9 @@ class LineChecker
     reqCheckList.reverse()
     
     path = new Pathfinder( reqCheckList, @ )
-    if path.find()
+    pathFound = path.find()
+    console.log "pathFound = #{pathFound}"
+    if pathFound
       return true
     else 
       console.log "LineChecker instance, checked toRequirement, @getMessage() = #{@getMessage()}"
@@ -217,7 +234,10 @@ class RequirementChecker
         @metaVariableNames = _.defaults( @metaVariableNames, @req.endReq.listMetaVariableNames() )
       else
         @metaVariableNames = @req.listMetaVariableNames()
-      
+    
+    clone : () ->
+      return new RequirementChecker(@req, @candidateLinesOrSubproofs, @matches)
+    
     setMatches : (@matches) ->
       @saveMatches(@matches)
     
@@ -241,6 +261,7 @@ class RequirementChecker
     canCheckAlready : () ->
       # console.log "canCheckAlready for #{@req.toString()} ..."
       mustBeInMatches = @metaVariableNames.inSub.left
+      mustBeInMatches = _.defaults mustBeInMatches, @metaVariableNames.inBox
       for varName in mustBeInMatches
         if not (varName of @matches)
           # console.log "... fail"
@@ -290,15 +311,34 @@ class RequirementChecker
         @matches = false 
         return undefined
       
+      eSubs = e.substitutions
       delete e.substitutions
       @matches = aLine.sentence.findMatches e, @matches
-      # console.log "_checkOneLine sentence = #{aLine.sentence.toString()}"
-      # console.log "_checkOneLine aReq = #{aReq.toString()}"
-      # console.log "_checkOneLine @matches (found) = #{JSON.stringify @matches,null,4}"
+      console.log "_checkOneLine sentence = #{aLine.sentence.toString()}"
+      console.log "_checkOneLine aReq = #{aReq.toString()}"
+      console.log "_checkOneLine @matches (found) = #{util.matchesToString @matches}"
+      
+      if @matches isnt false
+        if e.box? or e.type is 'box'
+          aBox = (e if e.type is 'box') or (e.box if e.box?)
+          aBox = aBox.applyMatches(@matches).applySubstitutions()
+          # The name in the box must not occur on a line earlier in the proof
+          # (although it may appear in earlier subproofs).
+          if eSubs and  eSubs isnt null
+            aBox.substitutions = eSubs
+          theName = aBox.term.name
+          iSALineContainingTheName = (lineOrBlock) ->
+            return false if lineOrBlock.type isnt 'line'
+            return true if (theName in lineOrBlock.sentence.getNames())
+            return false
+          youCantBoxThisName = aLine.find iSALineContainingTheName
+          @matches = false if youCantBoxThisName
+      
       return undefined
+
       
 # Some requirements can be met in multiple ways (by matching multiple lines).
-# The `Pathfinder` considers different paths through which requirements 
+# The `Pathfinder` explores different paths through which requirements 
 # could be met.  
 class Pathfinder
   constructor : ( @reqCheckList, @lineChecker, @matches = {} ) ->
@@ -325,15 +365,16 @@ class Pathfinder
     results = reqChecker.check()
     reqChecker.restoreMatches(@matches)
     if results is false
+      console.log "pathfinder says no (@reqCheckList.length = #{@reqCheckList.length})"
       @writeMessage(reqChecker)
       return false
     
     # From here on, the `reqChecker` found one or more lines where the 
     # requirement was met.
-    
+
     for lineNumber, aMatches of results
-      # clonedReqCheckList = ( reqCheck.clone() for reqCheck in @reqCheckList )
-      newPath = new Pathfinder( @reqCheckList, @lineChecker, aMatches )
+      clonedReqCheckList = ( reqCheck.clone() for reqCheck in @reqCheckList )
+      newPath = new Pathfinder( clonedReqCheckList, @lineChecker, aMatches )
       if newPath.find()
         return true
     

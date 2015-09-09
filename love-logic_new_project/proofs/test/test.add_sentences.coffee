@@ -10,7 +10,7 @@ fol = require '../../parser/awFOL'
 
 
 bp = require '../block_parser'
-ln = require '../line_numbers'
+ln = require '../add_line_numbers'
 addJustification = require '../add_justification'
 addSentences = require '../add_sentences'
 

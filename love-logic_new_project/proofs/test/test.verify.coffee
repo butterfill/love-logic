@@ -1,3 +1,8 @@
+# TODO: this combines tests for the `verify` module 
+# with tests for `fitch_rules`.
+#
+#
+
 _ = require 'lodash'
 
 util = require 'util'
@@ -10,7 +15,7 @@ fol = require '../../parser/awFOL'
 
 
 bp = require '../block_parser'
-ln = require '../line_numbers'
+ln = require '../add_line_numbers'
 addJustification = require '../add_justification'
 addSentences = require '../add_sentences'
 
@@ -461,6 +466,16 @@ describe "the verify module:", ->
       '''
       result = verify.line 3, proof
       expect(result.verified).to.be.true
+    it "spots mistake in use of contradiction intro (tricky case, not first)", ->
+      # This test fails while `rule`'s methods for checking do not 
+      # consider making matches for requirements in differnt orders.
+      proof = '''
+        1. not A              // premise
+        2. not not B          // premise
+        3. contradiction  // contradiction intro 1,2
+      '''
+      result = verify.line 3, proof
+      expect(result.verified).to.be.false
     it "verifies correct use of contradiction intro (tricky case, not first)", ->
       # This test could fail because `rule`'s methods for checking do not 
       # consider making matches for requirements in differnt orders.
@@ -498,6 +513,31 @@ describe "the verify module:", ->
       '''
       result = verify.line 1, proof
       expect(result.verified).to.be.false
+    it "confirms correct use of =elim", ->
+      proof = '''
+        1. a=b              
+        2. F(a)
+        3. F(b)         // = elim 1,2
+      '''
+      result = verify.line 3, proof
+      expect(result.verified).to.be.true
+    it "confirms correct use of =elim (right to left)", ->
+      proof = '''
+        1. a=b              
+        2. F(b)
+        3. F(a)         // = elim 1,2
+      '''
+      result = verify.line 3, proof
+      expect(result.verified).to.be.true
+    it "detects incorrect use of =elim", ->
+      proof = '''
+        1. a=b              
+        2. G(a)
+        3. F(c)         // = elim 1,2
+      '''
+      result = verify.line 3, proof
+      console.log(result.message)
+      expect(result.verified).to.be.false
     
     it "we need some more tests"
     
@@ -523,6 +563,15 @@ describe "the verify module:", ->
         1. A
         2.    [a]            // assumption
         3.    F(b)          
+        4. all x F(x)        // universal intro 2-3
+      '''
+      result = verify.line 4, proof
+      expect(result.verified).to.be.false
+    it "does not let you use universal intro when the name you box is not new", ->
+      proof = '''
+        1. F(a)
+        2.    [a]            // assumption
+        3.    F(a)          
         4. all x F(x)        // universal intro 2-3
       '''
       result = verify.line 4, proof

@@ -501,6 +501,30 @@ describe 'substitute', ->
         console.log "expectedResult = #{util.expressionToString expectedResult}"
       expect(test).to.be.true
 
+    it "applies matches to a term in a box (as in `[α]F(x)`)", ->
+      pattern = fol.parse '[α]F(x)'
+      matches = 
+        α : (fol.parse 'F(a)').termlist[0]
+      result = substitute.applyMatches pattern, matches
+      expectedResult = fol.parse '[a]F(x)'
+      test = util.areIdenticalExpressions result, expectedResult
+      if not test
+        console.log "result = #{util.expressionToString result}"
+        console.log "expectedResult = #{util.expressionToString expectedResult}"
+      expect(test).to.be.true
+
+    it "applies matches to just a box (as in `[α]`)", ->
+      pattern = fol.parse '[α]'
+      matches = 
+        α : (fol.parse 'F(a)').termlist[0]
+      result = substitute.applyMatches pattern, matches
+      expectedResult = fol.parse '[a]'
+      test = util.areIdenticalExpressions result, expectedResult
+      if not test
+        console.log "result = #{util.expressionToString result}"
+        console.log "expectedResult = #{util.expressionToString expectedResult}"
+      expect(test).to.be.true
+
   describe 'applyMatches to expressions with substitutions', ->
     it "applies matches within a substitution (terms, lhs)", ->
       pattern = fol.parse 'Loves(a,b)[α->c]'

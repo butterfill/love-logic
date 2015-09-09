@@ -49,5 +49,14 @@ _decorate = (expression) ->
       result =  substitute.applySubstitutions(e)
       _decorate(result)
       return result
+    
+    e.getNames = () ->
+      _names = []
+      nameFinder = (expression) ->
+        return undefined unless expression?.type is 'name'
+        _names.push expression.name
+        return undefined 
+      e.walk nameFinder
+      return _names
   return expression
 exports._decorate = _decorate

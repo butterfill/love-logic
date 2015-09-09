@@ -18,9 +18,7 @@ arePNFExpressionsEquivalent = (left, right) ->
   # But it's essential that we are sorted, so I'll do it anyway.
   left = sortPNFExpression(left)
   sortIdentityStatements(left)
-  console.log "right pre eliminateRed = #{util.expressionToString right}"
   right = eliminateRedundancyInPNF(right)
-  console.log "right POST eliminateRed = #{util.expressionToString right}"
   right = sortPNFExpression(right)
   sortIdentityStatements(right)
   pattern = substitute.renameVariables left, 'τ'

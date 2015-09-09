@@ -11,11 +11,11 @@ util = require '../util'
 
 
 blockParser = require './block_parser'
-lineNumbers = require './line_numbers'
+lineNumbers = require './add_line_numbers'
 addJustification = require './add_justification'
 addSentences = require './add_sentences'
 
-rule = require './rule'
+requirements = (require './fitch_rules').rules
 
 parseProof = (proofText) ->
   block = blockParser.parse proofText
@@ -58,10 +58,10 @@ line = (lineNumber, proofText) ->
   # We can't go on if there are errors.
   if line.sentenceErrors? 
     result.sentenceErrors = line.sentenceErrors 
-    result.addMessage 'There were errors with the sentence you wrote.'
+    result.addMessage 'there were errors with the sentence you wrote.'
   if line.justificationErrors?  
     result.justificationErrors = line.justificationErrors
-    result.addMessage 'There were errors with the justification you gave.'
+    result.addMessage 'there were errors with the justification you gave.'
   if result.areThereErrors()
     return result
   
@@ -117,7 +117,7 @@ checkRequirements = (line, result) ->
   if not intronation
     # We need to check the rule specified is complete.
     if reqList.type is 'rule'
-      return checkTheseRequirements(reqList, line, result)
+      return checkThisRule(reqList, line, result)
     # The rule specified is incomplete.
     result.addMessage "you only partially specified the rule: `#{connective}` needs something extra (intro? elim?)."
     result.verified = false 
@@ -135,7 +135,7 @@ checkRequirements = (line, result) ->
     # Now there are two cases.  The simple case is where the rule specification
     # doesn't involve left or right either.  
     if reqList.type is 'rule'
-      return checkTheseRequirements(reqList, line, result)
+      return checkThisRule(reqList, line, result)
     
     # We are in the tricky case where there are left and right rules.
     # In this case, at least one of the 'left' and 'right'
@@ -144,7 +144,7 @@ checkRequirements = (line, result) ->
     # We also want to provide a disjunctive message if neither left nor right
     # requirements are met.
     if reqList.left?
-      result = checkTheseRequirements(reqList.left, line, result)
+      result = checkThisRule(reqList.left, line, result)
       if result.verified 
         # meeting the `left` requirement is sufficient when no `side is specified 
         return result 
@@ -153,7 +153,7 @@ checkRequirements = (line, result) ->
       return result
       
     leftMessage = result.popMessage()
-    result = checkTheseRequirements(reqList.right, line, result)
+    result = checkThisRule(reqList.right, line, result)
     if not result.verified 
       rightMessage = result.popMessage()
       if leftMessage? and rightMessage?
@@ -172,11 +172,11 @@ checkRequirements = (line, result) ->
     result.verified = false
     return result
   
-  return checkTheseRequirements(reqList[side], line, result)  
+  return checkThisRule(reqList[side], line, result)  
 
   
-checkTheseRequirements = (req, line, result) ->
-  outcome = req.check(line)
+checkThisRule = (rule, line, result) ->
+  outcome = rule.check(line)
   if outcome is true
     result.verified = true
   else
@@ -185,56 +185,4 @@ checkTheseRequirements = (req, line, result) ->
     result.addMessage(msg)
   return result
       
-
-requirements = 
-  premise : rule.premise()
-
-  reit : rule.from('φ').to('φ')
-
-  'and' :
-    elim : 
-      left : rule.from('φ and ψ').to('φ')
-      right : rule.from('φ and ψ').to('ψ')
-    intro : rule.from('φ').and('ψ').to('φ and ψ')
-
-  'or' :
-    elim  : rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ') ).to('χ' )
-    intro : 
-      left  : rule.from('φ or ψ').to('φ')
-      right : rule.from('φ or ψ').to('ψ')
-
-  'not' : 
-    elim : rule.from('not not φ').to('φ') 
-    intro : rule.from( rule.subproof('φ','contradiction') ).to('not φ') 
-
-  contradiction :
-    elim : rule.from('contradiction').to('φ') 
-    intro : rule.from('not φ').and('φ').to('contradiction')
-    
-  arrow :
-    elim : rule.from('φ arrow ψ').and('φ').to('ψ')
-    intro : rule.from( rule.subproof('φ','ψ') ).to('φ arrow ψ')
-    
-  double_arrow :
-    elim : 
-      left : rule.from('φ↔ψ').and('φ').to('ψ')
-      right : rule.from('φ↔ψ').and('ψ').to('φ')
-    intro : rule.from( rule.subproof('φ','ψ') ).and( rule.subproof('ψ','φ') ).to('φ↔ψ')
-
-  identity :
-    intro : rule.to('α=α')
-    elim : 
-      # Note: this rule will fail as things stand because `α=β` might match
-      # what φ should match when =elim is applied to an identity statement.
-      left : rule.from('α=β').and('φ').to('φ[α->β]')
-      right : rule.from('α=β').and('φ').to('φ[β->α]')
-        
-  existential :
-    elim : rule.from('exists τ φ').and( rule.subproof('[α]φ[τ->α]', 'ψ') ).to('ψ[α->null]')
-
-    intro : rule.from('φ[τ->α]').to('exists τ φ')
-
-  universal :
-    elim : rule.from('all τ φ').to('φ[τ->α]')
-    intro : rule.from( rule.subproof('[α]', 'φ') ).to('all τ φ[α->τ]')
 

@@ -5,14 +5,14 @@ expect = chai.expect
 util = require 'util'
 
 bp = require '../block_parser'
-ln = require '../line_numbers'
+ln = require '../add_line_numbers'
 
 # For tests
 INPUT = "1 A\n 2.1 A     \n 2.2 A\n\n 3.1 A\n 3.2 A\n  3.2.1 A\n4 A"
 INPUT_LIST = (t.trim() for t in INPUT.split('\n'))
 INPUT_NO_NUMBERS = "a1\n a2.1\n a2.2\n\n a3.1\n a3.2\n  a3.2.1\na4"
 
-describe "line_numbers", ->
+describe "add_line_numbers", ->
   describe "addNumbers", ->
     it "can add line numbers to a block with no line numbers", ->
       block = bp.parse INPUT_NO_NUMBERS

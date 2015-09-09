@@ -43,5 +43,25 @@ describe "`fol`", ->
       expect(result).to.equal(text)
       expect(result2).to.equal(text2)
 
-    it "adds `.findMatches`"
+    it "adds `.findMatches`", ->
+      e = fol.parse '[α]'
+      matches = 
+        α : (fol.parse 'F(a)').termlist[0]
+      e = e.applyMatches(matches)
+      expect(e.toString()).to.equal('[a]')
+        
+      
     it "adds `.applySubstitutions`"    
+    
+    it "provides a method `getNames`", ->
+      e = fol.parse "F(a) and b=c"
+      n = e.getNames()
+      expect('a' in n).to.be.true
+      expect('b' in n).to.be.true
+      expect('c' in n).to.be.true
+      expect(n.length).to.equal(3)
+    it "`getNames` returns [] if there are no names", ->
+      e = fol.parse "F(x) and y=x"
+      n = e.getNames()
+      expect(n.length).to.equal(0)
+            

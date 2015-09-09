@@ -16,7 +16,7 @@ jp = require './justification_parser'
 
 # We are going to apply the same `cleanNumber` function to line number references
 # that is used in parsing the line numbers at the start of lines of the proof.
-cleanNumber = require('./line_numbers').cleanNumber
+cleanNumber = require('./add_line_numbers').cleanNumber
 
 # This will be useful later in case we have to add it to any lines
 # above a divider where no justification is given explicitly. 

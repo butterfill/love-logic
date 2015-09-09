@@ -267,46 +267,6 @@ describe 'util', ->
           expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
           
 
-  describe 'sameElementsDeep', ->
-    it "ignores order", ->
-      list1 = [{a:1}, {b:2}, {c:3}]
-      list2 = [ {b:2}, {c:3}, {a:1}]
-      result = util.sameElementsDeep list1, list2
-      expect(result).to.be.true
-
-    it "fails to match different lists", ->
-      list1 = [{a:1}, {b:2}, {c:3}, {d:4}]
-      list2 = [{a:2}, {b:2}, {c:3}, {d:4}]
-      result = util.sameElementsDeep list1, list2
-      expect(result).to.be.false
-      # check reverse parameters
-      result2 = util.sameElementsDeep list2, list1
-      expect(result2).to.be.false
-
-    it "fails to match lists of different lengths", ->
-      list1 = [{a:1}, {b:2}, {c:3}, {d:4}]
-      list2 = [ list1[1], list1[2]]
-      result = util.sameElementsDeep list1, list2
-      expect(result).to.be.false
-      # check reverse parameters
-      result2 = util.sameElementsDeep list2, list1
-      expect(result2).to.be.false
-
-    it "works with lists containing duplicates", ->
-      list1 = [{a:1}, {b:2}, {c:3}]
-      list2 = [{b:2}, {c:3}, {a:1}]
-      list1.push list1[0]
-      list2.push list1[0]
-      result = util.sameElementsDeep list1, list2
-      expect(result).to.be.true
-      
-    it "works with FOL expressions", ->
-      list1 = [fol.parse("P"), fol.parse("all x F(x)"), (fol.parse("F(x)")).termlist[0]]
-      list2 = [ list1[1], list1[2], list1[0]]
-      result = util.sameElementsDeep list1, list2
-      expect(result).to.be.true
-
-
   describe "exhaust", ->
     it "removes all elements from a simple list", ->
       fn = (list) -> 
@@ -486,6 +446,17 @@ describe 'util', ->
       # console.log "#{JSON.stringify result,null,4}"
       console.log util.expressionToString(result)
       expect(result.substitutions[0].to.letter).to.equal('B')
+    it "visits the term in a an expression that is just a box (`[a]`)", ->
+      e = fol.parse "[a]"
+      mutate = (e) ->
+        if e.name? and e.name is 'a'
+          e.name = 'c'
+        return e
+      result = util.walkMutate e, mutate
+      # console.log "#{JSON.stringify result,null,4}"
+      console.log util.expressionToString(result)
+      expect(result.term.name).to.equal('c')
+    
 
   describe "walk", ->
     describe "gives information about where you are", ->

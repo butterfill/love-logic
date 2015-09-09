@@ -8,7 +8,7 @@ expect = chai.expect
 
 bp = require '../block_parser'
 jp = require '../justification_parser' 
-ln = require '../line_numbers'
+ln = require '../add_line_numbers'
 addJustification = require '../add_justification'
 
 

@@ -28,7 +28,7 @@ walkMutate = (expression, fn, o) ->
   # Special case: the expression contains a box.
   if expression.box?
     fn._inBox = true
-    expression.box.term = walkMutate expression.box.term, fn, o
+    expression.box = walkMutate expression.box, fn, o
     fn._inBox = undefined      # Set this to undefined so that fn._inBox? works.
   
   # Special case: the expression contains one or more subtitutions.
@@ -54,6 +54,9 @@ walkMutate = (expression, fn, o) ->
     fn._inBoundVariable = undefined
   if expression.termlist?
     expression.termlist = walkMutate expression.termlist, fn, o
+  # Note: boxes contain `.term`s.  
+  if expression.term?
+    expression.term = walkMutate expression.term, fn, o
   if expression.left?
     expression.left = walkMutate expression.left, fn, o
   if expression.right?
@@ -295,30 +298,17 @@ substitutionToString = (s) ->
   symbol = (s.symbol if s.symbol?) or "→"
   return "#{_expressionToString(s.from)}#{symbol}#{_expressionToString(s.to)}"
 
-# Check whether two lists have the same elements.
-# The default comparitor is _.isEqual (which does deep comparisons).
-# (In the `symmetry` module, this will be used with comparator set to areEquivalent.)
-sameElementsDeep = (list1, list2, comparator) ->
-  comparator = comparator ? _.isEqual
-  
-  return false if (list1.length isnt list2.length)
-  
-  whatWeMatchedInList2 = []
-  for target, targetIdx in list1
-    for candidate, candidateIdx in list2 
-      #check we didn't already match this element: each element can only be matched once
-      if not (candidateIdx in whatWeMatchedInList2)
-        if comparator(target, candidate)
-          whatWeMatchedInList2.push candidateIdx
-          break
-    # end of attempt to match `target`
-    return false unless (candidateIdx in whatWeMatchedInList2)
-  # If we're here:
-  #     (a) all elements of list1 were matched to distinct elements in list2
-  #     (b) list1 and list2 have the same length
-  return true
 
-exports.sameElementsDeep = sameElementsDeep
+matchesToString = (matches) ->
+  return "false" if matches is false 
+  return "[no]" if not matches 
+  _str = ""
+  for own k,v of matches
+    if v?.type? 
+      _str = "#{_str}\n\t#{k} : #{expressionToString v}"
+  return _str
+exports.matchesToString = matchesToString
+
 
 
 # Apply `fn` to `expression` until doing so makes no difference 
