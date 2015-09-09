@@ -9,11 +9,11 @@ nodeutil = require 'util'
 _ = require 'lodash'
 
 util = require '../util'
-fol = require '../parser/awFOL'
+fol = require '../fol'
 
 class _From
   constructor: (requirement) ->
-    requirement = parseIfNecessary requirement
+    requirement = parseIfNecessaryAndDecorate requirement
     @_requirements = {
       from : ([requirement] if requirement) or []
       to : undefined
@@ -21,46 +21,94 @@ class _From
 
   type : 'rule'
 
-  and : (requirement) ->
-    requirement = parseIfNecessary requirement
+  'and' : (requirement) ->
+    requirement = parseIfNecessaryAndDecorate requirement
     @_requirements.from.push requirement
     return @ 
 
   to : (requirement) ->
     if @_requirements.to
       throw new Error "You cannot specify .to more than once."
-    requirement = parseIfNecessary requirement
+    requirement = parseIfNecessaryAndDecorate requirement
     @_requirements.to = requirement
     return @
 
   check : (line) ->
     return new LineChecker(line, @_requirements).check()
-    
+
+# `from` is the main entry point for this module.  Use it
+# like: `rule.from('φ and ψ').to('φ')`. 
 from = (requirement) ->
   return new _From(requirement)
 exports.from = from
 
 
-# Allow user to create a rule without any .from clause.
+# This allows you to create a rule without any `.from` clause,
+# as in `rule.to('α=α')` (for identity introduction).
 to = (requirement) ->
   return from().to(requirement)
 exports.to = to
 
-
+# When the prerequisites for a rule include subproofs,
+# specify them using `rule.subproof` as in:
+# `rule.from( rule.subproof('φ','contradiction') ).to('not φ')`.
 subproof = (startReq, endReq) ->
-  startReq = parseIfNecessary startReq
-  endReq = parseIfNecessary endReq
   return { 
     type : 'subproof'
-    startReq
-    endReq
+    startReq : parseIfNecessaryAndDecorate startReq
+    endReq : parseIfNecessaryAndDecorate endReq
   }
 exports.subproof = subproof
 
+# Use `rule.premise()` when the line in question
+# must be a premise or assumption.
+premise = () ->
+  # We will start with the empty rule (which checks that no
+  # lines are cited for us) and elaborate its check method.
+  emptyRule = from()
+  baseCheck = emptyRule.check.bind(emptyRule)
+  newCheck = (line) ->
+    result = baseCheck(line)
+    return result if result isnt true
+    # The first line in any proof can be a premise.
+    return true if not line.prev
+    if line.parent.parent?
+      # Line is in a subproof and not the first line of it.
+      return { getMessage : () -> "only the first line of a subproof may be a premise." }
+    
+    # From this point on, we are in the main proof (not in a subproof).
+    
+    # Is there a non-premise or subproof above line?
+    isNeitherAPremiseNorASubproof = (lineOrSubproof) ->
+      if lineOrSubproof.type is 'block'
+        thisIsASubproof = lineOrSubproof.parent?
+        return true if thisIsASubproof
+        return false if not thisIsASubproof
+      if lineOrSubproof.type is 'line'
+        thisIsAPremise = lineOrSubproof.justification?.rule.connective is 'premise'
+        return false if thisIsAPremise 
+        return true if not thisIsAPremise
+      # We don't care about dividers, blank lines and whatever else.
+      return false
+    thereIsANonPremiseAbove = line.find( isNeitherAPremiseNorASubproof )
+    if thereIsANonPremiseAbove
+      return { getMessage : () -> "premises may not occur after non-premises." }
+    return true
+  emptyRule.check = newCheck
+  return emptyRule
+exports.premise = premise      
 
-parseIfNecessary = (requirement) ->
+
+_notImplementedYet = (line) ->
+  throw new Error "the rule `#{line.justification.rule.connective}` (or some part of it) is not implemented yet!"
+exports._notImplementedYet = _notImplementedYet
+
+
+parseIfNecessaryAndDecorate = (requirement) ->
+  return requirement if not requirement   # Using `.to` creates undefined requirements.
   if _.isString requirement
-    return fol.parse requirement
+    requirement = fol.parse requirement
+  fol._decorate requirement
   return requirement
 
 
@@ -68,9 +116,7 @@ parseIfNecessary = (requirement) ->
 class LineChecker
   constructor : (@line, @requirements) ->
     @citedLines = @line.getCitedLines()
-    @citedLinesUsed = []
     @citedBlocks = @line.getCitedBlocks()
-    @citedBlocksUsed = []
 
     # The @message will provide an explanation of any mistakes for
     # the person writing a proof.
@@ -84,18 +130,33 @@ class LineChecker
     
   check : () ->
     return @ unless @citedTypesAreCorrect()
-    #return @ unless @toRequirementIsMet()
-    if not @toRequirementIsMet()
+    
+    reqCheckList = []
+    if @requirements.to
+      reqCheckList.push( new RequirementChecker(@requirements.to, [@line]) )
+    for aReq in @requirements.from
+      if aReq?.type? and aReq.type is 'subproof'
+        reqCheckList.push( new RequirementChecker(aReq, @citedBlocks) )
+      else
+        reqCheckList.push( new RequirementChecker(aReq, @citedLines) )
+    
+    # If possible we will start with the `.to` requirement and then check 
+    # the `.from` requirements in the order they were given.  (This allows rule 
+    # writers to optimise by writing the rule in an intuitive way.)
+    # (Note that the `Pathfinder` need to change the order.)
+    reqCheckList.reverse()
+    
+    path = new Pathfinder( reqCheckList, @ )
+    if path.find()
+      return true
+    else 
       console.log "LineChecker instance, checked toRequirement, @getMessage() = #{@getMessage()}"
       return @
-    # return @ unless @fromRequirementsAreMet()
-    if not @fromRequirementsAreMet()
-      console.log "LineChecker instance, checked fromRequirements, @getMessage() = #{@getMessage()}"
-      return @
-    return true
   
   addMessage : (text) ->
     @message = "#{@message} #{text}"
+  getMessage : () ->
+    return "You cannot do this because #{@message.trim()}"
 
   # An 'although' message is one that describes something correct about the
   # use of the rule. (e.g. 'although your conclusion has the right form ...')
@@ -105,9 +166,6 @@ class LineChecker
     else
       @addMessage "although #{text}"
       @_addedAlthough = true
-      
-  getMessage : () ->
-    return "You cannot do this because #{@message.trim()}"
 
   citedTypesAreCorrect : () ->
     expected = @whatToCite()
@@ -118,12 +176,16 @@ class LineChecker
       return true
     expectedLinesTxt = numberToWords expected.lines, 'line'
     expectedBlocksTxt = numberToWords expected.subproofs, 'subproof'
-    expectedAndText = ("and " if expectedLinesTxt and expectedBlocksTxt) or ""
-    expectedAndText = ("nothing" if not expectedLinesTxt and not expectedBlocksTxt) or expectedAndText
+    expectedAndText = \
+      ("and " if expectedLinesTxt and expectedBlocksTxt) \
+      or ("nothing" if not expectedLinesTxt and not expectedBlocksTxt) \
+      or ""
     actualLinesTxt = numberToWords actual.lines, 'line'
     actualBlocksTxt = numberToWords actual.subproofs, 'subproof'
-    actualAndText = ("and " if actualLinesTxt and actualBlocksTxt) or ""
-    actualAndText = ("nothing" if not actualLinesTxt and not actualBlocksTxt) or actualAndText
+    actualAndText = \
+      ("and " if actualLinesTxt and actualBlocksTxt) \
+      or ("nothing" if not actualLinesTxt and not actualBlocksTxt) \
+      or ""
     @addMessage "you must cite #{expectedLinesTxt} #{expectedAndText}#{expectedBlocksTxt} when using the rule #{@ruleName} (you cited #{actualLinesTxt} #{actualAndText}#{actualBlocksTxt}).".replace /\s\s+/g, ' ' 
     return false
 
@@ -136,104 +198,197 @@ class LineChecker
         result.lines += 1
     return result
   
-  fromRequirementsAreMet : () ->
-    for req in @requirements.from
-      return false if @checkRequirement(req) is false
-    # All requirements met
-    return true 
-  
-  # Check whether the specified requirement is met by the line.
-  checkRequirement : (req) ->
-    # We're going to handle requirements on subproofs and lines separately.
-    # Subproofs first.
-    if req.type? and req.type is 'subproof'
-      for block in @citedBlocks when not (block in @citedBlocksUsed)
-        if @subproofMeetsRequirement block, req
-          # TODO: temporarily disabled because it prevents proofs
-          # being able to cite the same line twice.
-          # @citedBlocksUsed.push block
-          return true 
-      console.log "\n\n req.endReq = #{JSON.stringify req.endReq,null,4}"
-      console.log "\n\n @matches.apply(req.endReq) = #{JSON.stringify @matches.apply(req.endReq),null,4}"
-      expressionsAsMatched = "#{util.expressionToString @matches.apply(req.startReq)} ... #{util.expressionToString @matches.apply(req.endReq)}"
-      @addMessage "you must cite a subproof whose premise is of the form #{util.expressionToString(req.startReq)}  and whose conclusion is of the form #{util.expressionToString(req.endReq)} (which would be #{expressionsAsMatched} in this case) when using the rule #{@ruleName}."
-      return false 
-    
-    # `req` is a requirement on a line
-    for aLine in @citedLines when not (aLine in @citedLinesUsed)
-      if @lineMeetsRequirement aLine, req
-        # TODO: temporarily disabled because it prevents proofs
-        # being able to cite the same line twice.
-        # @citedLinesUsed.push aLine
-        return true
-    # We have found an error.  Try to explain what went wrong.
-    expressionAsMatched = @matches.apply(req)
-    @addMessage "you must cite a line with the form #{util.expressionToString req} (#{util.expressionToString expressionAsMatched} in this case) when using the rule #{@ruleName}."
-    return false
-  
-  subproofMeetsRequirement : (block, req) ->
-    firstLine = block.getFirstLine()
-    return false if firstLine.type isnt 'line'
-    lastLine = block.getLastLine()
-    return false if lastLine.type isnt 'line'
-    # We don't yet know whether we will want to update @matches with 
-    # these matches (it depends on the last line of the subproof matching too).
-    tempMatches = _.cloneDeep @matches
-    firstLineMatches = firstLine.sentence.matches req.startReq, tempMatches
-    return false if firstLineMatches is false
-    
-    # Here we want to impose the `firstLineMatches` on subsequent matches.
-    # But we don't want to add these to `@matches` yet in case this
-    # subproof fails and we have to try another one.
-    tempMatches.addMatches firstLineMatches
-    lastLineMatches = lastLine.sentence.matches req.endReq, tempMatches
-    if lastLineMatches is false
-      return false 
-    else
-      @addMatches firstLineMatches
-      @addMatches lastLineMatches
-      expressionsAsMatched = "#{util.expressionToString @matches.apply(req.startReq)} ... #{util.expressionToString @matches.apply(req.endReq)}"
-      @addAlthoughMessage "although you correctly cited a subproof with the form '#{util.expressionToString req.startReq} ... #{util.expressionToString req.endReq}' (#{expressionsAsMatched} in this case),"
-      return true
 
-  
-  # Check whether line meets the specified requirement, `req`.
-  # `req` is a pattern suitable for use with `substitute.findMatch`.
-  lineMeetsRequirement : (aLine, req) ->
-    # console.log "Checking #{util.expressionToString(aLine.sentence)} against #{util.expressionToString(req)} with matches #{nodeutil.inspect(@matches)}"
-    newMatches = aLine.sentence.matches req, @matches
-    if newMatches isnt false
-      @addMatches newMatches
+class RequirementChecker
+    # Param `@matches` is an object containing the prior matches that must be respected
+    # in checking whether this requirement is met.
+    # param `@matches` will not be mutated.
+    # `candidateLinesOrSubproofs` is a list of lines or subproofs against
+    # which to check the requirement.
+    constructor : (@req, @candidateLinesOrSubproofs, @matches={}) ->
+      # This clones `@matches`, ensuring it will not be mutated.
+      @saveMatches(@matches)
       
-      # We didn't find an error yet, but add a message that will help to 
-      # explain any subsequent error.
-      expressionAsMatched = @matches.apply(req)
-      @addAlthoughMessage "you correctly cited a line with the form '#{util.expressionToString req}' (namely #{util.expressionToString expressionAsMatched}),"
+      # Store names of metavariables (such as α and ψ)  in the 
+      # requirement to be checked.
+      @metaVariableNames = {}
+      if @req.type? and @req.type is 'subproof'
+        @metaVariableNames =  @req.startReq.listMetaVariableNames()
+        @metaVariableNames = _.defaults( @metaVariableNames, @req.endReq.listMetaVariableNames() )
+      else
+        @metaVariableNames = @req.listMetaVariableNames()
       
-      return true
-    return false
-  
-  # Update `@matches` if it exists, otherwise set it to `newMatches`
-  addMatches : (newMatches) ->
-    @matches?.addMatches newMatches
-    @matches ?= newMatches
-  
-  toRequirementIsMet : () ->
-    # If no requirement is specified, the test passes.
-    return true if not @requirements.to
-    newMatches = @line.sentence.matches(@requirements.to, @matches)
-    if newMatches isnt false
-      @addMatches newMatches
-      # In case there is an error later, adding this clause to the message 
-      # explaining the error will make the explanation clearer later.
-      @addAlthoughMessage "although your conclusion has the correct form ('#{util.expressionToString @requirements.to}'),"
-      return true 
-    @addMessage "your sentence must have the form #{util.expressionToString @requirements.to} when using the rule #{@ruleName}."
-    return false
+    setMatches : (@matches) ->
+      @saveMatches(@matches)
     
+    # So that we can attempt matching different lines,
+    # we have a store of matches.
+    # TODO: this is a bit fragile (setting `@matches` directly would cause
+    # subtle errors).
+    _matchesStack : []
+    saveMatches : () ->
+      newMatches = _.cloneDeep( @matches )
+      @_matchesStack.push(newMatches)
+      @matches = newMatches
+      return undefined
+    restoreMatches : () ->
+      @_matchesStack.pop()
+      [..., @matches] = @_matchesStack
+      return undefined
+   
+    # Check whether this requirement can be checked yet.
+    # (Testing it may depend on what is in @matches).
+    canCheckAlready : () ->
+      # console.log "canCheckAlready for #{@req.toString()} ..."
+      mustBeInMatches = @metaVariableNames.inSub.left
+      for varName in mustBeInMatches
+        if not (varName of @matches)
+          # console.log "... fail"
+          return false 
+        whatItMatches = @matches[varName]
+        # Tricky case: `whatItMatches` may itself be a meta variable.
+        # TODO: for now I'm ignoring this (it doesn't arise in current rules.)
+      # console.log "... pass"
+      return true
+    
+    check : () ->
+      results = false
+      for candidate in @candidateLinesOrSubproofs
+        theResult = @_checkOne candidate
+        if theResult isnt false
+          results = results or {}
+          results[candidate.number] = theResult 
+      return results
+    
+    # In this method, the idea is to call methods that rely on, and 
+    # update, `@matches`.
+    _checkOne : (candidate) ->
+      if @req.type? and @req.type is 'subproof'
+        @saveMatches()
+        @_checkOneLine @req.startReq, candidate.getFirstLine()
+        if @matches isnt false
+          @_checkOneLine @req.endReq, candidate.getLastLine()
+        resultMatches = @matches
+        @restoreMatches()
+        return resultMatches
+      else
+        # @req just concerns a line, not a subproof.
+        @saveMatches()
+        @_checkOneLine @req, candidate
+        resultMatches = @matches
+        @restoreMatches()
+        return resultMatches
+    
+    _checkOneLine : (aReq, aLine) ->
+      fol._decorate(aReq)
+      e = aReq.clone().applyMatches(@matches).applySubstitutions()
+      
+      # Special case: there was a subsutition like `[a->null]` which
+      # results in `e` being null.  This indicates a requirement has 
+      # not been met.
+      if e is null
+        @matches = false 
+        return undefined
+      
+      delete e.substitutions
+      @matches = aLine.sentence.findMatches e, @matches
+      # console.log "_checkOneLine sentence = #{aLine.sentence.toString()}"
+      # console.log "_checkOneLine aReq = #{aReq.toString()}"
+      # console.log "_checkOneLine @matches (found) = #{JSON.stringify @matches,null,4}"
+      return undefined
+      
+# Some requirements can be met in multiple ways (by matching multiple lines).
+# The `Pathfinder` considers different paths through which requirements 
+# could be met.  
+class Pathfinder
+  constructor : ( @reqCheckList, @lineChecker, @matches = {} ) ->
+  
+  find : () ->
+    # If there are no more requirements to meet, we have found a 
+    # path along which all requirements can be met.
+    if @reqCheckList.length is 0
+      return true
+    
+    reqChecker = @reqCheckList.pop()
+    reqChecker.setMatches(@matches)
+    
+    # Find the first item in `reqCheckList` that we can already check;
+    # or, if we can't already check any, just start with the first and hope for the best.
+    numChecked = 0
+    while ( not reqChecker.canCheckAlready() ) and (numChecked < @reqCheckList.length)
+      reqChecker.restoreMatches(@matches)
+      @reqCheckList.unshift(reqChecker)
+      reqChecker = @reqCheckList.pop()
+      reqChecker.setMatches(@matches)
+      numChecked += 1
+    
+    results = reqChecker.check()
+    reqChecker.restoreMatches(@matches)
+    if results is false
+      @writeMessage(reqChecker)
+      return false
+    
+    # From here on, the `reqChecker` found one or more lines where the 
+    # requirement was met.
+    
+    for lineNumber, aMatches of results
+      # clonedReqCheckList = ( reqCheck.clone() for reqCheck in @reqCheckList )
+      newPath = new Pathfinder( @reqCheckList, @lineChecker, aMatches )
+      if newPath.find()
+        return true
+    
+    # So none of the `newPath`s provided a route to meeting all the `reqCheckList`
+    # requirements.
+    return false
+  
+  # This method is called if it has been established that there is no 
+  # path along which all requirements can be met.
+  # Param `reqChecker` is the last in `reqCheckList` for which there is no path.
+  writeMessage : (reqChecker) ->
+    @lineChecker.addMessage("to apply this rule you need to cite a line with the form ‘#{reqChecker.req.toString()}’ (‘#{reqChecker.req.clone().applyMatches(@matches)}’ in this case).")
+
+
+
+
 numberToWords = (num, type) ->
   return '' if num is 0
   return "1 #{type}" if num is 1
   return "#{num} #{type}s" if num > 1
 
 
+
+permutations = (n) ->
+  return [[0]] if n is 1
+  base = permutations(n-1)
+  result = []
+  for i in [0..n-1]
+    for p in base
+      l = _.clone p
+      l.unshift(n-1)
+      old = l[i]
+      l[i] = n-1
+      l[0] = old
+      result.push(l)
+  return result
+    
+
+truthtable = (nofLetters) ->
+  return combinations(nofLetters, 2).reverse()
+
+combinations = (length, max) ->
+  if length is 1
+    return ([x-1] for x in [1..max])
+  r = (([x,y] for x in [1..max]) for y in [1..max])
+  base = combinations(length-1,max)
+  result = []
+  for p in base
+    for i in [1..max]
+      l = _.clone(p)
+      l.push(i-1)
+      result.push(l)
+  return result
+  
+# These exports are for testing only
+exports.RequirementChecker = RequirementChecker  
+exports.Pathfinder = Pathfinder
+exports.LineChecker = LineChecker

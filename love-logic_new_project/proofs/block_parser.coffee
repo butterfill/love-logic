@@ -350,10 +350,11 @@ class Block
     lineObject.prev = @getLastLine()
     lineObject.lineNumberInSource = lineObject.idx
 
-    # Works up the proof from the current line
+    # Work up the proof from the current line
     # checking every line, block, divider and blank_line visible from here until
     # `matcher` returns true; at this point, the matched line or block is returned.
     # (It will not enter closed blocks.)
+    # If no match is found, return false.
     # `matcher` is a function that will be fed a line or block.
     lineObject.find = (matcher) ->
       current = @

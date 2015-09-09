@@ -380,6 +380,17 @@ describe "symmetry", ->
       expectedResult = fol.parse "true"
       expect( util.areIdenticalExpressions(result, expectedResult) ).to.be.true
   
+    it "should remove identities like y=y", ->
+      e = fol.parse "∃x( F(x) and y = y )"
+      result = symmetry.eliminateRedundancyInPNF(e)
+      expectedResult = fol.parse "∃x F(x)"
+      test = util.areIdenticalExpressions(result, expectedResult)
+      if not test
+        console.log "test expression = #{util.expressionToString e}"
+        console.log "actual result = #{util.expressionToString result}"
+        console.log "expected result = #{util.expressionToString expectedResult}"
+      expect( test ).to.be.true
+
   
   describe "isVariableFree", ->
     it "should report that x is free", ->
@@ -442,4 +453,16 @@ describe "symmetry", ->
       util.delExtraneousProperties(result)
       util.delExtraneousProperties(expectedResult)
       expect(result).to.deep.equal(expectedResult)
+
+    it "does not modify its parameter in place when the quantifier to be removed is at the root", ->
+      e = fol.parse "exists x A"
+      result = symmetry.removeQuantifiersThatBindNothing e
+      expect( util.areIdenticalExpressions(e, result) ).to.be.false
+
+    it "modifies expressions in place when removing an inner quantifier", ->
+      e = fol.parse "B and (exists x A)"
+      result = symmetry.removeQuantifiersThatBindNothing e
+      util.delExtraneousProperties e
+      util.delExtraneousProperties result
+      expect( util.areIdenticalExpressions(e, result) ).to.be.false
     

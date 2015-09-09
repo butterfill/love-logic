@@ -63,8 +63,21 @@ describe 'util', ->
       expect( expression.type ).to.equal(clone.type)
       expect( expression.left.type ).to.equal(clone.left.type)
       expect( expression.right.letter ).to.equal(clone.right.letter)
+    it "produces clones without extraneous properties", ->
+      expression = fol.parse("A and B")
+      clone = util.cloneExpression expression
+      expect(expression.symbol).to.equal('and')
+      expect(clone.symbol?).to.be.false
       
   describe 'areIdenticalExpressions', ->
+    it "says that true and false (the values, not the awFOL expressions) are not identical", ->
+      expect( util.areIdenticalExpressions(true, false) ).to.be.false
+    it "says that 'true' and 'false' are not identical phrases", ->
+      expect( util.areIdenticalExpressions(fol.parse("true"), fol.parse("false"))).to.be.false
+    it "says that 'true' and 'true' are not identical phrases", ->
+      expect( util.areIdenticalExpressions(fol.parse("true"), fol.parse("true"))).to.be.true
+    it "says that 'false' and 'false' are not identical phrases", ->
+      expect( util.areIdenticalExpressions(fol.parse("false"), fol.parse("false"))).to.be.true
     it "says that 'A & B' and 'A and B' are identical phrases", ->
       expect( util.areIdenticalExpressions(fol.parse("A & B"), fol.parse("A and B"))).to.be.true
     it "says that 'A & B' and 'B & A' are not identical phrases", ->
@@ -75,6 +88,54 @@ describe 'util', ->
       expect( util.areIdenticalExpressions(fol.parse("all x (F(x) arrow G(x))"), fol.parse("all y (F(y) arrow G(y))"))).to.be.false
     it "says that 'all x (F(x) arrow G(x))' and 'all x (G(x) arrow F(x))' are not identical phrases", ->
       expect( util.areIdenticalExpressions(fol.parse("all x (F(x) arrow G(x))"), fol.parse("all x (G(x) arrow F(x))"))).to.be.false
+    it "says that 'a' and 'a' are identical expressions", ->
+      e1 = fol.parse('F(a)').termlist[0]
+      e2 = fol.parse('F(a)').termlist[0]
+      expect( util.areIdenticalExpressions(e1,e2) ).to.be.true
+    it "does not equate expressions with different boxes", ->
+      e1 = fol.parse('[a] F(a)')
+      e2 = fol.parse('[b] F(a)')
+      expect( util.areIdenticalExpressions(e1,e2) ).to.be.false
+    it "does not equate expressions with and without boxes", ->
+      e1 = fol.parse('[a] F(a)')
+      e2 = fol.parse('F(a)')
+      expect( util.areIdenticalExpressions(e1,e2) ).to.be.false
+    it "does not equate expressions with and without substitutions", ->
+      e1 = fol.parse('F(a)[a->b]')
+      e2 = fol.parse('F(a)')
+      expect( util.areIdenticalExpressions(e1,e2) ).to.be.false
+    it "does equate expressions with identical substitutions", ->
+      e1 = fol.parse('F(a)[a->b]')
+      e2 = fol.parse('F(a)[a->b]')
+      expect( util.areIdenticalExpressions(e1,e2) ).to.be.true
+    it "does equate not expressions with different right substitutions", ->
+      e1 = fol.parse('F(a)[a->b]')
+      e2 = fol.parse('F(a)[a->c]')
+      expect( util.areIdenticalExpressions(e1,e2) ).to.be.false
+    it "does equate not expressions with different left substitutions", ->
+      e1 = fol.parse('F(a)[a->b]')
+      e2 = fol.parse('F(a)[c->b]')
+      expect( util.areIdenticalExpressions(e1,e2) ).to.be.false
+    it "does not apply substitutions before comparing expressions", ->
+      e1 = fol.parse('F(a)')
+      e2 = fol.parse('F(b)[b->a]')
+      expect( util.areIdenticalExpressions(e1,e2) ).to.be.false
+    it "does not apply propositional substitutions before comparing expressions", ->
+      e1 = fol.parse('A')
+      e2 = fol.parse('B[B->A]')
+      expect( util.areIdenticalExpressions(e1,e2) ).to.be.false
+    it "says that 'a' and 'b' are not identical expressions", ->
+      e1 = fol.parse('F(a)').termlist[0]
+      e2 = fol.parse('F(b)').termlist[0]
+      expect( util.areIdenticalExpressions(e1,e2) ).to.be.false
+    it "says that 'x' and 'x' are not identical expressions", ->
+      e1 = fol.parse('F(x)').termlist[0]
+      e2 = fol.parse('F(x)').termlist[0]
+      expect( util.areIdenticalExpressions(e1,e2) ).to.be.true
+    it "says that 'x' and 'y' are not identical expressions", ->
+      e1 = fol.parse('F(x)').termlist[0]
+      e2 = fol.parse('F(y)').termlist[0]
+      expect( util.areIdenticalExpressions(e1,e2) ).to.be.false
     it "works when either parameter is null", ->
       expect( util.areIdenticalExpressions(null, fol.parse("A and B")) ).to.be.false
       expect( util.areIdenticalExpressions(fol.parse("A and B"), null) ).to.be.false
@@ -87,7 +148,10 @@ describe 'util', ->
     it "works when the parameters are lists", ->
       expect( util.areIdenticalExpressions([1], [2]) ).to.be.false
       expect( util.areIdenticalExpressions([1], [1]) ).to.be.true
-    it "works when the parameters are lists", ->
+    it "works for a tricky case", ->
+      e1 = fol.parse "B and (exists x A)"
+      e2 = fol.parse "B and (exists x A)"
+      expect( util.areIdenticalExpressions(e1,e2) ).to.be.true
 
   describe 'expressionToString', ->
     it "does not throw", ->
@@ -186,6 +250,18 @@ describe 'util', ->
           expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
         it "works with nested substitutions", ->
           expression1 = fol.parse 'A [A->B[B->C]]'
+          string = util.expressionToString expression1
+          expression2 = fol.parse string
+          expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
+
+      describe "for expressions with `null`", ->
+        it "can do `ψ[α->null]`", ->
+          expression1 = fol.parse 'ψ[α->null]'
+          string = util.expressionToString expression1
+          expression2 = fol.parse string
+          expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
+        it "can do `A[ψ->null]`", ->
+          expression1 = fol.parse 'A[ψ->null]'
           string = util.expressionToString expression1
           expression2 = fol.parse string
           expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
@@ -302,25 +378,12 @@ describe 'util', ->
         expect( util.areIdenticalExpressions(expected, list[i]) ).to.be.true
 
 
-  describe "addParents", ->
-    it "adds parents to children", ->
-      e = fol.parse "A and B"
-      util.delExtraneousProperties e
-      util.addParents e
-      expect(e.left.parent).to.equal(e)
-      expect(e.right.parent).to.equal(e)
-    it "adds parents to children (more complex example)", ->
-      e = fol.parse "all y some x (R(x,y) and F(x))"
-      util.delExtraneousProperties e
-      util.addParents e
-      expect(e.left.left.parent).to.equal(e.left)
-      expect(e.left.left.left.parent).to.equal(e.left.left)
     
   describe "walkMutate", ->
     it "turns A to B", ->
       e = fol.parse "A"
       mutate = (e) ->
-        if e.letter? and e.letter is 'A'
+        if e?.letter? and e.letter is 'A'
           e.letter = 'B'
         return e
       result = util.walkMutate e, mutate
@@ -338,6 +401,17 @@ describe 'util', ->
       expect(result.left.left.letter).to.equal('D')
       expect(result.right.left.letter).to.equal('D')
     
+    it "turns A to D (complex case, swapped sides)", ->
+      e = fol.parse "(B and A) or (C and A)"
+      mutate = (e) ->
+        if e.letter? and e.letter is 'A'
+          e.letter = 'D'
+        return e
+      result = util.walkMutate e, mutate
+      console.log util.expressionToString(result)
+      expect(result.left.right.letter).to.equal('D')
+      expect(result.right.right.letter).to.equal('D')
+    
     it "turns a to c", ->
       e = fol.parse "a=b"
       mutate = (e) ->
@@ -347,6 +421,16 @@ describe 'util', ->
       result = util.walkMutate e, mutate
       console.log util.expressionToString(result)
       expect(result.termlist[0].name).to.equal('c')
+    
+    it "turns a to c (swapped sides)", ->
+      e = fol.parse "b=a"
+      mutate = (e) ->
+        if e.name? and e.name is 'a'
+          e.name = 'c'
+        return e
+      result = util.walkMutate e, mutate
+      console.log util.expressionToString(result)
+      expect(result.termlist[1].name).to.equal('c')
     
     it "turns a to c (complex case)", ->
       e = fol.parse "(a=b and B)"
@@ -358,4 +442,127 @@ describe 'util', ->
       # console.log "#{JSON.stringify result,null,4}"
       console.log util.expressionToString(result)
       expect(result.left.termlist[0].name).to.equal('c')
-    
+
+    it "turns a to c (in the left-side of a substitution)", ->
+      e = fol.parse "A[a->b]"
+      mutate = (e) ->
+        if e.name? and e.name is 'a'
+          e.name = 'c'
+        return e
+      result = util.walkMutate e, mutate
+      # console.log "#{JSON.stringify result,null,4}"
+      console.log util.expressionToString(result)
+      expect(result.substitutions[0].from.name).to.equal('c')
+
+    it "turns a to c (in the right-side of a substitution)", ->
+      e = fol.parse "A[b->a]"
+      mutate = (e) ->
+        if e.name? and e.name is 'a'
+          e.name = 'c'
+        return e
+      result = util.walkMutate e, mutate
+      # console.log "#{JSON.stringify result,null,4}"
+      console.log util.expressionToString(result)
+      expect(result.substitutions[0].to.name).to.equal('c')
+
+    it "turns A to B (in the left-side of a substitution)", ->
+      e = fol.parse "C[A->B]"
+      mutate = (e) ->
+        if e.letter? and e.letter is 'A'
+          e.letter = 'B'
+        return e
+      result = util.walkMutate e, mutate
+      # console.log "#{JSON.stringify result,null,4}"
+      console.log util.expressionToString(result)
+      expect(result.substitutions[0].from.letter).to.equal('B')
+
+    it "turns A to B (in the right-side of a substitution)", ->
+      e = fol.parse "C[B->A]"
+      mutate = (e) ->
+        if e.letter? and e.letter is 'A'
+          e.letter = 'B'
+        return e
+      result = util.walkMutate e, mutate
+      # console.log "#{JSON.stringify result,null,4}"
+      console.log util.expressionToString(result)
+      expect(result.substitutions[0].to.letter).to.equal('B')
+
+  describe "walk", ->
+    describe "gives information about where you are", ->
+      it "tells you when you are in a box", ->
+        e = fol.parse "[a](F(b))"
+        fn = (e) ->
+          if e?.name? and e.name is 'a'
+            if not fn._inBox?
+              throw new Error "fail"
+          if e.name? and e.name is 'b'
+            if fn._inBox?
+              throw new Error "fail because false positive"
+        util.walk e, fn
+          
+      it "tells you when you are in a bound variable", ->
+        e = fol.parse "A(y) and a=y and all x F(y) and exists x F(y)"
+        fn = (e) ->
+          if e?.name? and e.name is 'x'
+            if not fn._inBoundVariable?
+              throw new Error "fail"
+          if e.name? and e.name is 'y'
+            if fn._inBoundVariable?
+              throw new Error "fail because false positive"
+        util.walk e, fn
+
+      it "tells you when you are in a substitution", ->
+        e = fol.parse "(A and a=b)[C->C and C,c->c]"
+        fn = (e) ->
+          if (e?.name? and e.name is 'c') or (e?.letter? and e.letter is 'C')
+            if not fn._inSub?
+              throw new Error "fail"
+          if (e.name? and e.name is 'a') or (e.letter? and e.letter is 'A')
+            if fn._inSub?
+              throw new Error "fail because false positive"
+        util.walk e, fn
+      it "doesn't choke when 'null' features in substitutions (as in `ψ[α->null]`)", ->
+        e = fol.parse 'ψ[α->null]'
+        fn = (e) ->
+          return util.expressionToString(e)
+        util.walk e, fn
+        
+  describe ".listMetaVariableNames", ->
+    it "lists expression_variables in an expression", ->
+      e = fol.parse "φ"
+      result = util.listMetaVariableNames e
+      expect( 'φ' in result.inExpression ).to.be.true
+      expect(result.inExpression.length).to.equal(1)
+    it "lists several expression_variables in an expression", ->
+      e = fol.parse "ψ and (A and φ)"
+      result = util.listMetaVariableNames e
+      expect( 'φ' in result.inExpression ).to.be.true
+      expect( 'ψ' in result.inExpression ).to.be.true
+      expect(result.inExpression.length).to.equal(2)
+    it "lists term_metavariables in an expression", ->
+      e = fol.parse "F(α)"
+      result = util.listMetaVariableNames e
+      expect(result.inExpression[0]).to.equal('α')
+      expect(result.inExpression.length).to.equal(1)
+    it "lists term_metavariables in a box", ->
+      e = fol.parse "[τ]F(α)"
+      result = util.listMetaVariableNames e
+      expect(result.inBox[0]).to.equal('τ')
+      expect(result.inBox.length).to.equal(1)
+    it "lists metavariables in the left of a substitution", ->
+      e = fol.parse "F(x)[τ->α]"
+      result = util.listMetaVariableNames e
+      expect(result.inSub.left[0]).to.equal('τ')
+      expect(result.inSub.left.length).to.equal(1)
+    it "lists metavariables in the right of a substitution", ->
+      e = fol.parse "F(x)[τ->α]"
+      result = util.listMetaVariableNames e
+      expect(result.inSub.right[0]).to.equal('α')
+      expect(result.inSub.right.length).to.equal(1)
+    it "lists expression_variables in the right of a substitution", ->
+      e = fol.parse "A[A->ψ and φ]"
+      result = util.listMetaVariableNames e
+      expect( 'φ' in result.inSub.right ).to.be.true
+      expect( 'ψ' in result.inSub.right ).to.be.true
+      expect(result.inSub.right.length).to.equal(2)
+                

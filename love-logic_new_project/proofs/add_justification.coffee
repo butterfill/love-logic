@@ -27,7 +27,7 @@ PREMISE_JUSTIFICATION = jp.parse "premise"
 to = (block) ->
   
   # First pass: extract the justification and add it to the lines.
-  walker = 
+  walker =  
     visit : (item) ->
       return undefined if item.type isnt 'line'
       return undefined if item.justification? or item.justificationErrors?
@@ -55,7 +55,7 @@ to = (block) ->
   block.walk walker
 
   # Second pass: fill in premise justifications for any premises.
-  walker = 
+  walker =  
     visit : (item) ->
       return undefined if item.type isnt 'line'
       return undefined if item.justification? or item.justificationErrors?

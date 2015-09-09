@@ -192,120 +192,64 @@ exports.doSub = doSub
 # Apply the `sub` to the `expression` and all its components.  
 # (See doSub.)
 doSubRecursive = (expression, sub) ->
-  result = {}
-  for property in ['left','right','variable']
-    if expression[property]?
-      result[property] = doSubRecursive expression[property], sub
-  if expression.termlist?
-    result.termlist = (doSubRecursive(t,sub) for t in expression.termlist)      
-  result = _.defaults result, expression
-  return doSub(result, sub)
+  walker = (e) ->
+    return e if e is null
+    return e if _.isArray(e)
+    return e if e.type? and e.type is 'box'
+    return doSub(e, sub)
+  return util.walkMutate(expression, walker)
 exports.doSubRecursive = doSubRecursive
 
 
 
 # Determines whether  `expression` matches `pattern`, e.g. whether `not not A` matches `not φ`.
 # Where `expression` and `pattern` are fol.parse objects (not strings).
-# @returns false if no match, otherwise a map with each variable's match.
+# @returns `false` if no match, otherwise a map with each variable's match.
 #   E.g, in the above case it will return `{φ:fol.parse('not A')}`
+#
 # @param expression is like `fol.parse("not not (P and Q)")`
 # @param pattern is like `fol.parse("not not φ")` (extraneous properties will be removed)
+#
 # Note: `fol.parse "φ"` creates an expression with type  `expression_variable`
-# @param _matches should normally be null 
-# (is used internally to keep track of what is already matched), but you 
-# might also use it if keeping track of multiple matches where one constains another.
+#
+# You don't normally need to set @param _matches; is used internally to keep track 
+# of what is already matched, but you  might also use it if keeping track of 
+# multiple matches where one constains another.
+#
 # Note: this function only attempts to match `expression` itself 
 # (it does not look for matches with components of `expression`).
-findMatches = (expression, pattern, _matches, o) ->
-  _matches ?= {
-    addMatches : (moreMatches) ->
-      _.defaults @, moreMatches
+findMatches = (expression, pattern, _matches) ->
+  _matches ?= {}
+  
+  comparator = (expression, pattern) ->
+    return undefined unless pattern?.type?
     
-    # apply these matches to `pattern` and return the result
-    apply : (pattern) ->
-      return applyMatches(pattern, @)
-  }
-  o ?= {}
-  o.symmetricIdentity ?= false
-  o._notFirstCall ?= false
-  if not o._notFirstCall
-    # function is being called by user (not recursively)
-    util.delExtraneousProperties(pattern)
-    o._notFirstCall = true
-  
-  if pattern is null
-    if expression is null
-      return _matches
-    else
-      return false
-  
-  if _.isArray pattern
-    return _findMatchesArray expression, pattern, _matches, o #may update _matches
-    
-  if _.isString pattern
-    if _.isString(expression) and (expression is pattern)
-      return _matches
-    else
-      return false
-  
-  if _.isBoolean pattern
-    if _.isBoolean(expression) and (expression is pattern)
-      return _matches
-    else
-      return false
-  
-  # Pattern is an object.
-  
-  # First check whether it's an expression_variable; and, if so, test for a match.
-  if 'type' of pattern and (pattern.type in ['expression_variable', 'term_metavariable'])
-    targetVar = pattern.letter if pattern.type is 'expression_variable' # eg φ
-    targetVar = pattern.name if pattern.type is 'term_metavariable' # eg τ2
-    targetValue = expression
-    if targetVar of _matches
-      if util.areIdenticalExpressions targetValue, _matches[targetVar]
-        return _matches
+    # Check whether `pattern` is an expression_variable; and, if so, test for a match.
+    if pattern.type in ['expression_variable', 'term_metavariable']
+      targetVar = pattern.letter if pattern.type is 'expression_variable' # eg φ
+      targetVar = pattern.name if pattern.type is 'term_metavariable' # eg τ2
+      targetValue = expression
+      if targetVar of _matches
+        return util.areIdenticalExpressions(targetValue, _matches[targetVar])
       else
-        return false
-    else
-      # console.log "matched #{targetVar} with #{targetValue.type}"
-      _matches[targetVar] = targetValue
-      return _matches
-
-  # From this point on, we know that pattern.type isn neither 
-  # an expression_variable nor a term_metavariable.
-
-  # The following special case is needed only because we want to be able to
-  # treat identity as symmetric when `o.symmetricIdentity` is true.
-  # (This was needed for `symmetry.arePNFExpressionsEquivalent`, although now 
-  # we don't need it because we sort identity statements.)
-  if 'type' of pattern and pattern.type is 'identity'
-    return false unless (expression.type? and expression.type is 'identity')
-    result = _findMatchesArray expression.termlist, pattern.termlist, _matches, o
-    # Check whether we need to treat identity as symmetric.
-    if result is false and o.symmetricIdentity is true
-      # We need to attempt to match the other way around.
-      reversedPatternTermlist = [pattern.termlist[1],pattern.termlist[0]]
-      result = _findMatchesArray expression.termlist, reversedPatternTermlist, _matches, o
-    return false if result is false
-    return _matches
-    
-  # # We could attempt to save some time by checking primitive 
-  # # properties first as follows.
-  # for attr in ['type','letter','name']
-  #   if pattern[attr]?
-  #     return false unless expression[attr]?
-  #     return false unless expression[attr] is pattern[attr]
-
-  # Pattern is an object and not an expression_variable, so we
-  # loop through its keys and match them with keys of `expression`.
-  for key, value of pattern
-    return false unless (key of expression)
-    if pattern[key] is undefined
-      console.log "pattern = #{util.expressionToString pattern}, key = #{key}"
-    result = findMatches expression[key], pattern[key], _matches, o #may update _matches
-    return false if result is false
-  return _matches
+        _matches[targetVar] =targetValue
+        if pattern.box?
+          return false if not expression.box?
+          return util.walkCompare(expression.box, pattern.box, comparator)
+        return true
+        
+    return undefined
   
+  expressionMatchesPattern = util.walkCompare(expression, pattern, comparator)
+  if expressionMatchesPattern
+    # Protect the expressions matched by cloning them. 
+    for k,v of _matches
+      _matches[k] = util.cloneExpression v
+    return _matches
+  else
+    return false
+
+
 exports.findMatches = findMatches
 
 _findMatchesArray = (expression, arrayOfPatterns, _matches, o) ->
@@ -328,30 +272,28 @@ _findMatchesArray = (expression, arrayOfPatterns, _matches, o) ->
 #     `applyMatches fol.parse("not not φ"), {φ:fol.parse('A and B')}`
 # will return fol.parse("not not (A and B)")
 applyMatches = (pattern, matches) ->
-  if 'type' of pattern and (pattern.type is 'expression_variable' or pattern.type is 'term_metavariable')
+  walker = (pattern) ->
+    # Screen out everything but the variables we might replace
+    return pattern unless pattern?.type? and pattern.type in ['expression_variable', 'term_metavariable']
+
+    # Work out what we are potentially replacing.
     targetVar = pattern.letter if pattern.type is 'expression_variable' # eg φ
     targetVar = pattern.name if pattern.type is 'term_metavariable' # eg τ2
-    return util.cloneExpression(matches[targetVar])
-  res = {}
-  if pattern.left?
-    res.left = applyMatches pattern.left, matches
-  if pattern.right?
-    res.right = applyMatches pattern.right, matches
-  if pattern.termlist?
-    res.termlist = (applyMatches(t,matches) for t in pattern.termlist)
-  if pattern.boundVariable?
-    res.boundVariable = applyMatches(pattern.boundVariable, matches)
-  if pattern.box?
-    res.box = _.cloneDeep pattern.box
-    res.box.term = applyMatches(res.box.term, matches)
-  if pattern.substitutions?
-    res.substitutions = _.cloneDeep pattern.substitutions
-    for s in res.substitutions
-      s.from = applyMatches s.from, matches
-      s.to = applyMatches s.to, matches
-  # add everything from `pattern` to `res` except where `res` already contains it
-  return _.defaults(res, pattern)
-  
+
+    # Do nothing if the variable to be replaced is not in matches
+    return pattern unless targetVar of matches
+
+    # Replace the variable with its match.
+    toReplace = util.cloneExpression(matches[targetVar])
+    # Be sure to add back any substitutions and boxes (which will already have been
+    # processed by `applyMatches`.)
+    toReplace.substitutions = pattern.substitutions if pattern.substitutions?
+    toReplace.box = pattern.box if pattern.box?
+    return toReplace
+
+  theClone = util.cloneExpression pattern
+  return util.walkMutate(theClone, walker)
+
 exports.applyMatches = applyMatches
 
 
@@ -360,31 +302,25 @@ exports.applyMatches = applyMatches
 #    the expression `fol.parse "Loves(x,b)"` 
 #    would be turned into `Loves(a,b)` with whatToReplace = {from:VARIABLE_X, to:NAME_A}
 #
-# WARNING: At present this will not take into account whether a variable is bound
-# when replacing it!
+# Note: This will not take into account whether or not a variable is bound
+# when replacing it.
 #
+# Special feature for substitutions like `[a->null]`: if it actually finds a match
+# to replace, it will throw Error with `.messsage` "_internal: replace to null".
 replace =  (expression, whatToReplace) ->
   toFind = whatToReplace.from
   toReplace = whatToReplace.to
-  console.log "replace: #{util.expressionToString toFind} with #{util.expressionToString toReplace} in #{util.expressionToString(expression)}"
-  if util.areIdenticalExpressions(expression, toFind)
-    return util.cloneExpression(toReplace)
-  result = {}
-  if expression.left?
-    result.left = replace expression.left, whatToReplace
-  if expression.right?
-    result.right = replace expression.right, whatToReplace
-  if expression.termlist?
-    result.termlist = (replace(t,whatToReplace) for t in expression.termlist)
-  if expression.boundVariable?
-    result.boundVariable = replace(expression.boundVariable, whatToReplace)
-  if expression.box?
-    result.box = _.cloneDeep expression.box
-    result.box.term = replace(expression.box.term, whatToReplace)
-  # add everything from `expression` to `result` except where `result` already contains it
-  return _.defaults(result, expression)  
-  
+  walker = (e) ->
+    return e if e is null or _.isArray(e)
+    if util.areIdenticalExpressions(e, toFind)
+      if toReplace is null
+        throw new Error "_internal: replace to null"
+      return util.cloneExpression(toReplace)
+    return e
+  e = util.cloneExpression(expression)
+  return util.walkMutate(e, walker)
 exports.replace = replace
+
 
 # Given `A[A->B]` as the `expression`, return `B`.
 # (This is not to be confused with doSub, doSubRecursive (TODO: rename, reorganize).)
@@ -392,22 +328,23 @@ exports.replace = replace
 applySubstitutions = (expression) ->
   # We are going to do this by starting at a point innermost in the expression
   # and walking outwards, so that `(A[A->B] and C)[B->D]` returns `D and C`.
-  doit = (e) ->
-    return e if not e.substitutions?
-    console.log "at expression #{util.expressionToString(e)}"
+  walker = (e) ->
+    return e if not e?.substitutions?
     theSubs = _.cloneDeep e.substitutions
     delete e.substitutions
     for s in theSubs
       whatToReplace =
         from : s.from
         to : s.to
-      console.log "aS: replace: #{util.expressionToString whatToReplace.from} with #{util.expressionToString whatToReplace.to} in #{util.expressionToString(e)}"
       e = replace(e, whatToReplace)
-    # Note : if we don't delete the substitutions, this won't work.
     return e
     
   e = _.cloneDeep expression
-  return util.walkMutate(e, doit)
+  try
+    return util.walkMutate(e, walker)
+  catch e 
+    return null if e.message is "_internal: replace to null"
+    throw e
 exports.applySubstitutions = applySubstitutions
 
 # Go through expression and rename variables so that each 
@@ -417,64 +354,54 @@ exports.applySubstitutions = applySubstitutions
 #
 # The new variable names will have the form `newVariableBaseName[0-9]+` .
 # If you want to create a pattern to match, set `newVariableBaseName` to 'τ'.
-renameVariables = (expression, newVariableBaseName, _varStack, _newVarIdx) ->
+renameVariables = (expression, newVariableBaseName) ->
   newVariableBaseName ?= 'xx'
-  _newVarIdx ?= {idx:0} #Note: this is not a number because we need to mutate it.
-  _varStack ?= {}
+  newVariableType = ('term_metavariable' if newVariableBaseName[0] in ['α','β','γ','τ']) or 'variable'
   
-  # Note: `expression.boundVariable?` is currently equivalent to 
-  # `(expression.type in ['existential_quantifier','universal_quantifier'])`.  
-  # But what follows should generalise in case new quantifiers are added to awFOL.
-  if expression.boundVariable?
-    quantifier = expression
-    variableNameToRename = quantifier.boundVariable.name
-    _newVarIdx.idx += 1
-    newName = "#{newVariableBaseName}#{_newVarIdx.idx}"
-    _varStack[variableNameToRename] ?= []
-    _varStack[variableNameToRename].push newName
-    quantifier.boundVariable.name = newName
-    if newVariableBaseName[0] in ['α','β','γ','τ']
-      quantifier.boundVariable.type = 'term_metavariable'
-    renameVariables quantifier.left, newVariableBaseName, _varStack, _newVarIdx
-    # None of the awFOL quantifiers currently have `.right` but we would rename
-    # `quantifier.right` as well if they did.
-    if quantifier.right?
-      renameVariables quantifier.right, newVariableBaseName, _varStack, _newVarIdx
-    _varStack[variableNameToRename].pop()
+  _newVarIdx = 0 #Note: this is not a number because we need to mutate it.
+  # The keys are the old variable names, values are their replacements.
+  _newVarNames = {} 
+  # The keys are the new variable names, values are what they replaced.
+  _oldVarNames = {}
+  
+  # Get a replacement name for the `variable`, either the current replacement
+  # if there is one, or else a new replacement (which is saved for next time
+  # we see a variable with the same name).
+  getReplacementName = (variable) ->
+    if not _newVarNames[variable.name]?
+      _newVarIdx += 1
+      newName = "#{newVariableBaseName}#{_newVarIdx}"
+      _newVarNames[variable.name] = newName
+    return _newVarNames[variable.name]
+
+  # Force whatever name was replaced by `variable.name` (if any)
+  # to be discarded, so that future occurrences of variables with this 
+  # name will get a different name.
+  setNewReplacementName = (variable) ->
+    if _newVarNames[variable.name]?
+      delete _newVarNames[variable.name]
+  
+  topDownWalker = (expression) ->
+    return expression if expression is null # Because null can occur in substitutions.
+    return expression unless (expression?.boundVariable?) or (expression?.type? and expression.type is 'variable')
+    
+    # Require that a new replacement name be used for a variable every time 
+    # we see it bound to a quantifier.
+    #
+    # Note: `expression.boundVariable?` is the test for whether an awFOL 
+    # expression is a quantifier.  
+    # (What follows should generalise in case new quantifiers are added.)
+    if expression.boundVariable?
+      setNewReplacementName(expression.boundVariable)
+  
+    if expression?.type? and expression.type is 'variable'
+      variable = expression
+      variable.name = getReplacementName(variable)
+      variable.type = newVariableType
+      
     return expression
   
-  # Note: `expression.termlist?` is currently short for testing `expression.type` 
-  # against 'predicate' and 'identity'.  But doing it this way means it will work
-  # for any extensions involving termlists.
-  if expression.termlist?
-    #I'm calling it a predicate but `expression.type` may be 'identity'; that will work fine too.
-    predicate = expression
-    for term in expression.termlist when term.type is 'variable'
-      variable = term
-      variableNameToRename = variable.name
-      # Find out whether have already assigned this variable a new name.
-      _varStack[variableNameToRename] ?= []
-      theStack = _varStack[variableNameToRename]
-      if theStack.length is 0
-        # No, we have not already assigned this variable a new name (it's unbound).
-        _newVarIdx.idx += 1
-        newName = "#{newVariableBaseName}#{_newVarIdx.idx}"
-        theStack.push newName
-      # From here we can proceed regardless of whether we have already assigned this variable a new name.
-      newName = _.last theStack
-      variable.name = newName
-      if newVariableBaseName[0] in ['α','β','γ','τ']
-        variable.type = 'term_metavariable'
-    #I assume that any expression with a termlist is terminal (i.e. has no `.left` or `.right`)
-    return expression
-  
-  # If we are here expression isn't a quantifier and doesn't have a termlist.
-  # So I assume it doesn't contain any variables to rename.
-  if expression.left?
-    renameVariables expression.left, newVariableBaseName, _varStack, _newVarIdx
-  if expression.right?
-    renameVariables expression.right, newVariableBaseName, _varStack, _newVarIdx
-  return expression
+  return util.walkMutate(expression, topDownWalker, topDown:true)
     
 exports.renameVariables = renameVariables
 

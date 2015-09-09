@@ -5,13 +5,122 @@ _ = require 'lodash'
 
 util = require 'util'
 
+fol = require '../../fol'
 
+# TODO: remove this dependence (verify depends on rule!)
 verify = require '../verify'
 
 rule = require '../rule'
 
 
 describe "`rule`", ->
+  
+  describe "`RequirementChecker`", ->
+    it "collects the metavariables from subproofs", ->
+      req = rule.subproof('[α]φ[τ->α]', 'ψ')
+      line = { sentence : fol.parse 'not not A' }
+      rc = new rule.RequirementChecker(req, [line])
+      expect(rc.metaVariableNames.inSub.left.length).to.equal(1)
+      expect(rc.metaVariableNames.inSub.left[0]).to.equal('τ')
+      expect(rc.canCheckAlready()).to.be.false
+    
+    it "has a `canCheckAlready` method", ->
+      req = fol.parse 'not not φ'
+      line = { sentence : fol.parse 'not not A' }
+      rc = new rule.RequirementChecker(req, [line])
+      expect(rc.canCheckAlready()).to.be.true
+      
+    it "says no to `canCheckAlready` when necessary", ->
+      req = fol.parse 'ψ[α->null]' 
+      line = { sentence : fol.parse 'not not A' }
+      rc = new rule.RequirementChecker(req, [line])
+      console.log rc.metaVariableNames.inSub.left
+      expect(rc.canCheckAlready()).to.be.false
+      
+    it "says yes to `canCheckAlready` when possible", ->
+      req = fol.parse 'φ[α->a]'
+      line = { sentence : fol.parse 'not not A' }
+      matches = 
+        α : (fol.parse 'F(b)').termlist[0]
+      rc = new rule.RequirementChecker(req, [line], matches)
+      expect(rc.canCheckAlready()).to.be.true
+    
+    it "says yes to `canCheckAlready` when possible for a subproof", ->
+      req = rule.subproof('[α]φ[τ->α]', 'ψ')
+      line = { sentence : fol.parse 'not not A' }
+      matches = 
+        τ : (fol.parse 'F(x)').termlist[0]
+      rc = new rule.RequirementChecker(req, [line])
+      rc.setMatches(matches)
+      expect(rc.canCheckAlready()).to.be.true
+    
+    it "can save and restore matches", ->
+      req = fol.parse 'not not φ'
+      line = { sentence : fol.parse 'not not A' }
+      matches = 
+        α : (fol.parse 'F(b)').termlist[0]
+      rc = new rule.RequirementChecker(req, [line], matches)
+      expect(rc.matches.α.name).to.equal('b')
+      rc.saveMatches()
+      rc.matches.α = (fol.parse 'F(c)').termlist[0]
+      expect(rc.matches.α.name).to.equal('c')
+      rc.restoreMatches()
+      expect(rc.matches.α.name).to.equal('b')
+    
+    it "can check whether a requirement is met", ->
+      req = fol.parse 'not not φ'
+      proof = '''
+        1. not not A
+      ''' 
+      proof = verify._parseProof proof
+      line = proof.goto 1
+      rc = new rule.RequirementChecker(req, [line])
+      result = rc.check()
+      expect(result).not.to.be.false
+
+    it "returns matches when a requirement is met", ->
+      req = fol.parse 'not not φ'
+      proof = '''
+        1. not not A
+      ''' 
+      proof = verify._parseProof proof
+      line = proof.goto 1
+      rc = new rule.RequirementChecker(req, [line])
+      result = rc.check()
+      matches = result['1']
+      expect(matches.φ.letter).to.equal('A')
+
+    it "knows when a requirement is not met", ->
+      req = fol.parse 'not not φ'
+      proof = '''
+        1. A
+      ''' 
+      proof = verify._parseProof proof
+      line = proof.goto 1
+      rc = new rule.RequirementChecker(req, [line])
+      result = rc.check()
+      expect(result).to.be.false
+    
+    it "deals with a tricky case involving matches and substitutions (`[α]φ[τ->α]`)", ->
+      req = fol.parse '[α]φ[τ->α]'
+      proof = '''
+        1. [a]F(a)
+      ''' 
+      proof = verify._parseProof proof
+      line = proof.goto 1
+      matches = 
+        φ : fol.parse "F(x)"
+        τ : (fol.parse 'F(x)').termlist[0]
+      rc = new rule.RequirementChecker(req, [line])
+      rc.setMatches(matches)
+      result = rc.check()
+      expect(result).not.to.be.false
+      matches = result['1']
+      expect(matches.α.name).to.equal('a')
+      
+      
+      
+  
   describe ".from", ->
     it "allows chaining with to and check", ->
       result = rule.from('not not φ').to('φ')
@@ -65,7 +174,7 @@ describe "`rule`", ->
       console.log result.getMessage() if result isnt true
       expect(result).to.be.true
 
-    it "provides a message when required citations to lines are missing", ->
+    it "provides a message when required citations to subproofs are missing", ->
       proof = '''
         1. A or B    // premise
         2.    A         // assumption
@@ -191,28 +300,119 @@ describe "`rule`", ->
       result = arrowElim.check proof.goto(3)
       expect(result).to.be.true
 
-    it "can verify correct use of arrow elim regardless of the order in which the `.from` requirements are specified in defining the rule"
-      # This test works fine.
-      # The problem is just that the `rule.LineChecker` can't cope with this yet. (TODO)
-      # , ->
-      # proof = '''
-      #   1. A
-      #   2. A  arrow B
-      #   3. B            // arrow elim 1, 2
-      # '''
-      # proof = verify._parseProof proof
-      # arrowElim = rule.from('φ').and('φ arrow ψ').to('ψ')
-      # result = arrowElim.check proof.goto(3)
-      # expect(result).to.be.true
-      # proof2 = '''
-      #   1. A arrow B
-      #   2. A
-      #   3. B            // arrow elim 1, 2
-      # '''
-      # proof2 = verify._parseProof proof2
-      # arrowElim = rule.from('φ').and('φ arrow ψ').to('ψ')
-      # result = arrowElim.check proof2.goto(3)
-      # console.log result.getMessage() if result isnt true
-      # expect(result).to.be.true
+    it "can verify correct use of arrow elim regardless of the order in which the `.from` requirements are specified in defining the rule", ->
+      proof = '''
+        1. A
+        2. A  arrow B
+        3. B            // arrow elim 1, 2
+      '''
+      proof = verify._parseProof proof
+      arrowElim = rule.from('φ').and('φ arrow ψ').to('ψ')
+      result = arrowElim.check proof.goto(3)
+      expect(result).to.be.true
+      proof2 = '''
+        1. A arrow B
+        2. A
+        3. B            // arrow elim 1, 2
+      '''
+      proof2 = verify._parseProof proof2
+      result = arrowElim.check proof2.goto(3)
+      console.log result.getMessage() if result isnt true
+      expect(result).to.be.true
 
-        
+
+  describe "premises and assumptions", ->
+    it "`rule.from` allows creation of an empty rule", ->
+      proof = '''
+        1. A        // premise
+      ''' 
+      proof = verify._parseProof proof
+      emptyRule = rule.from()
+      result = emptyRule.check proof.goto(1)
+      expect(result).to.be.true
+    it "the empty rule, `rule.from()`, checks that no lines are cited", ->
+      proof = '''
+        1. A
+        2. A          // assumption 1
+      ''' 
+      proof = verify._parseProof proof
+      emptyRule = rule.from()
+      result = emptyRule.check proof.goto(2)
+      # if result isnt true
+      #   console.log result.getMessage()
+      expect(result).not.to.be.true
+    it "the empty rule, `rule.from()`, checks that no subpoofs are cited", ->
+      proof = '''
+        1. A
+        2.    B
+        3.    B
+        4. A          // assumption 2-3
+      ''' 
+      proof = verify._parseProof proof
+      emptyRule = rule.from()
+      result = emptyRule.check proof.goto(4)
+      # if result isnt true
+      #   console.log result.getMessage()
+      expect(result).not.to.be.true
+      
+    describe "`rule.premise()`", ->
+      it "allows the first line to be a premise", ->
+        proof = '''
+          1. A        // premise
+        ''' 
+        proof = verify._parseProof proof
+        premiseRule = rule.premise()
+        result = premiseRule.check proof.goto(1)
+        expect(result).to.be.true
+      it "allows the second line of the main proof to be a premise", ->
+        proof = '''
+          1. A        // premise
+          2. B        // premise
+        ''' 
+        proof = verify._parseProof proof
+        premiseRule = rule.premise()
+        result = premiseRule.check proof.goto(2)
+        console.log result.getMessage() if result isnt true
+        expect(result).to.be.true
+      it "does not allow the second line of a subproof to be a premise", ->
+        proof = '''
+          1. A        // premise
+          2.   A      // premise
+          3.   B      // premise
+        ''' 
+        proof = verify._parseProof proof
+        premiseRule = rule.premise()
+        result = premiseRule.check proof.goto(3)
+        expect(result).not.to.be.true
+      it "does not allow a premise to occur after a non-premise", ->
+        proof = '''
+          1. A and B        // premise
+          2. B              // and elim 1
+          3. C              // premise
+        ''' 
+        proof = verify._parseProof proof
+        premiseRule = rule.premise()
+        result = premiseRule.check proof.goto(3)
+        expect(result).not.to.be.true
+      it "does not allow a premise to occur after a subproof", ->
+        proof = '''
+          1. A and B        // premise
+          2.    B              // premise
+          3.    C              
+          4. C           // premise
+        ''' 
+        proof = verify._parseProof proof
+        premiseRule = rule.premise()
+        result = premiseRule.check proof.goto(4)
+        expect(result).not.to.be.true
+      it "returns a results object with `.getMessage` method when a line is not verified", ->
+        proof = '''
+          1. A        // premise
+          2.   A      // premise
+          3.   B      // premise
+        ''' 
+        proof = verify._parseProof proof
+        premiseRule = rule.premise()
+        result = premiseRule.check proof.goto(3)
+        expect(result).not.to.be.true
+        expect( _.isString(result.getMessage?()) ).to.be.true

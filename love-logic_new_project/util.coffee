@@ -1,68 +1,35 @@
 _ = require 'lodash'
 
 
-  
-# Walk through `expression` depth-first applying `fn`.
-# This will visit terms and bound variables.
-# It will also visit substitutions (like φ[τ->α]) and boxes (like [a]φ).
-walk = (expression, fn) ->
-  return null if not expression?
 
-  if _.isArray(expression)  #e.g. it's a termlist
-    for e in expression
-      walk e, fn
-
-  # Special case: the expression contains a box.
-  if expression.box?
-    fn._inBox = true
-    walk expression.box.term, fn
-    fn._inBox = undefined     # Set this to undefined so that fn._inBox? works.
-  
-  # Special case: the expression contains one or more subtitutions.
-  # Note: we use _inSubCount because it's possible for substitutions to be nested.
-  if expression.substitutions?
-    fn._inSubCount ?= 0
-    fn._inSubCount += 1
-    fn._inSub = true
-    # Note `expression.substitutions` is an array of substitutions.
-    walk expression.substitutions, fn
-    fn._inSubCount -= 1
-    fn._inSub = undefined if fn._inSubCount is 0    # Set this to undefined so that fn._inSub? works.
-  if expression.type is 'substitution'
-    walk expression.from, fn
-    walk expression.to, fn
-
-  # The standard parts of an expression.
-  if expression.boundVariable?
-    fn._inBoundVariable = true
-    walk expression.boundVariable, fn
-    fn._inBoundVariable = false
-  if expression.termlist?
-    walk expression.termlist, fn
-  if expression.left?
-    walk expression.left, fn
-  if expression.right?
-    walk expression.right, fn
-  
-  return fn(expression)
-exports.walk = walk  
-
-# `fn` takes an expression, term, substitutions, or termlist and returns an 
-# expression, term, termlist or substitutions .
-# `walkMutate` `walk`s through expression replacing every component.
-# Note that the walk will involving visiting any `.box` and `.substitutions` as 
-# well as `boundVariable`s.
-walkMutate = (expression, fn) ->
+# Walk through `expression` depth-first (unless `o.topDown`) applying `fn` to mutate it.
+# This will visit termlists, terms, and bound variables.
+# It will also visit substitution lists, individual substitutions 
+# and their components (like `τ` and `α` in `φ[τ->α]`) and boxes (like `[a]φ`).
+#
+# Note that `fn` can receive null when visiting substitutions like `ψ[α->null]`.
+#
+# `fn` takes an expression, term, substitutions, termlist and returns.
+#
+# If you don't need to change `expression`, use `.walk` to save having to
+# return things.
+walkMutate = (expression, fn, o) ->
   if _.isArray(expression)  #e.g. it's a termlist, or `substitutions`
-    return (walkMutate(e,fn) for e in expression)
+    return (walkMutate(e,fn,o) for e in expression)
 
-  console.log "walkMutate got #{expressionToString expression}"
+  if expression is null
+    return fn(expression)
+
+  if o?.topDown? and o.topDown
+    result = fn(expression)
+  
+  #console.log "walkMutate got #{expressionToString expression}"
 
   # Special case: the expression contains a box.
   if expression.box?
     fn._inBox = true
-    expression.box.term = walkMutate expression.box.term, fn
-    fn._inBox = undefined     # Set this to undefined so that fn._inBox? works.
+    expression.box.term = walkMutate expression.box.term, fn, o
+    fn._inBox = undefined      # Set this to undefined so that fn._inBox? works.
   
   # Special case: the expression contains one or more subtitutions.
   # Note: we use _inSubCount because it's possible for substitutions to be nested.
@@ -71,32 +38,102 @@ walkMutate = (expression, fn) ->
     fn._inSubCount += 1
     fn._inSub = true
     # Note `expression.substitutions` is an array of substitutions.
-    expression.substitutions = walkMutate expression.substitutions, fn
+    expression.substitutions = walkMutate expression.substitutions, fn, o
     fn._inSubCount -= 1
     fn._inSub = undefined if fn._inSubCount is 0    # Set this to undefined so that fn._inSub? works.
   if expression.type is 'substitution'
-    expression.from = walkMutate expression.from, fn
-    expression.to = walkMutate expression.to, fn
+    fn._inSubLeft = true
+    expression.from = walkMutate expression.from, fn, o
+    fn._inSubLeft = undefined
+    expression.to = walkMutate expression.to, fn, o
 
   # The standard parts of an expression.
   if expression.boundVariable?
     fn._inBoundVariable = true
-    expression.boundVariable = walkMutate expression.boundVariable, fn
-    fn._inBoundVariable = false
+    expression.boundVariable = walkMutate expression.boundVariable, fn, o
+    fn._inBoundVariable = undefined
   if expression.termlist?
-    expression.termlist = walkMutate expression.termlist, fn
+    expression.termlist = walkMutate expression.termlist, fn, o
   if expression.left?
-    expression.left = walkMutate expression.left, fn
+    expression.left = walkMutate expression.left, fn, o
   if expression.right?
-    expression.right = walkMutate expression.right, fn
+    expression.right = walkMutate expression.right, fn, o
     
-  return fn(expression)
+  if o?.topDown? and o.topDown
+    return result
+  else
+    return fn(expression)
 exports.walkMutate = walkMutate
 
 
+# Walk through `expression` depth-first applying `fn` to mutate it.
+# This will visit termlists, terms, and bound variables.
+# It will also visit substitution lists, individual substitutions 
+# and their components (like `τ` and `α` in `φ[τ->α]`) and boxes (like `[a]φ`).
+# The return value from `fn` is discarded, except for the final time it is called
+# on the whole expression.
+walk = (expression, fn, o) ->
+  wrappedFn = (e) ->
+    # Because `.walkMutate` sets some properties on its `fn` parameter,
+    # we want the function provided to walk to have these properties too.
+    for own k,v of wrappedFn
+      fn[k] = v
+    
+    fn(e)
+    return e
+  return walkMutate(expression, wrappedFn, o)
+exports.walk = walk  
+
+
+# Walk through `firstExp` and `otherExp` comparing them with `comparator`.
+# Stop as soon as `comparator` returns false.
+# This will visit termlists, terms, and bound variables.
+# It will also visit substitution lists, individual substitutions 
+# and their components (like `τ` and `α` in `φ[τ->α]`) and boxes (like `[a]φ`).
+#
+# Note that `fn` can receive primitive values, and also null (when visiting 
+# substitutions like `ψ[α->null]`).
+walkCompare = (firstExp, otherExp, comparator) ->
+  if comparator 
+    result = comparator(firstExp, otherExp)
+    return result unless result is undefined
+  
+  if firstExp is null or otherExp is null
+    return (firstExp is otherExp)
+
+  for test in [_.isBoolean, _.isNumber, _.isString]
+    if test(firstExp) or test(otherExp)
+      return (firstExp is otherExp)
+  
+  if _.isArray(firstExp) or _.isArray(otherExp)
+    return false unless _.isArray(firstExp) and _.isArray(otherExp) 
+    return false unless firstExp.length is otherExp.length
+    for e, idx in firstExp
+      return false unless walkCompare(e, otherExp[idx], comparator)
+    return true
+  
+  for attr in [ 'substitutions', 'from', 'to'       #for substitions
+                'box','term'                        #for boxes
+                'boundVariable'
+                'termlist'
+                'left', 'right'
+                # attributes with primitive values:
+                'type', 'name', 'letter', 'value'   
+              ]
+    if attr of firstExp or attr of otherExp
+      return false unless attr of firstExp and attr of otherExp
+      return false unless walkCompare(firstExp[attr], otherExp[attr], comparator)
+
+  return true
+exports.walkCompare = walkCompare
+
+areIdenticalExpressions = walkCompare
+exports.areIdenticalExpressions = areIdenticalExpressions
+
+
+
+
 # This modifies `expression` in place.
-# It is useful when we want to compare expressions ignoring things like
-# location information and symbols provided by the parser.  (See `areIdenticalExpressions`.)
 # If you create a function that adds attributes to expressions, 
 # update this function to be sure that it deletes them.
 delExtraneousProperties = (expression) ->
@@ -107,6 +144,7 @@ delExtraneousProperties = (expression) ->
   return walk(expression, _delExtraneousProperties)
 
 _delExtraneousProperties = (expression) ->
+  return expression if expression is null   # (Because `null` can occur in substitutions.)
   for attr in ['location','symbol','parent']
     delete(expression[attr]) if attr of expression
   for own attr, value of expression
@@ -115,29 +153,48 @@ _delExtraneousProperties = (expression) ->
   return expression
 exports.delExtraneousProperties = delExtraneousProperties
 
+
+# Returns a clone of expression with no extraneousProperties.
 cloneExpression = (expression) ->
-  return delExtraneousProperties(_.cloneDeep(expression))
+  # # Some things might be slow because `cloneExpression` is used a lot
+  # # in doing substitutions (which get looped quite a bit).
+  # # The following helps to trace where the calls are coming from 
+  # # (which is basically `findMatches`, `applyMatches`, and the walker
+  # # in `substitute.replace`)
+  # try
+  #   throw new Error "view stack"
+  # catch e
+  #   console.log "\tclone #{expressionToString expression} \t by #{e.stack.split('\n')[2].slice(0,20)} \t #{e.stack.split('\n')[3].slice(0,20)} \t #{e.stack.split('\n')[4].slice(0,20)} "
+  
+  if expression is null
+    return null
+
+  for test in [_.isBoolean, _.isNumber, _.isString]
+    if test(expression)
+      return expression
+  
+  if _.isArray(expression)
+    return (cloneExpression(x) for x in expression)
+  
+  _clone = {}
+  for attr in [ 'substitutions', 'from', 'to'       #for substitions
+                'box','term'                        #for boxes
+                'boundVariable'
+                'termlist'
+                'left', 'right'
+                # attributes with primitive values:
+                'type', 'name', 'letter', 'value'   
+              ]
+    if attr of expression
+      _clone[attr] = cloneExpression(expression[attr])
+
+  return _clone
+
 exports.cloneExpression = cloneExpression
-
-
-areIdenticalExpressions = (expression1, expression2) ->
-  # Deal with primitive values (might be useful when testing using recursion)
-  return true if expression1 is expression2 
-  # Deal with null (useful in starting some loops with util.exhaust)
-  return false if expression1 is null or expression2 is null
-    
-  e1 = cloneExpression expression1
-  e2 = cloneExpression expression2
-  delExtraneousProperties e1 
-  delExtraneousProperties e2 
-  return _.isEqual(e1, e2)
-exports.areIdenticalExpressions = areIdenticalExpressions
 
 
 # Create a string representation of a fol expression.
 # It uses the symbols that were specified when the expression was parsed (where these exist).
-# TODO: what cases does this not yet handle?
-# TODO: check system for deciding when brackets are needed.
 _cleanUp = 
   remove_extra_whitespace :
     from : /\s+/g
@@ -153,6 +210,9 @@ _cleanUp =
     to : '$2'
     
 expressionToString = (expression) ->
+  if expression is null
+    return 'null'   #for expressions like `ψ[α->null]`
+    
   # Does the expression have a box?  (This only makes sense at the root.)
   prefix = ''
   if expression.box
@@ -222,6 +282,8 @@ exports.termToString = termToString
 # Now modify _expressionToString to add substitutions.
 _old = _expressionToString
 _expressionToString = (expression) ->
+  if expression is null
+    return 'null'   # for cases like 'ψ[α->null]'
   string = _old(expression)
   if expression.substitutions?
     string = "#{string}[#{(substitutionToString(s) for s in expression.substitutions).join(', ')}]"
@@ -257,6 +319,7 @@ sameElementsDeep = (list1, list2, comparator) ->
   return true
 
 exports.sameElementsDeep = sameElementsDeep
+
 
 # Apply `fn` to `expression` until doing so makes no difference 
 # according to `comparitor` and then return the result.
@@ -375,33 +438,34 @@ listTerms = (expression) ->
 
 exports.listTerms = listTerms
 
-# Adds the `parent` property to expression and every component of it.
-addParents =  (expression, _parent) ->
-  _parent ?= null
-  expression.parent = _parent
-  
-  # This expression is parent to all its children
-  _parent = expression
-  
-  if _.isArray(expression)  #e.g. it's a termlist
-    for e in expression
-      addParents e, _parent
-  if expression.boundVariable?
-    addParents expression.boundVariable, _parent
-  if expression.termlist?
-    addParents expression.termlist, _parent
-  if expression.left?
-    addParents expression.left, _parent
-  if expression.right?
-    addParents expression.right, _parent
-  return expression
-exports.addParents = addParents
 
+# Returns an object with lists of the names of the metavariables (such as α and ψ)
+# in various parts of an expression.
+listMetaVariableNames = (expression) ->
+  result = 
+    inExpression : []
+    inBox : []
+    inSub : 
+      left : []
+      right : []
+  walker = (expression) ->
+    return expression if not expression?.type?
+    return expression if expression.type isnt 'term_metavariable' and expression.type isnt 'expression_variable'
+    theName = (expression.letter if expression?.letter?) or expression.name
+    if walker._inSub?
+      if walker._inSubLeft?
+        result.inSub.left.push theName
+      else
+        result.inSub.right.push theName
+    else
+      if walker._inBox?
+        result.inBox.push theName
+      else
+        result.inExpression.push theName
+    return expression
+  walk expression, walker
+  return result
+exports.listMetaVariableNames = listMetaVariableNames
+    
+    
 
-
-
-
-
-
-
-  

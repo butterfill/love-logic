@@ -27,11 +27,34 @@ describe "the verify module:", ->
       result = verify.line 1, PRF1
       expect(result.verified).to.be.false
       expect(_.isString(result.sentenceErrors)).to.be.true
+      expect(result.sentenceErrors.length>0).to.be.true
       # console.log "result.message = #{result.message}"
       # console.log "result.sentenceErrors = #{result.sentenceErrors}"
 
     it "tells you when a line has faulty justification", ->
       result = verify.line 2, PRF1
+      expect(result.verified).to.be.false
+      expect(_.isString(result.justificationErrors)).to.be.true
+      expect(result.justificationErrors.length>0).to.be.true
+      # console.log "result.message = #{result.message}"
+
+    it "tells you when a line has no justification", ->
+      proof = '''
+        1. A      // premise
+        2. A and B  
+      '''
+      result = verify.line 2, proof
+      expect(result.verified).to.be.false
+      test = result.message.length > 0 or _.isString(result.justificationErrors)
+      expect(test).to.be.true
+      # console.log "result.message = #{result.message}"
+
+    it "tells you when a line has blank justification", ->
+      proof = '''
+        1. A          // premise
+        2. A and B    //   
+      '''
+      result = verify.line 2, proof
       expect(result.verified).to.be.false
       expect(_.isString(result.justificationErrors)).to.be.true
       # console.log "result.message = #{result.message}"
@@ -97,6 +120,31 @@ describe "the verify module:", ->
       result = verify.line 2, proof
       expect(result.verified).to.be.false
       # console.log "result.message = #{result.message}"
+
+  describe "boxes are tricky", ->
+    it "lets you use and elim to get from `[a] F(a) and G(a)` to `F(a)`", ->
+      proof = '''
+        1. exists x (F(x) and G(x))   // premise
+        2. not F(a)                   // premise
+        3.    [a] F(a) and G(a)       // assumption
+        4.    F(a)                    // and elim 3
+        5.    contradiction           // contradiction intro 2,4
+        6. contradiction              // exists elim 1, 3-5
+      '''
+      result = verify.line 4, proof
+      expect(result.verified).to.be.false
+
+    it "lets you use and reit to get from `[a] F(a)` to `F(a)`", ->
+      proof = '''
+        1. exists x F(x)              // premise
+        2. not F(a)                   // premise
+        3.    [a] F(a)                // assumption
+        4.    F(a)                    // reit 3
+        5.    contradiction           // contradiction intro 2,4
+        6. contradiction              // exists elim 1, 3-5
+      '''
+      result = verify.line 4, proof
+      expect(result.verified).to.be.false
 
 
   describe "proofs with reit", ->
@@ -223,6 +271,24 @@ describe "the verify module:", ->
       #console.log "result.message = #{result.message}"
       expect(result.verified).to.be.true
 
+    it "verifies correct use of exists intro (another example)", ->
+      proof = '''
+        1. F(a) and all y F(a,y)              // premise
+        2. exists x (F(x) and all y F(x,y))   // exists intro 1
+      '''
+      result = verify.line 2, proof
+      #console.log "result.message = #{result.message}"
+      expect(result.verified).to.be.true
+
+    it "spots subtle mistake in use of exists intro (another example)", ->
+      proof = '''
+        1. F(a) and all y F(a,y)              // premise
+        2. exists x (F(x) and all y F(y,x))   // exists intro 1
+      '''
+      result = verify.line 2, proof
+      #console.log "result.message = #{result.message}"
+      expect(result.verified).to.be.false
+
     it "spots mistaken use of exists intro (wrong premise)", ->
       proof = '''
         1. F(a) and G(a)  // premise
@@ -249,20 +315,60 @@ describe "the verify module:", ->
 
     it "verifies correct use of exists elim", ->
       proof = '''
+        1. exists x F(x)      // premise
+        2.    [a] F(a)        // assumption
+        3.    contradiction   //
+        4. contradiction      // exists elim 1, 2-3
+      '''
+      result = verify.line 4, proof
+      expect(result.verified).to.be.true
+
+    it "verifies correct use of exists elim (more complex example)", ->
+      proof = '''
+        1. exists x (F(x) and x = b)      // premise
+        2.    [a] F(a) and a = b          // assumption
+        3.    contradiction               //
+        4. contradiction                  // exists elim 1, 2-3
+      '''
+      result = verify.line 4, proof
+      expect(result.verified).to.be.true
+
+    it "does not verify use of exists elim when box is missing", ->
+      proof = '''
         1. exists x F(x)    // premise
         2.    F(a)          // assumption
         3.    contradiction //
         4. contradiction    // exists elim 1, 2-3
       '''
       result = verify.line 4, proof
-      expect(result.verified).to.be.true
+      expect(result.verified).to.be.false
+
+    it "does not verify use of exists elim when box contains a wrong letter", ->
+      proof = '''
+        1. exists x F(x)    // premise
+        2.    [b] F(a)          // assumption
+        3.    contradiction //
+        4. contradiction    // exists elim 1, 2-3
+      '''
+      result = verify.line 4, proof
+      expect(result.verified).to.be.false
 
     it "spots mistaken use of exists elim where the conclusion doesn't match the conclusion of the subproof", ->
       proof = '''
         1. exists x F(x)    // premise
-        2.    F(a)          // assumption
+        2.    [a] F(a)          // assumption
         3.    F(a)          // reit 2
         4. contradiction    // exists elim 1, 2-3
+      '''
+      result = verify.line 4, proof
+      expect(result.verified).to.be.false
+
+    it "spots mistaken use of exists elim where subproof premise doesn't match the existential statement", ->
+      proof = '''
+        1. exists x F(x)        // premise
+        2.    [a] G(a)          // assumption
+        3.    F(a)              // reit 2
+        4. contradiction        // exists elim 1, 2-3
       '''
       result = verify.line 4, proof
       expect(result.verified).to.be.false
@@ -270,7 +376,7 @@ describe "the verify module:", ->
     it "spots mistaken use of exists elim where the new name is in the conclusion", ->
       proof = '''
         1. exists x F(x)    // premise
-        2.    F(a)          // assumption
+        2.    [a] F(a)          // assumption
         3.    F(a)          // reit 2
         4. F(a)             // exists elim 1, 2-3
       '''
@@ -365,6 +471,14 @@ describe "the verify module:", ->
       '''
       result = verify.line 3, proof
       expect(result.verified).to.be.true
+    it "detects dodgy use of contradiction intro (tricky case)", ->
+      proof = '''
+        1. not not A          // premise
+        2. contradiction      // contradiction intro 1,1
+      '''
+      result = verify.line 2, proof
+      expect(result.verified).to.be.false
+      
       
   describe "proofs with the rules for arrow", ->
     it "we need some tests"
@@ -388,14 +502,41 @@ describe "the verify module:", ->
     it "we need some more tests"
     
   describe "proofs with the rules for universal", ->
-    it "we need some tests"
+    it "verifies universal elim", ->
+      proof = '''
+        1. all x F(x)     // premise
+        2. F(a)           // universal elim 1
+      '''
+      result = verify.line 2, proof
+      expect(result.verified).to.be.true
+    it "verifies universal intro", ->
+      proof = '''
+        1. A
+        2.    [a]            // assumption
+        3.    F(a)          
+        4. all x F(x)        // universal intro 2-3
+      '''
+      result = verify.line 4, proof
+      expect(result.verified).to.be.true
+    it "spots a mistake in universal intro", ->
+      proof = '''
+        1. A
+        2.    [a]            // assumption
+        3.    F(b)          
+        4. all x F(x)        // universal intro 2-3
+      '''
+      result = verify.line 4, proof
+      expect(result.verified).to.be.false
+      
+    it "we need some more tests"
 
   describe "verifying premises and assumptions", ->
-    it "allows lines at the start of a proof to be premises"
-    it "does not allow lines below a non-premise to be premises"
-    it "does not allow lines below the first divider to be premises"
-    it "allows the first line of a subproof to be a premise"
-    it "does not allow the second line of a subproof to be a premise"
-  
-
-
+    # Here we just need to test that the rule is implemented;
+    # to check that it works we have the tests for the `rule` module.
+    it "verifies premises", ->
+      proof = '''
+        1. A              // assumption
+      '''
+      result = verify.line 1, proof
+      expect(result.verified).to.be.true
+      

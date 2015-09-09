@@ -18,17 +18,19 @@ arePNFExpressionsEquivalent = (left, right) ->
   # But it's essential that we are sorted, so I'll do it anyway.
   left = sortPNFExpression(left)
   sortIdentityStatements(left)
+  console.log "right pre eliminateRed = #{util.expressionToString right}"
   right = eliminateRedundancyInPNF(right)
+  console.log "right POST eliminateRed = #{util.expressionToString right}"
   right = sortPNFExpression(right)
   sortIdentityStatements(right)
   pattern = substitute.renameVariables left, 'τ'
   patternCore = removeQuantifiers pattern
   rightCore = removeQuantifiers right
 
-  # Note: the commented-out parameters in the call to `substitute.findMatches`
-  # enables matches to be found irrespective of the order of terms in identity statements.
-  # This is now necessary because we sort identity statements (using `sortIdentityStatements`).
-  matches = substitute.findMatches rightCore, patternCore #, null, {symmetricIdentity:true}
+  # Note: matches will found irrespective of the original order of terms 
+  # in identity statements because we have sorted identity statements 
+  # (using `sortIdentityStatements`).
+  matches = substitute.findMatches rightCore, patternCore 
   return false if matches is false
   
   # From this point on, we know that the cores (expressions minus quantifiers)
@@ -42,6 +44,7 @@ arePNFExpressionsEquivalent = (left, right) ->
   
   return arePrefixedQuantifiersEquivalent modifiedLeft, right
 exports.arePNFExpressionsEquivalent = arePNFExpressionsEquivalent
+
 
 # Sort the conjuncts and disjuncts in an expression in PNF.
 sortPNFExpression = (expression) ->
@@ -290,7 +293,16 @@ exports._getVariableOrder = _getVariableOrder
 eliminateRedundancyInPNF = (expression) ->
   fn = (expression) ->
     for name, sub of substitute.subs_eliminate_redundancy
+      # The commented code here and below illustrates how to record the 
+      # substitutions applied -- could be useful in giving feedback to 
+      # students when exercises involve writing substutions schemes.
+      # pre = util.cloneExpression expression
       expression = substitute.doSubRecursive expression, sub
+      # if not util.areIdenticalExpressions(pre,expression)
+      #   console.log "eliminateRedundancyInPNF:"
+      #   console.log "\t from: #{util.expressionToString pre}"
+      #   console.log "\t to: #{util.expressionToString expression}"
+      #   console.log "\t using #{util.expressionToString sub.from} -> #{util.expressionToString sub.to} "
     expression = sortPNFExpression(expression)
   result = util.exhaust expression, fn
   result = removeQuantifiersThatBindNothing result
@@ -313,37 +325,26 @@ isVariableFree = (variableName, expression) ->
   return false
 exports.isVariableFree = isVariableFree
   
-# This may modify `expression` in place but you need to use its
-# return value as it does not always modify `expression` in place.
+# This does not modify `expression` in place.
 removeQuantifiersThatBindNothing = (expression) ->
-  # Add the `parent` property to help with deleting a quantifier.
-  util.addParents expression 
-
-  fn = (expression) ->
+  walker = (expression) ->
     # There's nothing to do if `expression` isn't a quantifier.
-    return expression if not expression.boundVariable?
+    return expression if not expression?.boundVariable?
     
     # `expression` is a quantifier.
     quantifier = expression
     quantifiedExpression = expression.left
-    
+  
     # There's nothing to do if `quantifier` binds a variable that occurs 
     # free in the expression it quantifies.
     return expression if isVariableFree(quantifier.boundVariable.name, quantifiedExpression) 
     
     # We need to remove this quantifier.
-    if not quantifier.parent
-      return quantifiedExpression
-      
-    # Quantifier has a parent, so we want to attach `quantifiedExpression` to its parent.
-    # We need to out work whether `quantifier` is the `.left` or `.right` child.
-    if quantifier.parent.left is quantifier
-      quantifier.parent.left = quantifiedExpression
-    else if expression.parent.right is expression
-      quantifier.parent.right = quantifiedExpression
-    else
-      throw new Error "Could not work out how to remove quantifier from expression."
-    return quantifiedExpression
-        
-  return util.walk expression, fn
+    return quantifier.left
+  e = util.cloneExpression expression
+  return util.walkMutate e, walker
+    
 exports.removeQuantifiersThatBindNothing = removeQuantifiersThatBindNothing
+
+
+

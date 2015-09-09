@@ -46,9 +46,11 @@ line = (lineNumber, proofText) ->
       @messages.push txt
       @message = "#{@message} #{txt}".trim()
     popMessage : () ->
-      msg = @messages.pop()
-      @message = "#{@message}"
-      return msg
+      if @messages.length > 0
+        msg = @messages.pop()
+        @message = "#{@message}"
+        return msg
+      return ''
     areThereErrors : ->
       return true if @sentenceErrors? or @justificationErrors?
       return false
@@ -70,7 +72,7 @@ line = (lineNumber, proofText) ->
   
   # A line missing justification is a mistake.
   # (Note that justification is automatically added to premises 
-  # by the `add_justification` module.)
+  # and assumptions by the `add_justification` module.)
   if not line.justification?
     result.addMessage 'You did not provide any justification'
     return result
@@ -114,7 +116,7 @@ checkRequirements = (line, result) ->
   
   if not intronation
     # We need to check the rule specified is complete.
-    if _.isArray(reqList) or reqList.type is 'rule'
+    if reqList.type is 'rule'
       return checkTheseRequirements(reqList, line, result)
     # The rule specified is incomplete.
     result.addMessage "you only partially specified the rule: `#{connective}` needs something extra (intro? elim?)."
@@ -132,18 +134,13 @@ checkRequirements = (line, result) ->
   if not side
     # Now there are two cases.  The simple case is where the rule specification
     # doesn't involve left or right either.  
-    if _.isArray(reqList) or reqList.type is 'rule'
+    if reqList.type is 'rule'
       return checkTheseRequirements(reqList, line, result)
     
-    # We are in the tricky case where there are left and right rules, plus maybe a 'both'.
-    # In this case, the 'both' requirement must be met and at least one of the 'left' and 'right'
+    # We are in the tricky case where there are left and right rules.
+    # In this case, at least one of the 'left' and 'right'
     # requirements must be met.
-    if reqList.both?
-      result = checkTheseRequirements(reqList.both, line, result)
-      if not result.verified
-        return result
-
-    # Now we check left and, if that fails, check right.
+    # We first check left and, if that fails, check right.
     # We also want to provide a disjunctive message if neither left nor right
     # requirements are met.
     if reqList.left?
@@ -151,54 +148,34 @@ checkRequirements = (line, result) ->
       if result.verified 
         # meeting the `left` requirement is sufficient when no `side is specified 
         return result 
-    if reqList.right?
-      leftMessage = result.popMessage()
-      result = checkTheseRequirements(reqList.right, line, result)
-      if not result.verified 
-        rightMessage = result.popMessage()
-        # TODO: This will look weird if there is only one message (e.g. when ad hoc rule 
-        # restrictions apply).
+    if not reqList.right?
+      # There are no further checks so the line has not been verified.
+      return result
+      
+    leftMessage = result.popMessage()
+    result = checkTheseRequirements(reqList.right, line, result)
+    if not result.verified 
+      rightMessage = result.popMessage()
+      if leftMessage? and rightMessage?
         result.addMessage "Either #{leftMessage}, or else #{rightMessage}."
-      return result
-    else
-      # There are no further checks we can do.  
-      return result
+      else 
+        # Just put the one message we got (if any) back again
+        result.addMessage leftMessage or rightMessage or ''
+        
+    return result
   
   # From here on, we know that `side` is specified.
   
   # Preliminary check : if `side` is specified, there must be a corresponding rule.
-  if  not reqList[side]?
+  if not reqList[side]?
     result.addMessage "you specified the rule #{connective} #{intronation} *#{side}* but there is no ‘#{side}’ version of  #{connective} #{intronation} (or, if there is, you are not allowed to use it in this proof)."
     result.verified = false
     return result
   
-  # When `side` is specified, success involves meeting any `.both` requirements as 
-  # well as the `.side` requirements.
-  if reqList.both?
-    result = checkTheseRequirements(reqList.both, line, result)
-    if not result.verified
-      return result
   return checkTheseRequirements(reqList[side], line, result)  
 
   
-checkTheseRequirements = (reqList, line, result) ->
-  # Currently we have two ways of expressing requirements.
-  # The first is an array of functions that take a line and return either true or 
-  # a function which adds a message to result.
-  if _.isArray reqList
-    for req in reqList
-      itPassed = req(line)
-      if itPassed isnt true
-        result.verified = false
-        update = itPassed
-        update result
-        return result
-    # It passed all the requirements.
-    result.verified = true
-    return result
-
-  # The alternative way of expressing requirements uses the `rules` module.
-  req = reqList
+checkTheseRequirements = (req, line, result) ->
   outcome = req.check(line)
   if outcome is true
     result.verified = true
@@ -208,13 +185,9 @@ checkTheseRequirements = (reqList, line, result) ->
     result.addMessage(msg)
   return result
       
-test = {}
-test.throw = ->
-  throw new Error "Not implemented yet!"
-
 
 requirements = 
-  premise : [ test.throw ]
+  premise : rule.premise()
 
   reit : rule.from('φ').to('φ')
 
@@ -236,18 +209,9 @@ requirements =
 
   contradiction :
     elim : rule.from('contradiction').to('φ') 
-    # TODO: this rule will not always work as things stand, because it will 
-    # only try to match the `.from` clause before the `.and` clause.
-    # (It is essential to try matching in different orders.)
     intro : rule.from('not φ').and('φ').to('contradiction')
     
   arrow :
-    # Note: in checking this rule, it is essential to match `φ arrow ψ` before `φ`.
-    # This is because `φ` will also match anything `φ arrow ψ` matches.
-    # We therefore require that the `rule` checker first attempts to find matches 
-    # in the order we specify clauses.
-    # TODO: have the `rule` checker sort out which order to check things in, so that
-    # `rule.from('φ').and('φ arrow ψ').to('ψ')` would also work.
     elim : rule.from('φ arrow ψ').and('φ').to('ψ')
     intro : rule.from( rule.subproof('φ','ψ') ).to('φ arrow ψ')
     
@@ -260,25 +224,17 @@ requirements =
   identity :
     intro : rule.to('α=α')
     elim : 
+      # Note: this rule will fail as things stand because `α=β` might match
+      # what φ should match when =elim is applied to an identity statement.
       left : rule.from('α=β').and('φ').to('φ[α->β]')
       right : rule.from('α=β').and('φ').to('φ[β->α]')
         
   existential :
-    # This is rule requires tests to be done in a particular order (don't know what α is
-    # in the conclusion until done subproof, and doing that require doing first line).
-    # Solution: have a while loop in the checker attempting each check in turn (whatever order)
-    # until all checks are done.
-    #
-    # Note: in the `.to('ψ[α->nul]')`, the `[α->nul]` substitution means ensure that α
-    # does not occur in ψ.
-    # elim : rule.from('exists τ φ').and( rule.subproof('[α]φ[τ->α]', 'ψ') ).to('ψ[α->nul]')
+    elim : rule.from('exists τ φ').and( rule.subproof('[α]φ[τ->α]', 'ψ') ).to('ψ[α->null]')
 
-    # Note: this rule will not work as things stand because it requires matching the `.to` before
-    # the `.from`
     intro : rule.from('φ[τ->α]').to('exists τ φ')
 
   universal :
     elim : rule.from('all τ φ').to('φ[τ->α]')
     intro : rule.from( rule.subproof('[α]', 'φ') ).to('all τ φ[α->τ]')
 
-exports._test = test
