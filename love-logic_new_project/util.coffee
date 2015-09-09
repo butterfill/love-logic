@@ -159,6 +159,7 @@ exports.delExtraneousProperties = delExtraneousProperties
 
 # Returns a clone of expression with no extraneousProperties.
 cloneExpression = (expression) ->
+  
   # # Some things might be slow because `cloneExpression` is used a lot
   # # in doing substitutions (which get looped quite a bit).
   # # The following helps to trace where the calls are coming from 
@@ -299,6 +300,8 @@ substitutionToString = (s) ->
   return "#{_expressionToString(s.from)}#{symbol}#{_expressionToString(s.to)}"
 
 
+# Takes a set of matches (from metavariables to terms or expressions) and 
+# returns a string representation.
 matchesToString = (matches) ->
   return "false" if matches is false 
   return "[no]" if not matches 
@@ -417,7 +420,6 @@ _typeComparator = (left, right) ->
 # Returns a list of terms in `expression`.
 # (What is returned are the actual terms (objects), not their names.)
 # This does not include variables bound by a quantifier.
-# You should not normally set parameter `_terms` (this is used for recursion).
 listTerms = (expression) ->
   terms = []
   fn = (expression) ->
@@ -425,7 +427,6 @@ listTerms = (expression) ->
       terms.push(expression)
     return terms
   return walk expression, fn
-
 exports.listTerms = listTerms
 
 
@@ -438,6 +439,7 @@ listMetaVariableNames = (expression) ->
     inSub : 
       left : []
       right : []
+      
   walker = (expression) ->
     return expression if not expression?.type?
     return expression if expression.type isnt 'term_metavariable' and expression.type isnt 'expression_variable'
@@ -453,6 +455,7 @@ listMetaVariableNames = (expression) ->
       else
         result.inExpression.push theName
     return expression
+
   walk expression, walker
   return result
 exports.listMetaVariableNames = listMetaVariableNames

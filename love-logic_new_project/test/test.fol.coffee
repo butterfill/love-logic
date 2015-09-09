@@ -51,7 +51,7 @@ describe "`fol`", ->
       expect(e.toString()).to.equal('[a]')
         
       
-    it "adds `.applySubstitutions`"    
+    it "adds `.applySubstitutions`"
     
     it "provides a method `getNames`", ->
       e = fol.parse "F(a) and b=c"
@@ -64,4 +64,17 @@ describe "`fol`", ->
       e = fol.parse "F(x) and y=x"
       n = e.getNames()
       expect(n.length).to.equal(0)
-            
+
+    it "provides a method `getSentenceLetters`", ->
+      e = fol.parse "A and not (not B or C)"
+      n = e.getSentenceLetters()
+      expect('A' in n).to.be.true
+      expect('B' in n).to.be.true
+      expect('C' in n).to.be.true
+      expect(n.length).to.equal(3)
+      
+    it "`getSentenceLetters` returns [] if there are no sentence letters", ->
+      e = fol.parse "F(a) and y=x"
+      n = e.getSentenceLetters()
+      expect(n.length).to.equal(0)
+                        

@@ -29,51 +29,51 @@ describe "add_justification", ->
 
     it "strips justification from `line.content`", ->
       block = addJustification.to BLOCK
-      expect(block.goto(3).content).to.equal('2.2 ')
+      expect(block.getLine(3).content).to.equal('2.2 ')
 
     it "records error messages where justification can't be parsed", ->
       block = addJustification.to BLOCK
-      line = block.goto(5)
+      line = block.getLine(5)
       #console.log util.inspect(line)
       expect(line.justificationErrors.slice(0,5)).to.equal('Parse')
 
     it "doesn't mess with the text of lines missing justification", ->
       block = addJustification.to BLOCK
-      expect(block.goto(2).content.trim()).to.equal(INPUT.split('\n')[1].trim())
+      expect(block.getLine(2).content.trim()).to.equal(INPUT.split('\n')[1].trim())
 
     it "adds justification to premises where necessary", ->
       block = addJustification.to BLOCK
-      expect(block.goto(2).justification.rule.connective).to.equal('premise')
+      expect(block.getLine(2).justification.rule.connective).to.equal('premise')
 
     it "adds doesn't add justification to non-premises", ->
       block = bp.parse "1. A\n2. A\n A"
       block = addJustification.to block
-      expect(block.goto(1).justification.rule.connective).to.equal('premise')
-      expect(block.goto(2).justification?).to.be.false
+      expect(block.getLine(1).justification.rule.connective).to.equal('premise')
+      expect(block.getLine(2).justification?).to.be.false
 
     it "treats everything above the divider as a premise in the outer block", ->
       block = bp.parse "1. A\n2. A\n---\n3. A"
       block = addJustification.to block
-      expect(block.goto(2).justification.rule.connective).to.equal('premise')
+      expect(block.getLine(2).justification.rule.connective).to.equal('premise')
 
     it "doesn't treats everything above the divider as a premise in inner blocks", ->
       block = bp.parse "1. A\n| |2. A\n| |3. A\n| |---\n| |4. A"
       block = addJustification.to block
-      expect(block.goto(2).justification.rule.connective).to.equal('premise')
-      expect(block.goto(3).type).to.equal('line')
-      expect(block.goto(3).justification?).to.be.false
+      expect(block.getLine(2).justification.rule.connective).to.equal('premise')
+      expect(block.getLine(3).type).to.equal('line')
+      expect(block.getLine(3).justification?).to.be.false
       
     it "only treats the first divider as significant in working out what's a premise in the outer block", ->
       block = bp.parse "1. A\n2. A\n---\n3. A\n---\n4. A"
       block = addJustification.to block
-      expect(block.goto(2).justification.rule.connective).to.equal('premise')
-      expect(block.goto(4).type).to.equal('line')
-      expect(block.goto(4).justification?).to.be.false
+      expect(block.getLine(2).justification.rule.connective).to.equal('premise')
+      expect(block.getLine(4).type).to.equal('line')
+      expect(block.getLine(4).justification?).to.be.false
 
     it "enables a line tell you the name of its rule", ->
-      ln.addNumbers BLOCK
+      ln.to BLOCK
       block = addJustification.to BLOCK
-      line = block.goto 3
+      line = block.getLine 3
       #console.log line.getRuleName()
       expect(line.getRuleName()).to.equal('and elim')
       
@@ -85,10 +85,10 @@ describe "add_justification", ->
         4. not A // not elim 2-3
       '''
       block = bp.parse input
-      ln.addNumbers block
+      ln.to block
       addJustification.to block
-      expected = block.goto(2).parent
-      line4 = block.goto 4
+      expected = block.getLine(2).parent
+      line4 = block.getLine 4
       # console.log input
       # console.log block.toString()
       expect(line4.getCitedBlock()).to.equal(expected)

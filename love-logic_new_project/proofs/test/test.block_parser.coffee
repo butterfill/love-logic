@@ -195,17 +195,17 @@ describe "block_parser", ->
         block.walk walker
         expect( walker.seen ).to.deep.equal( (x for x in INPUT_LIST when x isnt '') )
 
-    describe ".goto", ->
+    describe ".getLine", ->
       it "will go to a line", ->
         block = bp.parse INPUT
         #console.log block.toString()
-        line = block.goto(3)
+        line = block.getLine(3)
         expect(line.content).to.equal(INPUT_LIST[2])
 
     describe ".find", ->
       it "finds things in earlier lines of the proof", ->
         block = bp.parse INPUT
-        line = block.goto(3)
+        line = block.getLine(3)
         finder = (item) ->
           return true if item.content.trim() is INPUT_LIST[1]
         result = line.find(finder)
@@ -215,7 +215,7 @@ describe "block_parser", ->
         block = bp.parse INPUT
         # Note: in this case, the last line is INPUT_LIST.length-1
         # because INPUT contains one blank line.
-        line = block.goto(INPUT_LIST.length-1)
+        line = block.getLine(INPUT_LIST.length-1)
 
         finder = (item) ->
           #console.log "item.content = #{item.content}"
@@ -225,7 +225,7 @@ describe "block_parser", ->
         
       it "doesn't look in lines below the current one", ->
         block = bp.parse INPUT
-        line = block.goto(2)
+        line = block.getLine(2)
         finder = (item) ->
           return true if item.content is '2.2'
         result = line.find(finder)
@@ -233,7 +233,7 @@ describe "block_parser", ->
         
       it "doesn't look into closed blocks", ->
         block = bp.parse INPUT
-        line = block.goto(INPUT_LIST.length-1)
+        line = block.getLine(INPUT_LIST.length-1)
         finder = (item) ->
           return true if _.isString(item.content) and item.content.trim() is INPUT_LIST[2]
         result = line.find(finder)
@@ -334,8 +334,8 @@ describe "block_parser", ->
     it "identifies dividers as dividers", ->
       block_div    = bp.parse "1 A\n 2.1 A\n---\n 2.2 A\n\n 3.1 A\n 3.2 A\n  3.2.1 A\n4 A"
       block_no_div = bp.parse "1 A\n 2.1 A     \n 2.2 A\n\n 3.1 A\n 3.2 A\n  3.2.1 A\n4 A"
-      line3_div = block_div.goto(3)
-      line3_nodiv = block_no_div.goto(3)
+      line3_div = block_div.getLine(3)
+      line3_nodiv = block_no_div.getLine(3)
       expect(line3_div.content).to.equal(line3_nodiv.content)
       expect(line3_div.prev.type).to.equal('divider')
     

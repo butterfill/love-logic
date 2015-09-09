@@ -19,7 +19,7 @@ ln = require '../add_line_numbers'
 addJustification = require '../add_justification'
 addSentences = require '../add_sentences'
 
-verify = require '../verify'
+verify = require '../add_verification'
 
 PRF1 = '''
 1. hello    // premise
@@ -29,7 +29,7 @@ PRF1 = '''
 describe "the verify module:", ->
   describe "general features (not specific to any rule) include that it", ->
     it "tells you when a line has a syntax error", ->
-      result = verify.line 1, PRF1
+      result = verify._line 1, PRF1
       expect(result.verified).to.be.false
       expect(_.isString(result.sentenceErrors)).to.be.true
       expect(result.sentenceErrors.length>0).to.be.true
@@ -37,7 +37,7 @@ describe "the verify module:", ->
       # console.log "result.sentenceErrors = #{result.sentenceErrors}"
 
     it "tells you when a line has faulty justification", ->
-      result = verify.line 2, PRF1
+      result = verify._line 2, PRF1
       expect(result.verified).to.be.false
       expect(_.isString(result.justificationErrors)).to.be.true
       expect(result.justificationErrors.length>0).to.be.true
@@ -48,7 +48,7 @@ describe "the verify module:", ->
         1. A      // premise
         2. A and B  
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.false
       test = result.message.length > 0 or _.isString(result.justificationErrors)
       expect(test).to.be.true
@@ -59,7 +59,7 @@ describe "the verify module:", ->
         1. A          // premise
         2. A and B    //   
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.false
       expect(_.isString(result.justificationErrors)).to.be.true
       # console.log "result.message = #{result.message}"
@@ -72,7 +72,7 @@ describe "the verify module:", ->
         |  4. A
         5. A // and elim 3.
       '''
-      result = verify.line 5, proof
+      result = verify._line 5, proof
       expect(result.verified).to.be.false
       # console.log "result.message = #{result.message}"
       
@@ -81,7 +81,7 @@ describe "the verify module:", ->
         1. A and B    // premise
         2. A        // and elim
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       #console.log "result.message = #{result.message}"
       expect(result.verified).to.be.false
       
@@ -92,7 +92,7 @@ describe "the verify module:", ->
         |  3. A and B
         4. A          // and elim 2-3.
       '''
-      result = verify.line 4, proof
+      result = verify._line 4, proof
       #console.log "result.message = #{result.message}"
       expect(result.verified).to.be.false
 
@@ -104,7 +104,7 @@ describe "the verify module:", ->
         |  4. 
         5. A and B // and elim 3.
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.false
       # console.log "result.message = #{result.message}"
       
@@ -113,7 +113,7 @@ describe "the verify module:", ->
         1. hello    // premise
         2. A        // and elim 5
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.false
       # console.log "result.message = #{result.message}"
       
@@ -122,7 +122,7 @@ describe "the verify module:", ->
         1. hello    // premise
         2. A        // and elim 5
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.false
       # console.log "result.message = #{result.message}"
 
@@ -136,7 +136,7 @@ describe "the verify module:", ->
         5.    contradiction           // contradiction intro 2,4
         6. contradiction              // exists elim 1, 3-5
       '''
-      result = verify.line 4, proof
+      result = verify._line 4, proof
       expect(result.verified).to.be.false
 
     it "lets you use and reit to get from `[a] F(a)` to `F(a)`", ->
@@ -148,7 +148,7 @@ describe "the verify module:", ->
         5.    contradiction           // contradiction intro 2,4
         6. contradiction              // exists elim 1, 3-5
       '''
-      result = verify.line 4, proof
+      result = verify._line 4, proof
       expect(result.verified).to.be.false
 
 
@@ -158,7 +158,7 @@ describe "the verify module:", ->
         1. A          // premise
         2. A          // reit 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       console.log "result.message = #{result.message}" if result.verified is false
       expect(result.verified).to.be.true
 
@@ -167,7 +167,7 @@ describe "the verify module:", ->
         1. B          // premise
         2. A          // reit 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       # console.log "result.message = #{result.message}"
       expect(result.verified).to.be.false
 
@@ -178,7 +178,7 @@ describe "the verify module:", ->
         1. A and B    // premise
         2. A          // and elim left 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.true
       
     it "identifies incorrect use of and elim left", ->
@@ -186,7 +186,7 @@ describe "the verify module:", ->
         1. A and B     // premise
         2. B          // and elim left 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.false
 
     it "verifies correct use of and elim right", ->
@@ -194,7 +194,7 @@ describe "the verify module:", ->
         1. A and B    // premise
         2. B          // and elim right 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.true
       
     it "identifies incorrect use of and elim right", ->
@@ -202,7 +202,7 @@ describe "the verify module:", ->
         1. A and B     // premise
         2. A          // and elim  right 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.false
 
     it "verifies correct use of and elim ", ->
@@ -210,7 +210,7 @@ describe "the verify module:", ->
         1. A and B     // premise
         2. A          // and elim 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.true
       
     it "identifies incorrect use of and elim ", ->
@@ -218,7 +218,7 @@ describe "the verify module:", ->
         1. A or B     // premise
         2. A          // and elim 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.false
       
     it "identifies incorrect use of and elim (wrong conjuncts)", ->
@@ -226,7 +226,7 @@ describe "the verify module:", ->
         1. A and B     // premise
         2. C          // and elim 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.false
 
     it "verifies correct use of `and intro` ", ->
@@ -235,7 +235,7 @@ describe "the verify module:", ->
         2. B
         3. A and B     // and intro 1,2
       '''
-      result = verify.line 3, proof
+      result = verify._line 3, proof
       expect(result.verified).to.be.true
 
     it "verifies correct use of and intro for A and A citing the same line twice", ->
@@ -244,7 +244,7 @@ describe "the verify module:", ->
         2. B
         3. A and A     // and intro 1,1
       '''
-      result = verify.line 3, proof
+      result = verify._line 3, proof
       expect(result.verified).to.be.true
 
     it "identifies incorrect use of and intro (wrong connective)", ->
@@ -253,7 +253,7 @@ describe "the verify module:", ->
         2. B          // premise
         3. A or B     // and intro 1,2
       '''
-      result = verify.line 3, proof
+      result = verify._line 3, proof
       expect(result.verified).to.be.false
       
     it "identifies incorrect use of and intro (wrong lines cited)", ->
@@ -262,7 +262,7 @@ describe "the verify module:", ->
         2. C            // premise
         3. A or B       // and intro 1,2
       '''
-      result = verify.line 3, proof
+      result = verify._line 3, proof
       expect(result.verified).to.be.false
 
 
@@ -272,7 +272,7 @@ describe "the verify module:", ->
         1. F(a)           // premise
         2. exists x F(x)  // exists intro 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       #console.log "result.message = #{result.message}"
       expect(result.verified).to.be.true
 
@@ -281,7 +281,7 @@ describe "the verify module:", ->
         1. F(a) and all y F(a,y)              // premise
         2. exists x (F(x) and all y F(x,y))   // exists intro 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       #console.log "result.message = #{result.message}"
       expect(result.verified).to.be.true
 
@@ -290,7 +290,7 @@ describe "the verify module:", ->
         1. F(a) and all y F(a,y)              // premise
         2. exists x (F(x) and all y F(y,x))   // exists intro 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       #console.log "result.message = #{result.message}"
       expect(result.verified).to.be.false
 
@@ -299,7 +299,7 @@ describe "the verify module:", ->
         1. F(a) and G(a)  // premise
         2. exists x F(x)  // exists intro 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.false
 
     it "spots mistaken use of exists intro (wrong conclusion)", ->
@@ -307,7 +307,7 @@ describe "the verify module:", ->
         1. F(a)           // premise
         2. exists x G(x)  // exists intro 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.false
 
     it "spots mistaken use of exists intro (wrong quantifier)", ->
@@ -315,7 +315,7 @@ describe "the verify module:", ->
         1. F(a)           // premise
         2. some x G(x)  // exists intro 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.false
 
     it "verifies correct use of exists elim", ->
@@ -325,7 +325,7 @@ describe "the verify module:", ->
         3.    contradiction   //
         4. contradiction      // exists elim 1, 2-3
       '''
-      result = verify.line 4, proof
+      result = verify._line 4, proof
       expect(result.verified).to.be.true
 
     it "verifies correct use of exists elim (more complex example)", ->
@@ -335,7 +335,7 @@ describe "the verify module:", ->
         3.    contradiction               //
         4. contradiction                  // exists elim 1, 2-3
       '''
-      result = verify.line 4, proof
+      result = verify._line 4, proof
       expect(result.verified).to.be.true
 
     it "does not verify use of exists elim when box is missing", ->
@@ -345,7 +345,7 @@ describe "the verify module:", ->
         3.    contradiction //
         4. contradiction    // exists elim 1, 2-3
       '''
-      result = verify.line 4, proof
+      result = verify._line 4, proof
       expect(result.verified).to.be.false
 
     it "does not verify use of exists elim when box contains a wrong letter", ->
@@ -355,7 +355,7 @@ describe "the verify module:", ->
         3.    contradiction //
         4. contradiction    // exists elim 1, 2-3
       '''
-      result = verify.line 4, proof
+      result = verify._line 4, proof
       expect(result.verified).to.be.false
 
     it "spots mistaken use of exists elim where the conclusion doesn't match the conclusion of the subproof", ->
@@ -365,7 +365,7 @@ describe "the verify module:", ->
         3.    F(a)          // reit 2
         4. contradiction    // exists elim 1, 2-3
       '''
-      result = verify.line 4, proof
+      result = verify._line 4, proof
       expect(result.verified).to.be.false
 
     it "spots mistaken use of exists elim where subproof premise doesn't match the existential statement", ->
@@ -375,7 +375,7 @@ describe "the verify module:", ->
         3.    F(a)              // reit 2
         4. contradiction        // exists elim 1, 2-3
       '''
-      result = verify.line 4, proof
+      result = verify._line 4, proof
       expect(result.verified).to.be.false
 
     it "spots mistaken use of exists elim where the new name is in the conclusion", ->
@@ -385,7 +385,7 @@ describe "the verify module:", ->
         3.    F(a)          // reit 2
         4. F(a)             // exists elim 1, 2-3
       '''
-      result = verify.line 4, proof
+      result = verify._line 4, proof
       expect(result.verified).to.be.false
 
 
@@ -395,14 +395,14 @@ describe "the verify module:", ->
         1. not not A    // premise
         2. A            // not elim 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.true
     it "spots an incorrect use of not elim", ->
       proof = '''
         1. not not B    // premise
         2. A            // not elim 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.false
     it "verifies correct use of not intro", ->
       proof = '''
@@ -412,7 +412,7 @@ describe "the verify module:", ->
         2. | | contradiction  // contradiction intro 1,2
         3. | not A            // not intro 1-2
       '''
-      result = verify.line 3, proof
+      result = verify._line 3, proof
       expect(result.verified).to.be.true
     it "spots an correct use of not intro", ->
       proof = '''
@@ -422,7 +422,7 @@ describe "the verify module:", ->
         2. | | B              // contradiction intro 1,2
         3. | not A            // not intro 1-2
       '''
-      result = verify.line 3, proof
+      result = verify._line 3, proof
       expect(result.verified).to.be.false
 
   describe "proofs with the rules for not", ->
@@ -431,14 +431,14 @@ describe "the verify module:", ->
         1. contradiction    // premise
         2. A            // contradiction elim 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.true
     it "spots incorrect use of contradiction elim", ->
       proof = '''
         1. A          // premise
         2. A            // contradiction elim 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.false
     it "verifies correct use of contradiction intro", ->
       proof = '''
@@ -446,7 +446,7 @@ describe "the verify module:", ->
         2. not A          // premise
         3. contradiction  // contradiction intro 1,2
       '''
-      result = verify.line 3, proof
+      result = verify._line 3, proof
       expect(result.verified).to.be.true
     it "verifies correct use of contradiction intro (not first)", ->
       proof = '''
@@ -454,7 +454,7 @@ describe "the verify module:", ->
         2. A          // premise
         3. contradiction  // contradiction intro 1,2
       '''
-      result = verify.line 3, proof
+      result = verify._line 3, proof
       expect(result.verified).to.be.true
     it "verifies correct use of contradiction intro (tricky case, not first)", ->
       # This test fails while `rule`'s methods for checking do not 
@@ -464,7 +464,7 @@ describe "the verify module:", ->
         2. not not A          // premise
         3. contradiction  // contradiction intro 1,2
       '''
-      result = verify.line 3, proof
+      result = verify._line 3, proof
       expect(result.verified).to.be.true
     it "spots mistake in use of contradiction intro (tricky case, not first)", ->
       # This test fails while `rule`'s methods for checking do not 
@@ -474,7 +474,7 @@ describe "the verify module:", ->
         2. not not B          // premise
         3. contradiction  // contradiction intro 1,2
       '''
-      result = verify.line 3, proof
+      result = verify._line 3, proof
       expect(result.verified).to.be.false
     it "verifies correct use of contradiction intro (tricky case, not first)", ->
       # This test could fail because `rule`'s methods for checking do not 
@@ -484,14 +484,14 @@ describe "the verify module:", ->
         2. not A          // premise
         3. contradiction  // contradiction intro 1,2
       '''
-      result = verify.line 3, proof
+      result = verify._line 3, proof
       expect(result.verified).to.be.true
     it "detects dodgy use of contradiction intro (tricky case)", ->
       proof = '''
         1. not not A          // premise
         2. contradiction      // contradiction intro 1,1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.false
       
       
@@ -505,13 +505,13 @@ describe "the verify module:", ->
       proof = '''
         1. b=b              // identity intro
       '''
-      result = verify.line 1, proof
+      result = verify._line 1, proof
       expect(result.verified).to.be.true
     it "detects incorrect use of =intro", ->
       proof = '''
         1. b=c              // identity intro
       '''
-      result = verify.line 1, proof
+      result = verify._line 1, proof
       expect(result.verified).to.be.false
     it "confirms correct use of =elim", ->
       proof = '''
@@ -519,7 +519,7 @@ describe "the verify module:", ->
         2. F(a)
         3. F(b)         // = elim 1,2
       '''
-      result = verify.line 3, proof
+      result = verify._line 3, proof
       expect(result.verified).to.be.true
     it "confirms correct use of =elim (right to left)", ->
       proof = '''
@@ -527,7 +527,7 @@ describe "the verify module:", ->
         2. F(b)
         3. F(a)         // = elim 1,2
       '''
-      result = verify.line 3, proof
+      result = verify._line 3, proof
       expect(result.verified).to.be.true
     it "detects incorrect use of =elim", ->
       proof = '''
@@ -535,7 +535,7 @@ describe "the verify module:", ->
         2. G(a)
         3. F(c)         // = elim 1,2
       '''
-      result = verify.line 3, proof
+      result = verify._line 3, proof
       console.log(result.message)
       expect(result.verified).to.be.false
     
@@ -547,7 +547,7 @@ describe "the verify module:", ->
         1. all x F(x)     // premise
         2. F(a)           // universal elim 1
       '''
-      result = verify.line 2, proof
+      result = verify._line 2, proof
       expect(result.verified).to.be.true
     it "verifies universal intro", ->
       proof = '''
@@ -556,7 +556,7 @@ describe "the verify module:", ->
         3.    F(a)          
         4. all x F(x)        // universal intro 2-3
       '''
-      result = verify.line 4, proof
+      result = verify._line 4, proof
       expect(result.verified).to.be.true
     it "spots a mistake in universal intro", ->
       proof = '''
@@ -565,7 +565,7 @@ describe "the verify module:", ->
         3.    F(b)          
         4. all x F(x)        // universal intro 2-3
       '''
-      result = verify.line 4, proof
+      result = verify._line 4, proof
       expect(result.verified).to.be.false
     it "does not let you use universal intro when the name you box is not new", ->
       proof = '''
@@ -574,7 +574,7 @@ describe "the verify module:", ->
         3.    F(a)          
         4. all x F(x)        // universal intro 2-3
       '''
-      result = verify.line 4, proof
+      result = verify._line 4, proof
       expect(result.verified).to.be.false
       
     it "we need some more tests"
@@ -586,6 +586,6 @@ describe "the verify module:", ->
       proof = '''
         1. A              // assumption
       '''
-      result = verify.line 1, proof
+      result = verify._line 1, proof
       expect(result.verified).to.be.true
       

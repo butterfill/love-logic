@@ -32,7 +32,7 @@ split = (line) ->
   return { lineNumber:null, rest: line.content }
   
 
-addNumbers = (block) -> 
+to = (block) -> 
   # Do this in two passes.
   # First pass: add numbers to lines.
   walker = { 
@@ -84,4 +84,4 @@ addNumbers = (block) ->
   return block
 
 
-exports.addNumbers = addNumbers
+exports.to = to

@@ -1,6 +1,10 @@
 # This module ties together a parser (e.g. `parser/awFOL`) with
 # methods for performing substitutions and other actions on expressions
 # and their components.
+#
+# The aim is to include everything needed for parsing and verifying proofs,
+# for evaluating sentences in worlds and verifying counterexamples, and for
+# building truth tables.
 
 _ = require 'lodash'
 
@@ -14,11 +18,11 @@ parse = (text) ->
   return _decorate(e)
 exports.parse = parse
 
-# Add some useful functions to an expression.
+# Add some useful functions to an expression and every part of it.
 _decorate = (expression) ->
   util.walk expression, (e) ->
     return if e is null # (Because `null` can occur in substitutions.)
-    return if _.isArray e
+    return if _.isArray(e) or _.isString(e) or _.isBoolean(e) or _.isNumber(e)
     
     e.walk = (fn) ->
       util.walk e, fn
@@ -58,5 +62,15 @@ _decorate = (expression) ->
         return undefined 
       e.walk nameFinder
       return _names
+
+    e.getSentenceLetters = () ->
+      _letters = []
+      letterFinder = (expression) ->
+        return undefined unless expression?.type is 'sentence_letter'
+        _letters.push expression.letter
+        return undefined 
+      e.walk letterFinder
+      return _letters.sort()
+
   return expression
 exports._decorate = _decorate

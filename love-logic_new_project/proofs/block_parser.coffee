@@ -393,7 +393,7 @@ class Block
   
   # Returns the 1-based lineNumber-th line in this block.
   # (This is mainly (or only?) used for testing.)
-  goto : (lineNumber) ->
+  getLine : (lineNumber) ->
     walker = {
       onLine : 0
       visit : (item) ->
