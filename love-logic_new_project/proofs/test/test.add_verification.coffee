@@ -27,7 +27,7 @@ PRF1 = '''
 '''
 
 describe "the verify module:", ->
-  describe "general features (not specific to any rule) include that it", ->
+  describe "`verifyLine` (aka `_line`)", ->
     it "tells you when a line has a syntax error", ->
       result = verify._line 1, PRF1
       expect(result.verified).to.be.false
@@ -108,7 +108,7 @@ describe "the verify module:", ->
       expect(result.verified).to.be.false
       # console.log "result.message = #{result.message}"
       
-    it "Tells you when you incorrectly cite a line that doesn't exist", ->
+    it "tells you when you incorrectly cite a line that doesn't exist", ->
       proof = '''
         1. hello    // premise
         2. A        // and elim 5
@@ -117,14 +117,18 @@ describe "the verify module:", ->
       expect(result.verified).to.be.false
       # console.log "result.message = #{result.message}"
       
-    it "Tells you when you incorrectly cite a line that doesn't exist", ->
+    it "objects when you cite the subproof you are in", ->
       proof = '''
-        1. hello    // premise
-        2. A        // and elim 5
+        1. A or B    // premise
+        2.    A         // assumption
+        3.    C         // 
+        
+        4.    B
+        5.    C       // or elim 1, 2-3, 4-5
       '''
-      result = verify._line 2, proof
+      result = verify._line 5, proof
       expect(result.verified).to.be.false
-      # console.log "result.message = #{result.message}"
+
 
   describe "boxes are tricky", ->
     it "lets you use and elim to get from `[a] F(a) and G(a)` to `F(a)`", ->
@@ -568,6 +572,7 @@ describe "the verify module:", ->
       result = verify._line 4, proof
       expect(result.verified).to.be.false
     it "does not let you use universal intro when the name you box is not new", ->
+      # test id 454092AA-57A4-11E5-9C09-B0C78BD11E5D
       proof = '''
         1. F(a)
         2.    [a]            // assumption

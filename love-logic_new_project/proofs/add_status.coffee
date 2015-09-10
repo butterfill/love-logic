@@ -51,12 +51,20 @@ class LineStatus
     
   messages : []
   
-  addMessage : (txt) -> 
-    @messages.push txt
+  addMessage : (text) -> 
+    @messages.push text
   popMessage : () ->
     if @messages.length > 0
       return @messages.pop()
     return ''
+  # An 'although' message is one that describes something correct about the
+  # use of the rule. (e.g. 'although your conclusion has the right form ...')
+  addAlthoughMessage : (text) ->
+    if @_addedAlthough?
+      @addMessage "and although #{text}"
+    else
+      @addMessage "although #{text}"
+      @_addedAlthough = true
   getMessage : () ->
     return "" if messages.length is 0
     msg = "This line is not correct because #{@messages[0]}"

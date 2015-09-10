@@ -15,6 +15,146 @@ rule = require '../rule'
 
 describe "`rule`", ->
   
+  describe ".from", ->
+    it "allows chaining with to and check", ->
+      result = rule.from('not not φ').to('φ')
+      expect(typeof result.check).to.equal('function')
+
+    it "allows adding requirements with .and", ->
+      result = rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ')).to('χ')
+      expect(typeof result.check).to.equal('function')
+
+    it "keeps track of requirements (including those added with .to and .and)", ->
+      result = rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ')).to('χ')
+      # This is a fragile test that depends on inner workings.
+      expect result._requirements?
+        .to.be.true
+      expect result._requirements.from.length
+        .to.equal 3
+      expect result._requirements.from[0].type
+        .to.equal 'or'
+
+    it "returns something with .type 'rule'", ->
+      result = rule.from('not not φ').to('φ')
+      expect(result.type).to.equal 'rule'
+      
+    it "allows you to define multiple rules for later use", ->
+      proof = '''
+        1. not A
+        2. not A            // reit 1
+        3. a=a              // = intro
+      ''' 
+      proof = verify._parseProof proof
+      idIntro = new rule.to('α=α')
+      reit = (new rule.from('φ')).to('φ')
+      
+      result1 = reit.check(proof.getLine(2))
+      console.log result1.getMessage() if result1 isnt true
+      expect(result1).to.be.true
+      
+      result2 = idIntro.check(proof.getLine(3))
+      console.log result2.getMessage() if result2 isnt true
+      expect(result2).to.be.true
+
+
+  describe "premises and assumptions", ->
+    it "`rule.from` allows creation of an empty rule", ->
+      proof = '''
+        1. A        // premise
+      ''' 
+      proof = verify._parseProof proof
+      emptyRule = rule.from()
+      result = emptyRule.check proof.getLine(1)
+      expect(result).to.be.true
+    it "the empty rule, `rule.from()`, checks that no lines are cited", ->
+      proof = '''
+        1. A
+        2. A          // assumption 1
+      ''' 
+      proof = verify._parseProof proof
+      emptyRule = rule.from()
+      result = emptyRule.check proof.getLine(2)
+      # if result isnt true
+      #   console.log result.getMessage()
+      expect(result).not.to.be.true
+    it "the empty rule, `rule.from()`, checks that no subpoofs are cited", ->
+      proof = '''
+        1. A
+        2.    B
+        3.    B
+        4. A          // assumption 2-3
+      ''' 
+      proof = verify._parseProof proof
+      emptyRule = rule.from()
+      result = emptyRule.check proof.getLine(4)
+      # if result isnt true
+      #   console.log result.getMessage()
+      expect(result).not.to.be.true
+      
+      
+    describe "`rule.premise()`", ->
+      it "allows the first line to be a premise", ->
+        proof = '''
+          1. A        // premise
+        ''' 
+        proof = verify._parseProof proof
+        premiseRule = rule.premise()
+        result = premiseRule.check proof.getLine(1)
+        expect(result).to.be.true
+      it "allows the second line of the main proof to be a premise", ->
+        proof = '''
+          1. A        // premise
+          2. B        // premise
+        ''' 
+        proof = verify._parseProof proof
+        premiseRule = rule.premise()
+        result = premiseRule.check proof.getLine(2)
+        console.log result.getMessage() if result isnt true
+        expect(result).to.be.true
+      it "does not allow the second line of a subproof to be a premise", ->
+        proof = '''
+          1. A        // premise
+          2.   A      // premise
+          3.   B      // premise
+        ''' 
+        proof = verify._parseProof proof
+        premiseRule = rule.premise()
+        result = premiseRule.check proof.getLine(3)
+        expect(result).not.to.be.true
+      it "does not allow a premise to occur after a non-premise", ->
+        proof = '''
+          1. A and B        // premise
+          2. B              // and elim 1
+          3. C              // premise
+        ''' 
+        proof = verify._parseProof proof
+        premiseRule = rule.premise()
+        result = premiseRule.check proof.getLine(3)
+        expect(result).not.to.be.true
+      it "does not allow a premise to occur after a subproof", ->
+        proof = '''
+          1. A and B        // premise
+          2.    B              // premise
+          3.    C              
+          4. C           // premise
+        ''' 
+        proof = verify._parseProof proof
+        premiseRule = rule.premise()
+        result = premiseRule.check proof.getLine(4)
+        expect(result).not.to.be.true
+      it "returns a results object with `.getMessage` method when a line is not verified", ->
+        proof = '''
+          1. A        // premise
+          2.   A      // premise
+          3.   B      // premise
+        ''' 
+        proof = verify._parseProof proof
+        premiseRule = rule.premise()
+        result = premiseRule.check proof.getLine(3)
+        expect(result).not.to.be.true
+        expect( _.isString(result.getMessage?()) ).to.be.true
+  
+  
   describe "`RequirementChecker`", ->
     it "collects the metavariables from subproofs", ->
       req = rule.subproof('[α]φ[τ->α]', 'ψ')
@@ -118,32 +258,8 @@ describe "`rule`", ->
       matches = result['1']
       expect(matches.α.name).to.equal('a')
       
-      
-      
-  
-  describe ".from", ->
-    it "allows chaining with to and check", ->
-      result = rule.from('not not φ').to('φ')
-      expect(typeof result.check).to.equal('function')
 
-    it "allows adding requirements with .and", ->
-      result = rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ')).to('χ')
-      expect(typeof result.check).to.equal('function')
-
-    it "keeps track of requirements (including those added with .to and .and)", ->
-      result = rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ')).to('χ')
-      # This is a fragile test that depends on inner workings.
-      expect result._requirements?
-        .to.be.true
-      expect result._requirements.from.length
-        .to.equal 3
-      expect result._requirements.from[0].type
-        .to.equal 'or'
-
-    it "returns something with .type 'rule'", ->
-      result = rule.from('not not φ').to('φ')
-      expect(result.type).to.equal 'rule'
-
+  describe "LineChecker",->
     it "allows checking cited things are correct when one line is required", ->
       proof = '''
         1. not not A
@@ -217,6 +333,7 @@ describe "`rule`", ->
       expect(result).not.to.be.true
       expect(result.getMessage().length > 0).to.be.true
 
+  describe "LineChecker, RequirementChecker and Pathfinder", ->
     it "allows you to confirm correct use of reit", ->
       proof = '''
         1. not A
@@ -247,24 +364,29 @@ describe "`rule`", ->
       expect(result).not.to.be.true
       expect(_.isString(result.getMessage())).to.be.true
       expect(result.getMessage().length > 0).to.be.true
-      
-    it "allows you to define multiple rules for later use", ->
+
+    it "allows correct use of and intro for A and A citing the same line twice", ->
       proof = '''
-        1. not A
-        2. not A            // reit 1
-        3. a=a              // = intro
-      ''' 
+        1. A           // premise
+        2. B
+        3. A and A     // and intro 1,1
+      '''
       proof = verify._parseProof proof
-      idIntro = new rule.to('α=α')
-      reit = (new rule.from('φ')).to('φ')
+      andIntro = rule.from('ψ').and('φ').to('φ and ψ')
+      result = andIntro.check(proof.getLine(3))
+      expect(result).to.be.true
       
-      result1 = reit.check(proof.getLine(2))
-      console.log result1.getMessage() if result1 isnt true
-      expect(result1).to.be.true
+    it "does not allow citing irrelevant lines in a tricky case with and-intro", ->
+      proof = '''
+        1. A           // premise
+        2. B
+        3. A and A     // and intro 1,2
+      '''
+      proof = verify._parseProof proof
+      andIntro = rule.from('ψ').and('φ').to('φ and ψ')
+      result = andIntro.check(proof.getLine(3))
+      expect(result).not.to.be.true
       
-      result2 = idIntro.check(proof.getLine(3))
-      console.log result2.getMessage() if result2 isnt true
-      expect(result2).to.be.true
       
   describe "In cases where the order in which matches are made matters", ->
     it "can detect incorrect use of arrow elim", ->
@@ -277,6 +399,7 @@ describe "`rule`", ->
       arrowElim = rule.from('φ arrow ψ').and('φ').to('ψ')
       result = arrowElim.check proof.getLine(3)
       expect(result).not.to.be.true
+      expect(result).not.to.be.undefined
 
     it "can verify correct use of arrow elim", ->
       proof = '''
@@ -321,98 +444,3 @@ describe "`rule`", ->
       expect(result).to.be.true
 
 
-  describe "premises and assumptions", ->
-    it "`rule.from` allows creation of an empty rule", ->
-      proof = '''
-        1. A        // premise
-      ''' 
-      proof = verify._parseProof proof
-      emptyRule = rule.from()
-      result = emptyRule.check proof.getLine(1)
-      expect(result).to.be.true
-    it "the empty rule, `rule.from()`, checks that no lines are cited", ->
-      proof = '''
-        1. A
-        2. A          // assumption 1
-      ''' 
-      proof = verify._parseProof proof
-      emptyRule = rule.from()
-      result = emptyRule.check proof.getLine(2)
-      # if result isnt true
-      #   console.log result.getMessage()
-      expect(result).not.to.be.true
-    it "the empty rule, `rule.from()`, checks that no subpoofs are cited", ->
-      proof = '''
-        1. A
-        2.    B
-        3.    B
-        4. A          // assumption 2-3
-      ''' 
-      proof = verify._parseProof proof
-      emptyRule = rule.from()
-      result = emptyRule.check proof.getLine(4)
-      # if result isnt true
-      #   console.log result.getMessage()
-      expect(result).not.to.be.true
-      
-    describe "`rule.premise()`", ->
-      it "allows the first line to be a premise", ->
-        proof = '''
-          1. A        // premise
-        ''' 
-        proof = verify._parseProof proof
-        premiseRule = rule.premise()
-        result = premiseRule.check proof.getLine(1)
-        expect(result).to.be.true
-      it "allows the second line of the main proof to be a premise", ->
-        proof = '''
-          1. A        // premise
-          2. B        // premise
-        ''' 
-        proof = verify._parseProof proof
-        premiseRule = rule.premise()
-        result = premiseRule.check proof.getLine(2)
-        console.log result.getMessage() if result isnt true
-        expect(result).to.be.true
-      it "does not allow the second line of a subproof to be a premise", ->
-        proof = '''
-          1. A        // premise
-          2.   A      // premise
-          3.   B      // premise
-        ''' 
-        proof = verify._parseProof proof
-        premiseRule = rule.premise()
-        result = premiseRule.check proof.getLine(3)
-        expect(result).not.to.be.true
-      it "does not allow a premise to occur after a non-premise", ->
-        proof = '''
-          1. A and B        // premise
-          2. B              // and elim 1
-          3. C              // premise
-        ''' 
-        proof = verify._parseProof proof
-        premiseRule = rule.premise()
-        result = premiseRule.check proof.getLine(3)
-        expect(result).not.to.be.true
-      it "does not allow a premise to occur after a subproof", ->
-        proof = '''
-          1. A and B        // premise
-          2.    B              // premise
-          3.    C              
-          4. C           // premise
-        ''' 
-        proof = verify._parseProof proof
-        premiseRule = rule.premise()
-        result = premiseRule.check proof.getLine(4)
-        expect(result).not.to.be.true
-      it "returns a results object with `.getMessage` method when a line is not verified", ->
-        proof = '''
-          1. A        // premise
-          2.   A      // premise
-          3.   B      // premise
-        ''' 
-        proof = verify._parseProof proof
-        premiseRule = rule.premise()
-        result = premiseRule.check proof.getLine(3)
-        expect(result).not.to.be.true
-        expect( _.isString(result.getMessage?()) ).to.be.true

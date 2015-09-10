@@ -1,8 +1,22 @@
 # Module for creating requirements on lines of a proof expressed like this:
-#     rule.from('not not φ').to('φ') ]
-#     'intro' : [ rule.from( rule.subproof('φ','contradiction') ).to('not φ') ]
+#     `rule.from('not not φ').to('φ')`
+# and:
+#     `rule.from( rule.subproof('φ','contradiction') ).to('not φ') `
 #
-# Use like rule.from( rule.subproof('φ','contradiction') ).to('not φ').check(line)
+# Having created a rule, use `.check` to see whether a line conforms to the rule:
+#     `rule.from( rule.subproof('φ','contradiction') ).to('not φ').check(line)`
+#
+# Note that this module doesn't care at all about the actual justification given.
+# (It does care about which lines or subproofs are cited; but it does not 
+# check whether the proof writer can cite these lines or subproofs (`add_verification`
+# does that job).)
+#
+# This module depends on `add_line_numbers.to`, `add_status.to` and `add_sentences.to` 
+# have been applied to any proof it sees.
+#
+# Terminology: a `matches` object is a map from metavariables (like `φ` and `α`) to
+# the expressions or terms they have matched (see the core module `substitute.findMatches`).
+#
 
 nodeutil = require 'util'
 
@@ -63,6 +77,13 @@ subproof = (startReq, endReq) ->
     type : 'subproof'
     startReq 
     endReq 
+    
+    # Some methods allow us to treat lines and subproofs interchangeably.
+    listMetaVariableNames : () ->
+      result = @startReq.listMetaVariableNames()
+      result = _.defaults( result, @endReq.listMetaVariableNames() )
+      return result
+    
   }
 exports.subproof = subproof
 
@@ -72,37 +93,40 @@ exports.subproof = subproof
 premise = () ->
   # We start with the empty rule (which checks that no
   # lines are cited for us) and elaborate its check method.
-  emptyRule = from()
-  baseCheck = emptyRule.check.bind(emptyRule)
-  newCheck = (line) ->
+  premiseRule = from()
+  baseCheck = premiseRule.check.bind(premiseRule)
+  
+  premiseRule.check = (line) ->
     result = baseCheck(line)
     return result if result isnt true
+    
     # The first line of any proof or subproof can be a premise.
     return true if not line.prev
-    if line.parent.parent?
-      # Line is in a subproof and not the first line of it.
+    
+    # From now on we know that this is not the first line of a proof or subproof.
+    
+    lineIsInASubproof = line.parent.parent?
+    if lineIsInASubproof
       return { getMessage : () -> "only the first line of a subproof may be a premise." }
     
     # From this point on, we are in the main proof (not in a subproof).
     
     # Is there a non-premise or subproof above line?
-    isNeitherAPremiseNorASubproof = (lineOrSubproof) ->
-      if lineOrSubproof.type is 'block'
-        thisIsASubproof = lineOrSubproof.parent?
-        return true if thisIsASubproof
-        return false if not thisIsASubproof
-      if lineOrSubproof.type is 'line'
-        thisIsAPremise = lineOrSubproof.justification?.rule.connective is 'premise'
+    isNeitherAPremiseNorASubproof = (item) ->
+      if item.type is 'line'
+        thisIsAPremise = item.justification?.rule.connective is 'premise'
         return false if thisIsAPremise 
         return true if not thisIsAPremise
+      if item.type is 'block'   # A block is a subproof.
+        return true
       # We don't care about dividers, blank lines and whatever else.
       return false
-    thereIsANonPremiseAbove = line.find( isNeitherAPremiseNorASubproof )
+    thereIsANonPremiseAbove = line.findAbove( isNeitherAPremiseNorASubproof )
     if thereIsANonPremiseAbove
       return { getMessage : () -> "premises may not occur after non-premises." }
     return true
-  emptyRule.check = newCheck
-  return emptyRule
+    
+  return premiseRule
 exports.premise = premise      
 
 
@@ -161,9 +185,8 @@ class LineChecker
     # (Note that the `Pathfinder` need to change the order.)
     reqCheckList.reverse()
     
-    path = new Pathfinder( reqCheckList, @ )
+    path = new Pathfinder( reqCheckList, @line )
     pathFound = path.find()
-    console.log "pathFound = #{pathFound}"
     if pathFound
       return true
     else 
@@ -191,6 +214,8 @@ class LineChecker
       subproofs : @citedBlocks.length
     if expected.lines is actual.lines and expected.subproofs is actual.subproofs
       return true
+
+    # From here, we are just creating a message for the proof writer.
     expectedLinesTxt = numberToWords expected.lines, 'line'
     expectedBlocksTxt = numberToWords expected.subproofs, 'subproof'
     expectedAndText = \
@@ -204,6 +229,7 @@ class LineChecker
       or ("nothing" if not actualLinesTxt and not actualBlocksTxt) \
       or ""
     @addMessage "you must cite #{expectedLinesTxt} #{expectedAndText}#{expectedBlocksTxt} when using the rule #{@ruleName} (you cited #{actualLinesTxt} #{actualAndText}#{actualBlocksTxt}).".replace /\s\s+/g, ' ' 
+
     return false
 
   whatToCite : () ->
@@ -222,29 +248,21 @@ class RequirementChecker
     # param `@matches` will not be mutated.
     # `candidateLinesOrSubproofs` is a list of lines or subproofs against
     # which to check the requirement.
-    constructor : (@req, @candidateLinesOrSubproofs, @matches={}) ->
+    constructor : (@theRequirement, @candidateLinesOrSubproofs, @matches={}) ->
       # This clones `@matches`, ensuring it will not be mutated.
       @saveMatches(@matches)
       
       # Store names of metavariables (such as α and ψ)  in the 
       # requirement to be checked.
-      @metaVariableNames = {}
-      if @req.type? and @req.type is 'subproof'
-        @metaVariableNames =  @req.startReq.listMetaVariableNames()
-        @metaVariableNames = _.defaults( @metaVariableNames, @req.endReq.listMetaVariableNames() )
-      else
-        @metaVariableNames = @req.listMetaVariableNames()
-    
-    clone : () ->
-      return new RequirementChecker(@req, @candidateLinesOrSubproofs, @matches)
+      @metaVariableNames = @theRequirement.listMetaVariableNames()
     
     setMatches : (@matches) ->
       @saveMatches(@matches)
     
-    # So that we can attempt matching different lines,
-    # we have a store of matches.
-    # TODO: this is a bit fragile (setting `@matches` directly would cause
-    # subtle errors).
+    # These methods allow the `Pathfinder` to try out different possibilities,
+    # saving and then restoring the matches between attempts.
+    # TODO: this is a bit fragile (setting `@matches` directly could cause
+    # subtle errors).  
     _matchesStack : []
     saveMatches : () ->
       newMatches = _.cloneDeep( @matches )
@@ -256,93 +274,114 @@ class RequirementChecker
       [..., @matches] = @_matchesStack
       return undefined
    
+    tempRemovedCandidates : {}
+    temporarilyRemoveCandidate : (lineNumber) ->
+      _toRemove = (x for x in @candidateLinesOrSubproofs when x.number is lineNumber)
+      if _toRemove.length is 1
+        @tempRemovedCandidates[lineNumber] = _toRemove[0]
+        @candidateLinesOrSubproofs = (x for x in @candidateLinesOrSubproofs when x.number isnt lineNumber)
+    restoreCandidate : (lineNumber) ->
+      if lineNumber of @tempRemovedCandidates
+        @candidateLinesOrSubproofs.push( @tempRemovedCandidates[lineNumber] )
+        delete @tempRemovedCandidates[lineNumber] 
+   
     # Check whether this requirement can be checked yet.
     # (Testing it may depend on what is in @matches).
     canCheckAlready : () ->
-      # console.log "canCheckAlready for #{@req.toString()} ..."
       mustBeInMatches = @metaVariableNames.inSub.left
-      mustBeInMatches = _.defaults mustBeInMatches, @metaVariableNames.inBox
       for varName in mustBeInMatches
         if not (varName of @matches)
           # console.log "... fail"
           return false 
         whatItMatches = @matches[varName]
-        # Tricky case: `whatItMatches` may itself be a meta variable.
-        # TODO: for now I'm ignoring this (it doesn't arise in current rules.)
-      # console.log "... pass"
       return true
     
+    # At this stage, there may be several lines or subproofs 
+    # that meet a requirement.
+    # Test the requirement against each candidate line or subproof;
+    # and, where the requirement could be met by one or more candidates, 
+    # return a map from the names of the lines to the matches needed 
+    # to meet the requirement.
     check : () ->
       results = false
       for candidate in @candidateLinesOrSubproofs
-        theResult = @_checkOne candidate
-        if theResult isnt false
+        newMatches = @_checkOne candidate      
+        if newMatches isnt false
           results = results or {}
-          results[candidate.number] = theResult 
+          results[candidate.number] = newMatches 
       return results
     
-    # In this method, the idea is to call methods that rely on, and 
-    # update, `@matches`.
     _checkOne : (candidate) ->
-      if @req.type? and @req.type is 'subproof'
-        @saveMatches()
-        @_checkOneLine @req.startReq, candidate.getFirstLine()
-        if @matches isnt false
-          @_checkOneLine @req.endReq, candidate.getLastLine()
-        resultMatches = @matches
-        @restoreMatches()
-        return resultMatches
-      else
-        # @req just concerns a line, not a subproof.
-        @saveMatches()
-        @_checkOneLine @req, candidate
-        resultMatches = @matches
-        @restoreMatches()
-        return resultMatches
+      if @theRequirement.type? and @theRequirement.type is 'subproof'
+        newMatches = @_checkOneLine @theRequirement.startReq, candidate.getFirstLine(), @matches
+        return false if newMatches is false
+        moreNewMatches = @_checkOneLine @theRequirement.endReq, candidate.getLastLine(), newMatches
+        return moreNewMatches
+      # @theRequirement just concerns a line, not a subproof.
+      # TODO : I'm really unhappy because I don't know why `@saveMatches()` is needed 
+      # here.  Failure to do it results in weird substutitions (φ : null).  I think
+      # it's a bug in the `Pathfinder`.
+      @saveMatches() 
+      newMatches = @_checkOneLine(@theRequirement, candidate, @matches)
+      @restoreMatches()
+      return newMatches
     
-    _checkOneLine : (aReq, aLine) ->
-      fol._decorate(aReq)
-      e = aReq.clone().applyMatches(@matches).applySubstitutions()
+    _checkOneLine : (aReq, aLine, priorMatches) ->
+      reqClone = aReq.clone().applyMatches(priorMatches).applySubstitutions()
       
       # Special case: there was a subsutition like `[a->null]` which
       # results in `e` being null.  This indicates a requirement has 
       # not been met.
-      if e is null
-        @matches = false 
-        return undefined
+      if reqClone is null
+        return false
       
-      eSubs = e.substitutions
-      delete e.substitutions
-      @matches = aLine.sentence.findMatches e, @matches
-      console.log "_checkOneLine sentence = #{aLine.sentence.toString()}"
-      console.log "_checkOneLine aReq = #{aReq.toString()}"
-      console.log "_checkOneLine @matches (found) = #{util.matchesToString @matches}"
+      delete reqClone.substitutions
+      newMatches = aLine.sentence.findMatches reqClone, priorMatches
+      # console.log "_checkOneLine sentence = #{aLine.sentence.toString()}"
+      # console.log "_checkOneLine aReq = #{aReq.toString()}"
+      # console.log "_checkOneLine reqClone = #{reqClone.toString()}"
+      # console.log "_checkOneLine priorMatches = #{util.matchesToString priorMatches}"
+      # console.log "_checkOneLine newMatches = #{util.matchesToString newMatches}"
       
-      if @matches isnt false
-        if e.box? or e.type is 'box'
-          aBox = (e if e.type is 'box') or (e.box if e.box?)
-          aBox = aBox.applyMatches(@matches).applySubstitutions()
-          # The name in the box must not occur on a line earlier in the proof
-          # (although it may appear in earlier subproofs).
-          if eSubs and  eSubs isnt null
-            aBox.substitutions = eSubs
-          theName = aBox.term.name
-          iSALineContainingTheName = (lineOrBlock) ->
-            return false if lineOrBlock.type isnt 'line'
-            return true if (theName in lineOrBlock.sentence.getNames())
-            return false
-          youCantBoxThisName = aLine.find iSALineContainingTheName
-          @matches = false if youCantBoxThisName
+      return newMatches if (newMatches is false)
       
-      return undefined
+      # Special case: if `aReq` involves a box, we need to apply the requirement
+      # that the name in the box must not already occur in the proof.
+      if reqClone.box? or (reqClone.type is 'box')
+        aBox = (reqClone if reqClone.type is 'box') or (reqClone.box if reqClone.box?)
+        
+        # Do this or fail test `454092AA-57A4-11E5-9C09-B0C78BD11E5D`.
+        # (It's necessary because the box may contain a `term_metavariable` which
+        # we have only now just matched.)
+        aBox = aBox.applyMatches(newMatches).applySubstitutions()
+        
+        # The name in the box must not occur on a line earlier in the proof
+        # (although it may appear in earlier subproofs).
+        theName = aBox.term.name
+        iSALineContainingTheName = (lineOrBlock) ->
+          # Note: we don't care if the name occurs in closed subproofs
+          # as long as it doesn't occur in any line above this one.
+          return false if lineOrBlock.type isnt 'line'
+          return true if (theName in lineOrBlock.sentence.getNames())
+          return false
+        nameInBoxIsAlreadyUsedInProof = aLine.findAbove( iSALineContainingTheName )
+        newMatches = false if nameInBoxIsAlreadyUsedInProof
+      
+      return newMatches
 
       
-# Some requirements can be met in multiple ways (by matching multiple lines).
+# Some requirements can sometimes be met in multiple ways (by matching 
+# different lines), as for example in the rule for contradiction 
+# introduction applied to `not not A` and `not A`.
 # The `Pathfinder` explores different paths through which requirements 
-# could be met.  
+# could be met: if there is a way of meeting the requirements in `reqCheckList`,
+# it will be found.  
 class Pathfinder
-  constructor : ( @reqCheckList, @lineChecker, @matches = {} ) ->
-  
+  constructor : ( reqCheckList, @line, @matches = {} ) ->
+    # We will make a copy of `reqCheckList` to avoid mutating our parameters
+    # (which is essential given that we'll use this class recursively).
+    @reqCheckList = (x for x in reqCheckList)
+    
   find : () ->
     # If there are no more requirements to meet, we have found a 
     # path along which all requirements can be met.
@@ -350,33 +389,41 @@ class Pathfinder
       return true
     
     reqChecker = @reqCheckList.pop()
+    # Note that we must `.setMatches` before testing `.canCheckAlready()`.
     reqChecker.setMatches(@matches)
     
     # Find the first item in `reqCheckList` that we can already check;
     # or, if we can't already check any, just start with the first and hope for the best.
     numChecked = 0
-    while ( not reqChecker.canCheckAlready() ) and (numChecked < @reqCheckList.length)
-      reqChecker.restoreMatches(@matches)
+    # Note: the limit is `(@reqCheckList.length+1)` because we already popped one from `@reqCheckList`.
+    while ( not reqChecker.canCheckAlready() ) and (numChecked < (@reqCheckList.length+1))
       @reqCheckList.unshift(reqChecker)
       reqChecker = @reqCheckList.pop()
       reqChecker.setMatches(@matches)
       numChecked += 1
     
+    if numChecked is (@reqCheckList.length+1) 
+      # We couldn't find a `req` with `.canCheckAlready()` true.
+      # Unless there is an error with the rule, this should not happen.
+      throw new Error "Rule problem!  I can’t start checking any of the conditions in the rule." 
+    
     results = reqChecker.check()
-    reqChecker.restoreMatches(@matches)
     if results is false
-      console.log "pathfinder says no (@reqCheckList.length = #{@reqCheckList.length})"
       @writeMessage(reqChecker)
       return false
     
     # From here on, the `reqChecker` found one or more lines where the 
     # requirement was met.
 
+    # Now explore whether the other requirements can be met starting with
+    # any of these lines and matches.
     for lineNumber, aMatches of results
-      clonedReqCheckList = ( reqCheck.clone() for reqCheck in @reqCheckList )
-      newPath = new Pathfinder( clonedReqCheckList, @lineChecker, aMatches )
-      if newPath.find()
-        return true
+      # Do not allow the requirements in @reqCheckList to further consider `lineNumber`.
+      (x.temporarilyRemoveCandidate(lineNumber) for x in @reqCheckList)
+      newPath = new Pathfinder( @reqCheckList, @line, aMatches )
+      result =  newPath.find()
+      (x.restoreCandidate(lineNumber) for x in @reqCheckList)
+      return true if result is true
     
     # So none of the `newPath`s provided a route to meeting all the `reqCheckList`
     # requirements.
@@ -386,7 +433,7 @@ class Pathfinder
   # path along which all requirements can be met.
   # Param `reqChecker` is the last in `reqCheckList` for which there is no path.
   writeMessage : (reqChecker) ->
-    @lineChecker.addMessage("to apply this rule you need to cite a line with the form ‘#{reqChecker.req.toString()}’ (‘#{reqChecker.req.clone().applyMatches(@matches)}’ in this case).")
+    @line.status.addMessage("to apply this rule you need to cite a line with the form ‘#{reqChecker.theRequirement.toString()}’ (‘#{reqChecker.theRequirement.clone().applyMatches(@matches)}’ in this case).")
 
 
 

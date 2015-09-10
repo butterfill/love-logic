@@ -46,9 +46,7 @@ to = (block) ->
       line.findLine = findLine
       line.findBlock = findBlock
       line.findLineOrBlock = findLineOrBlock
-      line.getCitedLine = getCitedLine
       line.getCitedLines = getCitedLines
-      line.getCitedBlock = getCitedBlock
       line.getCitedBlocks = getCitedBlocks
       
       return undefined  # Keep walking.
@@ -132,10 +130,13 @@ getRuleName = ->
   side = @justification.rule.variant.side or ''
   return "#{connective} #{intronation} #{side}".trim()
 
+
+# TODO: the find functions should be added by `add_line_numbers`
+
 # `targetNumber` specifies the number of a line as (typically) given by the
 # user who wrote the proof.
 findLine = (targetNumber) ->
-  return @find( (item) ->
+  return @findAbove( (item) ->
     return undefined if item.type isnt 'line'
     return true if item.number is targetNumber
     return undefined
@@ -144,7 +145,7 @@ findLine = (targetNumber) ->
 # `targetNumber` specifies the number of a line as (typically) given by the
 # user who wrote the proof.
 findBlock = (targetNumber) ->
-  return @find( (item) ->
+  return @findAbove( (item) ->
     return undefined if item.type isnt 'block'
     return true if item.number is targetNumber
     return undefined
@@ -153,15 +154,14 @@ findBlock = (targetNumber) ->
 # `targetNumber` specifies the number of a line as (typically) given by the
 # user who wrote the proof.
 findLineOrBlock = (targetNumber) ->
-  return @find( (item) ->
+  return @findAbove( (item) ->
     return undefined if (item.type isnt 'block' and item.type isnt 'line')
     return true if item.number is targetNumber
     return undefined
   )
+  
 
 # This should only be used if this line references a single line.
-getCitedLine = ->
-  return @getCitedLines()[0]
 getCitedLines = ->
   return [] if not @justification.numbers
   citedLines = []
@@ -170,10 +170,6 @@ getCitedLines = ->
     if result isnt false
       citedLines.push result
   return citedLines
-
-# This should only be used if this line references a single block.
-getCitedBlock = ->
-  return @getCitedBlocks()[0]
 
 getCitedBlocks = ->
   return [] if not @justification.numbers

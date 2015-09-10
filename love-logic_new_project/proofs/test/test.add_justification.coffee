@@ -91,5 +91,5 @@ describe "add_justification", ->
       line4 = block.getLine 4
       # console.log input
       # console.log block.toString()
-      expect(line4.getCitedBlock()).to.equal(expected)
+      expect(line4.getCitedBlocks()[0]).to.equal(expected)
     

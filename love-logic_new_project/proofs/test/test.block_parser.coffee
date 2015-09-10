@@ -202,13 +202,13 @@ describe "block_parser", ->
         line = block.getLine(3)
         expect(line.content).to.equal(INPUT_LIST[2])
 
-    describe ".find", ->
+    describe ".findAbove", ->
       it "finds things in earlier lines of the proof", ->
         block = bp.parse INPUT
         line = block.getLine(3)
         finder = (item) ->
           return true if item.content.trim() is INPUT_LIST[1]
-        result = line.find(finder)
+        result = line.findAbove(finder)
         expect(result.content.trim()).to.equal(INPUT_LIST[1])
         
       it "finds things in the first line of the proof", ->
@@ -220,7 +220,7 @@ describe "block_parser", ->
         finder = (item) ->
           #console.log "item.content = #{item.content}"
           return true if _.isString(item.content) and item.content.trim() is INPUT_LIST[0]
-        result = line.find(finder)
+        result = line.findAbove(finder)
         expect(result.content).to.equal(INPUT_LIST[0])
         
       it "doesn't look in lines below the current one", ->
@@ -228,7 +228,7 @@ describe "block_parser", ->
         line = block.getLine(2)
         finder = (item) ->
           return true if item.content is '2.2'
-        result = line.find(finder)
+        result = line.findAbove(finder)
         expect(result).to.equal(false)
         
       it "doesn't look into closed blocks", ->
@@ -236,9 +236,60 @@ describe "block_parser", ->
         line = block.getLine(INPUT_LIST.length-1)
         finder = (item) ->
           return true if _.isString(item.content) and item.content.trim() is INPUT_LIST[2]
-        result = line.find(finder)
+        result = line.findAbove(finder)
+        expect(result).to.equal(false)
+
+      it "doesn't look at the line it is called from", ->
+        block = bp.parse '''
+        1. A
+        2. B
+        3. C
+        '''
+        line = block.getLine(2)
+        finder = (item) ->
+          return true if _.isString(item.content) and item.content.trim() is "2. B"
+        result = line.findAbove(finder)
+        # Test the test.
+        line3 = block.getLine(3)
+        testTest = line3.findAbove(finder)
+        expect(testTest.content).to.equal("2. B")
         expect(result).to.equal(false)
         
+      it "doesn't choke if called from the first line of a proof", ->
+        block = bp.parse '''
+        1. A
+        2. B
+        3. C
+        '''
+        line = block.getLine(1)
+        finder = (item) ->
+          return true if _.isString(item.content) and item.content.trim() is "2. B"
+        result = line.findAbove(finder)
+        expect(result).to.equal(false)
+        
+      it "doesn't find in the outermost block", ->
+        block = bp.parse '''
+        1. A
+        2. B
+        3. C
+        '''
+        line = block.getLine(1)
+        finder = (item) ->
+          return true if item.type is 'block'
+        result = line.findAbove(finder)
+        expect(result).to.equal(false)
+
+      it "does find the outermost block containing the line found from", ->
+        block = bp.parse '''
+        1. A
+        2.   B
+        3.   C
+        '''
+        line = block.getLine(2)
+        finder = (item) ->
+          return true if item.type is 'block'
+        result = line.findAbove(finder)
+        expect(result).not.to.equal(false)
       
   describe ".parse", ->
     it "parses a one line input", ->

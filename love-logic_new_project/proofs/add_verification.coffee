@@ -12,7 +12,11 @@
 # parsing justification and attaching it to the proof), `add_line_numbers`
 # (which is about identifying how the proof writer names lines) and 
 # `rule` (which is for describing rules of proof).
-
+#
+# In adding verification, this module also checks that the cited lines 
+# and blocks exist and can be cited from the line they are cited from.  
+# (It makes sense to do this here rather than in `rule` because the
+# check doesn't depend on which rule is used.)
  
 _ = require 'lodash'
 
@@ -21,6 +25,7 @@ blockParser = require './block_parser'
 addLineNumbers = require './add_line_numbers'
 addJustification = require './add_justification'
 addSentences = require './add_sentences'
+addStatus = require './add_status'
 
 theRules = (require './fitch_rules').rules
 
@@ -30,6 +35,7 @@ _parseProof = (proofText) ->
   addLineNumbers.to block
   addJustification.to block
   addSentences.to block
+  addStatus.to block
   return block
 exports._parseProof = _parseProof
 
@@ -140,6 +146,7 @@ linesCitedAreOk = (line) ->
   for num in numbers
     found = line.findLineOrBlock(num)
     return false if not found
+    return false if (found is line.parent)
   return true
 
 

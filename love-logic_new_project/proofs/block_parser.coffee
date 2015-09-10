@@ -356,9 +356,9 @@ class Block
     # (It will not enter closed blocks.)
     # If no match is found, return false.
     # `matcher` is a function that will be fed a line or block.
-    lineObject.find = (matcher) ->
+    lineObject.findAbove = (matcher) ->
       current = @.prev or @.parent
-      while current?
+      while current? and current.parent?
         return current if matcher(current)
         if not current.prev? and current.parent?
           # Move on to the parent if there's no previous item.

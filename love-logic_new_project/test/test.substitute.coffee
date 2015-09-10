@@ -1030,6 +1030,7 @@ describe 'substitute', ->
       pre = _.cloneDeep expression
       result = substitute.applySubstitutions expression
       post = expression
+      expect(pre).not.to.deep.equal(result) # Test the test.
       expect(pre).to.deep.equal(post)
     
     describe "in the special case of `[α->null]` substitutions", ->

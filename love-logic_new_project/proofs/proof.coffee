@@ -24,7 +24,7 @@
 # ```
 
 blockParser = require './block_parser'
-lineNumbers = require './add_line_numbers'
+addLineNumbers = require './add_line_numbers'
 addJustification = require './add_justification'
 addSentences = require './add_sentences'
 addStatus = require './add_status'
@@ -33,11 +33,10 @@ addVerification = require './add_verification'
 parse = (proofText) ->
   try
     block = blockParser.parse proofText
-    lineNumbers.to block
-    # TODO:
-    addStatus.to block
+    addLineNumbers.to block
     addJustification.to block
     addSentences.to block
+    addStatus.to block
     addVerification.to block
   catch e
     return e.message
