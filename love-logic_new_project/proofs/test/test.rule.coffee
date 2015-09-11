@@ -277,13 +277,13 @@ describe "`rule`", ->
         1. A or B    // premise
         2.    A         // assumption
         3.    C         // 
-        
-        4.    B
-        5.    C
-        6. C          // or elim 1, 2-3, 4-5
+        4.
+        5.    B
+        6.    C
+        7. C          // or elim 1, 2-3, 5-6
       '''
       proof = verify._parseProof proof
-      line = proof.getLine 6
+      line = proof.getLine 7
       test = rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ')).to('χ')
       result = test.check(line)
       # console.log util.inspect(line)
@@ -295,13 +295,13 @@ describe "`rule`", ->
         1. A or B    // premise
         2.    A         // assumption
         3.    C         // 
-        
-        4.    B
-        5.    C
-        6. C          // or elim 1, 2-3
+        4.  
+        5.    B
+        6.    C
+        7. C          // or elim 1, 2-3
       '''
       proof = verify._parseProof proof
-      line = proof.getLine 6
+      line = proof.getLine 7
       test = rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ')).to('χ')
       result = test.check(line)
       expect(result).not.to.be.true

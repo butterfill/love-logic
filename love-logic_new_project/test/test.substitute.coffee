@@ -12,8 +12,10 @@ symmetry = require('../symmetry')
 PROP_A = fol.parse "A"
 NAME_A = fol.parse("F(a)").termlist[0]   #i.e. {type='name', name='a', ...}
 NAME_B = fol.parse("F(b)").termlist[0]
+NAME_C = fol.parse("F(c)").termlist[0]
 VARIABLE_X = fol.parse("F(x)").termlist[0]
 TERM_METAVARIABLE_T = fol.parse("F(τ)").termlist[0]
+(util.delExtraneousProperties(x) for x in [PROP_A, NAME_A, NAME_B, NAME_C, VARIABLE_X,TERM_METAVARIABLE_T])
 
 describe 'substitute', ->
   describe 'findMatches', ->
@@ -71,7 +73,7 @@ describe 'substitute', ->
       expect(matches).not.to.be.false
       expect(util.areIdenticalExpressions(matches.φ, expectedMatches.φ)).to.be.true
     
-    it "should match a sentence with the same (no expression variables)", ->
+    it "matches a sentence with the same (no expression variables)", ->
       pattern = fol.parse 'A or A'
       expression = fol.parse 'A or A'
       matches = substitute.findMatches expression, pattern
@@ -178,7 +180,7 @@ describe 'substitute', ->
       expect(matches).to.be.false
 
   describe 'findMatches with expressions that are not closed wffs', ->
-    it "should match 'all x not φ' in 'all x (not (F(x) and G(x)))", ->
+    it "matches 'all x not φ' in 'all x (not (F(x) and G(x)))", ->
       pattern = fol.parse 'all x not φ'
       expression = fol.parse 'all x (not (F(x) and G(x)))'
       matches = substitute.findMatches expression, pattern
@@ -208,7 +210,7 @@ describe 'substitute', ->
       expect(util.areIdenticalExpressions(matches.φ, expectedMatches.φ)).to.be.true
       expect(util.areIdenticalExpressions(matches.α, expectedMatches.α)).to.be.true
       
-    it "should match for pattern α=β", ->
+    it "matches for pattern α=β", ->
       pattern = fol.parse 'α=β'
       expression1 = fol.parse 'a=b'
       matches = substitute.findMatches expression1, pattern
@@ -219,7 +221,7 @@ describe 'substitute', ->
       expect(util.areIdenticalExpressions(matches.α, expectedMatches.α)).to.be.true
       expect(util.areIdenticalExpressions(matches.β, expectedMatches.β)).to.be.true
 
-    it "should match for pattern 'all τ φ", ->
+    it "matches for pattern 'all τ φ", ->
       pattern = fol.parse 'all τ φ'
       expression = fol.parse '(all x) (F(x) and G(x))'
       matches = substitute.findMatches expression, pattern
@@ -230,7 +232,7 @@ describe 'substitute', ->
       expect(util.areIdenticalExpressions(matches.τ, expectedMatches.τ)).to.be.true
       expect(util.areIdenticalExpressions(matches.φ, expectedMatches.φ)).to.be.true
     
-    it "should match 'exists τ1 exists τ2 (F(τ1) and G(τ2))'", ->
+    it "matches 'exists τ1 exists τ2 (F(τ1) and G(τ2))'", ->
       expression = fol.parse 'exists x exists y (F(x) and G(y))'
       pattern = fol.parse 'exists τ1 exists τ2 (F(τ1) and G(τ2))'
       result = substitute.findMatches expression, pattern
@@ -246,14 +248,14 @@ describe 'substitute', ->
       
 
   describe 'using findMatches where what the expression variables must match is stipulated', ->
-    it "should match for pattern α=β with specified matches (expect success)", ->
+    it "matches for pattern α=β with specified matches (expect success)", ->
       pattern = fol.parse 'α=β'
       expression1 = fol.parse 'a=b'
       stipulatedMatches = {"α":NAME_A, "β":NAME_B}
       matches = substitute.findMatches expression1, pattern, stipulatedMatches
       expect(matches).not.to.be.false
       
-    it "should match for pattern α=β with specified matches (expect failure)", ->
+    it "matches for pattern α=β with specified matches (expect failure)", ->
       pattern = fol.parse 'α=β'
       expression1 = fol.parse 'a=b'
       stipulatedMatches =
@@ -261,6 +263,157 @@ describe 'substitute', ->
         "β" : NAME_A
       matches = substitute.findMatches expression1, pattern, stipulatedMatches
       expect(matches).to.be.false
+
+
+  describe 'using findMatches with substitutions', ->
+    it "returns {} when expressions match and there are no metavariables", ->
+      pattern = fol.parse 'F(a)'
+      expression = fol.parse 'F(a)'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches = {}
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "returns false when expressions do not match and there are no metavariables", ->
+      pattern = fol.parse 'F(a)'
+      expression = fol.parse 'F(b)'
+      matches = substitute.findMatches expression, pattern
+      expect(matches).to.be.false
+    it "finds matches where applying a substitution would produce a match", ->
+      pattern = fol.parse 'F(a)[a->b]'
+      expression = fol.parse 'F(b)'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches = {}
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "finds matches where applying a substitution would break the match", ->
+      pattern = fol.parse 'F(a)[a->b]'
+      expression = fol.parse 'F(a)'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches = {}
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "finds matches where partially applying a substitution would produce a match", ->
+      pattern = fol.parse '(a=a)[a->b]'
+      expression = fol.parse 'a=b'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches = {}
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "finds matches where partially applying a substitution would produce a match (example with predicates)", ->
+      pattern = fol.parse '(F(a) and F(a))[a->b]'
+      expression = fol.parse 'F(a) and F(b)'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches = {}
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "[test for the next test]", ->
+      pattern = fol.parse '(F(a) and F(β))'
+      expression = fol.parse 'F(a) and F(b)'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        β : NAME_B
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "finds matches where partially applying a substitution involving a term_metavariable would produce a match (example with predicates)", ->
+      pattern = fol.parse '(F(a) and F(a))[a->β]'
+      expression = fol.parse 'F(a) and F(b)'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        β : NAME_B
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "doesn't match where applying a substitution involving a term_metavariable would require to to have two values", ->
+      pattern = fol.parse '(F(a) and F(a))[a->β]'
+      expression = fol.parse 'F(c) and F(b)'
+      matches = substitute.findMatches expression, pattern
+      expect(matches).to.be.false
+    it "finds matches where partially applying a substitution involving a term_metavariable ... other way around", ->
+      # It's important to test two ways around to avoid accidental success 
+      # contingent based on the route an expression tree walker takes
+      pattern = fol.parse '(F(a) and F(a))[a->β]'
+      expression = fol.parse 'F(b) and F(a)'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        β : NAME_B
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "finds matches where partially applying a substitution involving a term_metavariable ... middle", ->
+      # As above, it's important to test different ways around to avoid accidental success 
+      # contingent based on the route an expression tree walker takes
+      pattern = fol.parse '(F(a) and (F(a) and F(a)))[a->β]'
+      expression = fol.parse '(F(a) and (F(b) and F(a)))'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        β : NAME_B
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "finds matches where partially applying a substitution involving a term_metavariable ... two of four, different branches", ->
+      # As above, it's important to test different ways around to avoid accidental success 
+      # contingent based on the route an expression tree walker takes
+      pattern = fol.parse '((F(a) or F(a)) and (F(a) and F(a)))[a->β]'
+      expression = fol.parse '((F(a) or F(b)) and (F(b) and F(a)))'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        β : NAME_B
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "doesn't finds matches where partially applying a substitution involving a term_metavariable would require it having multiple values", ->
+      # The concern here is that `β` could be matched with `d` in one
+      # branch and with `c` in the other branch.  But this would be incorrect:
+      # `expression` is not a substitution instance of `pattern`.
+      pattern = fol.parse '((F(a) or F(a)) and (F(a) and F(a)))[a->β]'
+      expression = fol.parse '((F(a) or F(d)) and (F(c) and F(a)))'
+      matches = substitute.findMatches expression, pattern
+      expect(matches).to.be.false
+    it "finds matches requiring partially applying a substitution involving a sentence variable", ->
+      # As above, it's important to test different ways around to avoid accidental success 
+      # contingent based on the route an expression tree walker takes
+      pattern = fol.parse '(A and B)[B->φ]'
+      expression = fol.parse 'A and A'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        φ : PROP_A
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+
+
+  describe 'using findMatches with *multiple* substitutions', ->
+    it "finds matches where multiple substitutions are required", ->
+      pattern = fol.parse '(F(c) and F(d))[c->α,d->β]'
+      expression = fol.parse 'F(a) and F(b)'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        α : NAME_A
+        β : NAME_B
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "finds matches where multiple, partial substitutions are required", ->
+      pattern = fol.parse '(F(c) and F(d) and F(c) and F(d))[c->α,d->β]'
+      expression = fol.parse '(F(c) and F(d) and F(a) and F(b))'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        α : NAME_A
+        β : NAME_B
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "finds matches where multiple, partial substitutions are required (variant1)", ->
+      pattern = fol.parse '(F(c) and F(d) and F(c) and F(d))[c->α,d->β]'
+      expression = fol.parse '(F(a) and F(d) and F(c) and F(b))'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        α : NAME_A
+        β : NAME_B
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "finds matches where multiple, partial substitutions are required (variant2)", ->
+      pattern = fol.parse '(F(c) and F(d) and F(c) and F(d))[c->α,d->β]'
+      expression = fol.parse '(F(c) and F(b) and F(a) and F(d))'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        α : NAME_A
+        β : NAME_B
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
 
 
   describe 'replace (replaces one expression or term with another)', ->    
@@ -416,7 +569,15 @@ describe 'substitute', ->
         to : expression.substitutions[0].to
       result = substitute.replace expression, whatToReplace
       expect(result.termlist[0].name).to.equal('τ')
-
+    
+    it "doesn't mess with substitutions", ->
+      expression = fol.parse "(A and B)[C->D]"
+      whatToReplace =
+        from : fol.parse "A"
+        to : fol.parse "B"
+      result = substitute.replace expression, whatToReplace
+      expect(expression.substitutions.length).to.equal(1)
+      expect(result.substitutions.length).to.equal(1)
 
   describe '.applyMatches', ->
     it "correctly applies a simple match to a pattern", ->

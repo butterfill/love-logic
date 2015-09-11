@@ -122,11 +122,11 @@ describe "the verify module:", ->
         1. A or B    // premise
         2.    A         // assumption
         3.    C         // 
-        
-        4.    B
-        5.    C       // or elim 1, 2-3, 4-5
+        4.
+        5.    B
+        6.    C       // or elim 1, 2-3, 4-5
       '''
-      result = verify._line 5, proof
+      result = verify._line 6, proof
       expect(result.verified).to.be.false
 
 
@@ -410,13 +410,13 @@ describe "the verify module:", ->
       expect(result.verified).to.be.false
     it "verifies correct use of not intro", ->
       proof = '''
-           |
-        1. | | A              // assumption
-           | |-------
-        2. | | contradiction  // contradiction intro 1,2
-        3. | not A            // not intro 1-2
+        1. |
+        2. | | A              // assumption
+        3. | |-------
+        4. | | contradiction  // contradiction intro 1,2
+        5. | not A            // not intro 2-4
       '''
-      result = verify._line 3, proof
+      result = verify._line 5, proof
       expect(result.verified).to.be.true
     it "spots an correct use of not intro", ->
       proof = '''
@@ -481,7 +481,7 @@ describe "the verify module:", ->
       result = verify._line 3, proof
       expect(result.verified).to.be.false
     it "verifies correct use of contradiction intro (tricky case, not first)", ->
-      # This test could fail because `rule`'s methods for checking do not 
+      # This test could fail if `rule`'s methods for checking did not 
       # consider making matches for requirements in differnt orders.
       proof = '''
         1. not not A              // premise
@@ -500,9 +500,143 @@ describe "the verify module:", ->
       
       
   describe "proofs with the rules for arrow", ->
-    it "we need some tests"
+    it "verifies correct use of arrow elim", ->
+      proof = '''
+        1. A                // premise
+        2. A arrow B        // premise
+        3. B                // arrow elim 1,2
+      '''
+      result = verify._line 3, proof
+      console.log result.message if not result.verified
+      expect(result.verified).to.be.true
+    it "detects mistaken use arrow elim (right to left)", ->
+      proof = '''
+        1. B                // premise
+        2. A arrow B           // premise
+        3. A                // arrow elim 1,2
+      '''
+      result = verify._line 3, proof
+      console.log result.message if not result.verified
+      expect(result.verified).to.be.false
+    it "verifies correct use of arrow intro", ->
+      proof = '''
+        1. |
+        2. | | A                
+        3. | |---
+        4. | | false             
+        5. | C  
+        6. | A arrow false        // arrow intro 2-4
+      '''
+      result = verify._line 6, proof
+      console.log result.message if not result.verified
+      expect(result.verified).to.be.true
+    it "spots incorrect use of arrow intro", ->
+      proof = '''
+        1. |
+        2. | | B                
+        3. | |---
+        4. | | A       
+        5. | C          
+        6. | A arrow B        // arrow intro 2-4
+      '''
+      result = verify._line 6, proof
+      console.log result.message if not result.verified
+      expect(result.verified).to.be.false
+    
+    
   describe "proofs with the rules for double_arrow", ->
-    it "we need some tests"
+    it "verifies correct use double_arrow elim", ->
+      proof = '''
+        1. A                // premise
+        2. A ↔ B           // premise
+        3. B                // ↔ elim 1,2
+      '''
+      result = verify._line 3, proof
+      console.log result.message if not result.verified
+      expect(result.verified).to.be.true
+    it "verifies correct use double_arrow elim (right to left)", ->
+      proof = '''
+        1. B                // premise
+        2. A ↔ B           // premise
+        3. A                // ↔ elim 1,2
+      '''
+      result = verify._line 3, proof
+      console.log result.message if not result.verified
+      expect(result.verified).to.be.true
+    it "detects incorrect use double_arrow elim (wrong conclusion)", ->
+      proof = '''
+        1. B                // premise
+        2. A ↔ B           // premise
+        3. B                // ↔ elim 1,2
+      '''
+      result = verify._line 3, proof
+      console.log "\t#{result.message}" if not result.verified
+      expect(result.verified).to.be.false
+    it "detects incorrect use double_arrow elim (wrong arrow) ", ->
+      proof = '''
+        1. B                // premise
+        2. B ↔ B           // premise
+        3. A                // ↔ elim 1,2
+      '''
+      result = verify._line 3, proof
+      console.log "\t#{result.message}" if not result.verified
+      expect(result.verified).to.be.false
+    it "detects incorrect use double_arrow elim (wrong arrow) ", ->
+      proof = '''
+        1. B                // premise
+        2. A ↔ B           // premise
+        3. A                // ↔ elim 2,2
+      '''
+      result = verify._line 3, proof
+      console.log "\t#{result.message}" if not result.verified
+      expect(result.verified).to.be.false
+      
+    it "verifies correct use of double_arrow intro", ->
+      # This example also illustrates flexibility with line
+      # numbering (naming); note that `.getLine` and `verify._line`
+      # want the (1-based) number of the line in file, not the 
+      # name given to the line by the proof writer.
+      proof = '''
+        1. |
+        2. | | A                
+           | |---
+        3. | | false             
+           |   
+        4. | | false
+           | |---
+        5. | | A
+        6. | A ↔ false        // ↔ intro 2-3, 4-5
+      '''
+      result = verify._line 9, proof
+      console.log result.message if not result.verified
+      expect(result.verified).to.be.true
+      
+    it "spots incorrect use of double_arrow intro", ->
+      proof = '''
+        1. |
+        2. | | A                
+           | |---
+        3. | | | false
+           | | |---
+        4. | | | A
+        5. | | false             
+        6. | A ↔ false        // ↔ intro 2-5, 3-4
+      '''
+      result = verify._line 8, proof
+      console.log result.message if not result.verified
+      expect(result.verified).to.be.false
+    it "spots incorrect use of double_arrow intro", ->
+      proof = '''
+        1. |
+        2. | | A                
+        3. | |---
+        4. | | false             
+        5. | C  
+        6. | A ↔ false        // ↔ intro 2-4, 2-4
+      '''
+      result = verify._line 6, proof
+      console.log result.message if not result.verified
+      expect(result.verified).to.be.false
     
   describe "proofs with the rules for identity", ->
     it "confirms correct use of =intro", ->
@@ -542,8 +676,76 @@ describe "the verify module:", ->
       result = verify._line 3, proof
       console.log(result.message)
       expect(result.verified).to.be.false
+    it "confirms correct use of =elim (reverse lines)", ->
+      proof = '''
+        1. F(b)
+        2. a=b              
+        3. F(a)         // = elim 1,2
+      '''
+      result = verify._line 3, proof
+      expect(result.verified).to.be.true
+    it "confirms correct use of =elim (complex example)", ->
+      proof = '''
+        1  all x (x=b arrow (F(x) and G(x)))
+        2  A
+        3  a=b              
+        4  B
+        5  all x (x=a arrow (F(x) and G(x)))         // = elim 1,3
+      '''
+      result = verify._line 5, proof
+      expect(result.verified).to.be.true
+    it "=elim allows not all substitutions to be made", ->
+      # test id AF96B036-57DA-11E5-8511-720262EA09BE
+      proof = '''
+        1  F(a) and G(a)
+        2  a=b              
+        3  F(a) and G(b)         // = elim 1,2
+      '''
+      result = verify._line 3, proof
+      expect(result.verified).to.be.true
+    it "=elim allows no substitutions to be made", ->
+      proof = '''
+        1  F(a) 
+        2  a=b              
+        3  F(a)          // = elim 1,2
+      '''
+      result = verify._line 3, proof
+      expect(result.verified).to.be.true
+    it "=elim allows not all substitutions to be made proving a=b therefore b=a", ->
+      # test id 69A3AAF2-57DF-11E5-A384-6BFFF2E18425
+      proof = '''
+        1  a=b
+        2  a=a              // = elim              
+        3  b=a              // = elim 1,2
+      '''
+      result = verify._line 3, proof
+      expect(result.verified).to.be.true
+    it "=elim allows not all substitutions to be made proving a=b therefore b=a (variation)", ->
+      proof = '''
+        1  a=b
+        2  b=b              // = elim              
+        3  b=a              // = elim 1,2
+      '''
+      result = verify._line 3, proof
+      expect(result.verified).to.be.true
+    it "=elim allows not all substitutions to be made (multiple clauses)", ->
+      # test id 2D900196-57DF-11E5-9F54-6BFFF2E18425
+      proof = '''
+        1  F(a) and a=a and (G(a) and H(a))
+        2  a=b              
+        3  F(b) and a=b and (G(a) and H(b))         // = elim 1,2
+      '''
+      result = verify._line 3, proof
+      expect(result.verified).to.be.true
+    it "=elim weird case (to check `rule` doesn't hang)", ->
+      proof = '''
+        1  F(a) and G(a)
+        2  a=a              
+        3  F(a) and G(a)         // = elim 1,2
+      '''
+      result = verify._line 3, proof
+      expect(result.verified).to.be.true
     
-    it "we need some more tests"
     
   describe "proofs with the rules for universal", ->
     it "verifies universal elim", ->
@@ -553,6 +755,13 @@ describe "the verify module:", ->
       '''
       result = verify._line 2, proof
       expect(result.verified).to.be.true
+    it "spots a mistake with universal elim (predicate)", ->
+      proof = '''
+        1. all x F(x)     // premise
+        2. G(a)           // universal elim 1
+      '''
+      result = verify._line 2, proof
+      expect(result.verified).to.be.false
     it "verifies universal intro", ->
       proof = '''
         1. A
@@ -581,8 +790,16 @@ describe "the verify module:", ->
       '''
       result = verify._line 4, proof
       expect(result.verified).to.be.false
-      
-    it "we need some more tests"
+    it "allows you use universal intro when you make only partial replacements", ->
+      # test id A7774B7C-57DA-11E5-B920-720262EA09BE
+      proof = '''
+        1. 
+        2.    [a]                   // assumption
+        3.    F(a) and G(a)          
+        4. all x (F(x) and G(a))    // universal intro 2-3
+      '''
+      result = verify._line 4, proof
+      expect(result.verified).to.be.true
 
   describe "verifying premises and assumptions", ->
     # Here we just need to test that the rule is implemented;

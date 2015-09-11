@@ -33,6 +33,6 @@ describe "add_sentences", ->
       expect( BLOCK.getLine(2).sentence.type ).to.equal('universal_quantifier')
     it "adds error messages", ->
       addSentences.to BLOCK
-      lineWithError = BLOCK.getLine(4)
+      lineWithError = BLOCK.getLine(5)
       expect( lineWithError.sentenceErrors.slice(0,5) ).to.equal('Parse')  
       

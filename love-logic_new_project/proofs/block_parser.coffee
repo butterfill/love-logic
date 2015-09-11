@@ -383,8 +383,8 @@ class Block
     result = walker.visit(@)
     return result if result?
     for item in @content
-      if item.type is 'line'
-        result = walker.visit(item)
+      result = walker.visit(item)
+      return result if result?
       if item.type is 'block'
         result = item.walk(walker)
       # Stop walking as soon as `walker.walk` gives us a result.
@@ -397,7 +397,7 @@ class Block
     walker = {
       onLine : 0
       visit : (item) ->
-        return undefined if item.type isnt 'line'
+        return undefined if not (item.type in ['line','divider','blank_line'])
         @onLine += 1
         return item if @onLine is lineNumber
         return undefined

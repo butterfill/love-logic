@@ -24,7 +24,7 @@
 "="                          { return 'identity'; }
 [aA][nN][dD]|"&"|"∧"|"•"            { return 'and'; }
 [aA][rR][rR][oO][wW]|"->"|"⇒"|"→"|"⊃"    { return 'arrow'; }
-"↔"|"≡"|"⇔"                { return 'double_arrow'; }
+"↔"|"≡"|"⇔"|"double_arrow" { return 'double_arrow'; }
 [oO][rR]|"∨"|"+"|"ǀǀ"        { return 'or'; }
 [nN][oO][tT]|"¬"|"˜"|"!"     { return 'not'; }
 [nN][oO][rR]|"↓"             { return 'nor'; }

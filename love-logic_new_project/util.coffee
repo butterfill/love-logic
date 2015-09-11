@@ -97,7 +97,11 @@ exports.walk = walk
 # Note that `fn` can receive primitive values, and also null (when visiting 
 # substitutions like `ψ[α->null]`).
 walkCompare = (firstExp, otherExp, comparator) ->
-  if comparator 
+
+  if comparator
+    if comparator._trace
+      try 
+        console.log "walkCompare: #{expressionToString firstExp} with #{expressionToString otherExp}"
     result = comparator(firstExp, otherExp)
     return result unless result is undefined
   
@@ -132,8 +136,6 @@ exports.walkCompare = walkCompare
 
 areIdenticalExpressions = walkCompare
 exports.areIdenticalExpressions = areIdenticalExpressions
-
-
 
 
 # This modifies `expression` in place.
@@ -199,105 +201,103 @@ exports.cloneExpression = cloneExpression
 
 # Create a string representation of a fol expression.
 # It uses the symbols that were specified when the expression was parsed (where these exist).
-_cleanUp = 
-  remove_extra_whitespace :
-    from : /\s+/g
-    to : ' '
-  remove_quantifier_space :
-    from : /([∀∃])\s+/g
-    to : "$1"
-  remove_outer_brackets :
-    #   (^\s*\()    --- start of line, any amount of space, left bracket
-    #   ([\s\S]*)   --- anything at all
-    #   (\)\s*$)    --- right bracket, any amount of space, end of line
-    from : /(^\s*\()([\s\S]*)(\)\s*$)/
-    to : '$2'
-    
 expressionToString = (expression) ->
-  if expression is null
-    return 'null'   #for expressions like `ψ[α->null]`
+  
+  # Help with debug 
+  for test in [_.isBoolean, _.isNumber, _.isString, _.isArray]
+    if test(expression)
+      return "#{expression}"
+  
+  
+  walker = (e) ->
+    return 'null' if e is null 
+
+    for test in [_.isBoolean, _.isNumber, _.isString]
+      if test(e)
+        return "#{e}"
+
+    if _.isArray(e)
+      return e.join(',')
+
+    if not e?.type?
+      return '[undefined]' if e is undefined
     
-  # Does the expression have a box?  (This only makes sense at the root.)
-  prefix = ''
-  if expression.box
-    prefix = "[#{termToString(expression.box.term)}]"
-  result = "#{prefix}#{_expressionToString(expression)}"
+    if e?.type in ['variable','name','term_metavariable']
+      return e.name
+    
+    if e.type is 'box'
+      return "[#{e.term}]"
+    
+    if e.type is 'termlist'
+      return (x.name for x in e)
+    
+    if e.type is 'substitution'
+      return "#{e.from}->#{e.to}"
+    
+    if e.box?
+      aBox = e.box
+    
+    if e.substitutions
+      theSubs = "[#{e.substitutions}]"
+    
+    if e.termlist? 
+      symbol = e.name or e.symbol or e.type
+      middle = "#{symbol}(#{e.termlist.join(',')})"
+  
+    if e.type is 'identity'
+      symbol = (e.symbol or '=')
+      [lhs,rhs] = e.termlist
+      middle = "#{lhs} #{symbol} #{rhs}"
+    
+    if e.type in ['sentence_letter','expression_variable']
+      middle = e.letter
+
+    if e.type is 'value'
+      middle = "#{((e.symbol if e.symbol?) or ('⊥' if e.value is "false") or e.value)}"
+    
+    bracketsNeeded = e.right?
+    left_bracket = " "
+    right_bracket = " "
+    if bracketsNeeded 
+      left_bracket = " (" 
+      right_bracket = " )" 
+    
+    if e.boundVariable?
+      symbol = (e.symbol or e.type)
+      symbol = '∀' if symbol is 'universal_quantifier'
+      symbol = '∃' if symbol is 'existential_quantifier'
+      variableName = e.boundVariable
+      middle = "#{symbol} #{variableName} #{left_bracket}#{e.left}#{e.right or ''}#{right_bracket}"
+    
+    if e.left? and not e.boundVariable?
+      if not e.right?   # e.g. `not P`
+        middle = "#{left_bracket}#{e.symbol or e.type or ''} #{e.left or ''}#{right_bracket}"
+      else 
+        middle = "#{left_bracket}#{e.left or ''} #{e.symbol or e.type or ''} #{e.right or ''}#{right_bracket}"
+    return "#{aBox or ''}#{middle}#{theSubs or ''}"
+
+  eClone = cloneExpression expression
+  expressionStr = walkMutate eClone, walker
+  
+  _cleanUp = 
+    remove_extra_whitespace :
+      from : /\s+/g
+      to : ' '
+    remove_quantifier_space :
+      from : /([∀∃])\s+/g
+      to : "$1"
+    remove_outer_brackets :
+      #   (^\s*\()    --- start of line, any amount of space, left bracket
+      #   ([\s\S]*)   --- anything at all
+      #   (\)\s*$)    --- right bracket, any amount of space, end of line
+      from : /(^\s*\()([\s\S]*)(\)\s*$)/
+      to : '$2'
   for k, rplc of _cleanUp
-    result = result.replace(rplc.from, rplc.to)
-  return result.trim()
-_expressionToString = (expression) ->
-  if expression is undefined or expression is null
-    return "[undefined or null expression]"
-  brackets_needed = expression.right?
-  left_bracket = " "
-  right_bracket = " "
-  if brackets_needed 
-    left_bracket = " (" 
-    right_bracket = " )" 
-  
-  if expression.type in ['variable','name','term_metavariable']
-    return termToString(expression)
-  
-  if expression.type is 'box'
-    return "[#{termToString(expression.term)}]"
-  
-  if expression.type in ['sentence_letter','expression_variable']
-    return expression.letter
-    
-  if expression.type is 'not'
-    symbol = expression.symbol or expression.type
-    return "#{symbol}#{left_bracket}#{_expressionToString(expression.left)}#{right_bracket}"
-  
-  # Is `expression` a quantifier?
-  if expression.boundVariable?
-    symbol = (expression.symbol or expression.type)
-    symbol = '∀' if symbol is 'universal_quantifier'
-    symbol = '∃' if symbol is 'existential_quantifier'
-    variableName = expression.boundVariable.name
-    return "#{symbol} #{variableName} #{left_bracket}#{_expressionToString(expression.left)}#{right_bracket}"
-  
-  if expression.type is 'identity'
-    symbol = (expression.symbol or '=')
-    return termToString(expression.termlist[0])+" #{symbol} "+termToString(expression.termlist[1])
-
-  if expression.type is 'value'
-    return "#{((expression.symbol if expression.symbol?) or ('⊥' if expression.value is false) or expression.value)}"
-
-  if expression.termlist?
-    symbol = (expression.name or expression.symbol or expression.type)
-    termStringList = (termToString(t) for t in expression.termlist)
-    return "#{symbol}(#{termStringList.join(',')})"
-  
-  
-  result = [left_bracket]
-  if expression.left?
-    result.push(_expressionToString(expression.left))
-  if expression.type?
-    result.push(expression.symbol or expression.type or "!unknown expression!")
-  if expression.right?
-    result.push(_expressionToString(expression.right))
-  result.push(right_bracket)
-  return result.join(" ")
-
-termToString = (term) ->
-  return term.name
-exports.termToString = termToString
-
-# Now modify _expressionToString to add substitutions.
-_old = _expressionToString
-_expressionToString = (expression) ->
-  if expression is null
-    return 'null'   # for cases like 'ψ[α->null]'
-  string = _old(expression)
-  if expression.substitutions?
-    string = "#{string}[#{(substitutionToString(s) for s in expression.substitutions).join(', ')}]"
-  return string
+    expressionStr = expressionStr.replace(rplc.from, rplc.to)
+  return expressionStr.trim()
   
 exports.expressionToString = expressionToString
 
-substitutionToString = (s) ->
-  symbol = (s.symbol if s.symbol?) or "→"
-  return "#{_expressionToString(s.from)}#{symbol}#{_expressionToString(s.to)}"
 
 
 # Takes a set of matches (from metavariables to terms or expressions) and 

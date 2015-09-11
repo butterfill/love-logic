@@ -33,7 +33,7 @@ describe "add_justification", ->
 
     it "records error messages where justification can't be parsed", ->
       block = addJustification.to BLOCK
-      line = block.getLine(5)
+      line = block.getLine(6)
       #console.log util.inspect(line)
       expect(line.justificationErrors.slice(0,5)).to.equal('Parse')
 

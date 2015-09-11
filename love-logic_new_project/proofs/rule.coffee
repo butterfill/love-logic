@@ -327,16 +327,19 @@ class RequirementChecker
       return newMatches
     
     _checkOneLine : (aReq, aLine, priorMatches) ->
-      reqClone = aReq.clone().applyMatches(priorMatches).applySubstitutions()
+      reqClone = aReq.clone().applyMatches(priorMatches)
       
       # Special case: there was a subsutition like `[a->null]` which
       # results in `e` being null.  This indicates a requirement has 
       # not been met.
-      if reqClone is null
+      testVerbotenName = reqClone.applySubstitutions()
+      if testVerbotenName is null
         return false
-      
-      delete reqClone.substitutions
+
+      # Note: We must NOT apply matches before doing `.findMatches`.
+      # (Because `.findMatches` needs to selectively apply substitutions.)
       newMatches = aLine.sentence.findMatches reqClone, priorMatches
+        
       # console.log "_checkOneLine sentence = #{aLine.sentence.toString()}"
       # console.log "_checkOneLine aReq = #{aReq.toString()}"
       # console.log "_checkOneLine reqClone = #{reqClone.toString()}"

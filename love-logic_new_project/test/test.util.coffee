@@ -68,6 +68,11 @@ describe 'util', ->
       clone = util.cloneExpression expression
       expect(expression.symbol).to.equal('and')
       expect(clone.symbol?).to.be.false
+    it "produces clones with substitutions intact", ->
+      expression = fol.parse("A[A->B]")
+      clone = util.cloneExpression expression
+      expect(expression.substitutions.length).to.equal(1)
+      expect(clone.substitutions.length).to.equal(1)
       
   describe 'areIdenticalExpressions', ->
     it "says that true and false (the values, not the awFOL expressions) are not identical", ->
@@ -173,12 +178,16 @@ describe 'util', ->
         expression1 = fol.parse 'not (not not A & B)'
         string = util.expressionToString expression1
         expression2 = fol.parse string
-        expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
+        test = util.areIdenticalExpressions(expression1, expression2)
+        console.log string unless test
+        expect(test).to.be.true
       it "sentences with predicates", ->
         expression1 = fol.parse 'F(x) and R(a,y)'
         string = util.expressionToString expression1
         expression2 = fol.parse string
-        expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
+        test = util.areIdenticalExpressions(expression1, expression2)
+        console.log string unless test
+        expect(test).to.be.true
       it "sentences with identity", ->
         expression1 = fol.parse 'not x=y or (a=b and x=a)'
         string = util.expressionToString expression1

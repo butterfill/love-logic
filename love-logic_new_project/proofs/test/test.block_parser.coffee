@@ -201,6 +201,18 @@ describe "block_parser", ->
         #console.log block.toString()
         line = block.getLine(3)
         expect(line.content).to.equal(INPUT_LIST[2])
+      it "will go to a blank line", ->
+        proofText = '''
+          1.  A
+          2.  ---
+          3.  B
+          4.
+          5.  C
+        '''
+        block = bp.parse proofText
+        line = block.getLine(2)
+        console.log line.content
+        expect(line.type).to.equal('divider')
 
     describe ".findAbove", ->
       it "finds things in earlier lines of the proof", ->
@@ -384,11 +396,8 @@ describe "block_parser", ->
     
     it "identifies dividers as dividers", ->
       block_div    = bp.parse "1 A\n 2.1 A\n---\n 2.2 A\n\n 3.1 A\n 3.2 A\n  3.2.1 A\n4 A"
-      block_no_div = bp.parse "1 A\n 2.1 A     \n 2.2 A\n\n 3.1 A\n 3.2 A\n  3.2.1 A\n4 A"
       line3_div = block_div.getLine(3)
-      line3_nodiv = block_no_div.getLine(3)
-      expect(line3_div.content).to.equal(line3_nodiv.content)
-      expect(line3_div.prev.type).to.equal('divider')
+      expect(line3_div.type).to.equal('divider')
     
     it "parses a proof with numbers first and indentation", ->
       proofText = '''

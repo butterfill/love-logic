@@ -53,6 +53,13 @@ _decorate = (expression) ->
       result =  substitute.applySubstitutions(e)
       _decorate(result)
       return result
+    e.containsSubstitutions = () ->
+      _subsFound = false
+      subFinder = (expression) ->
+        _subsFound = true if expression?.substitutions?
+        return undefined
+      e.walk subFinder
+      return _subsFound
     
     e.getNames = () ->
       _names = []

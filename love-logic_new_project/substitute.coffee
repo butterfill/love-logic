@@ -218,11 +218,34 @@ exports.doSubRecursive = doSubRecursive
 #
 # Note: this function only attempts to match `expression` itself 
 # (it does not look for matches with components of `expression`).
+#
+# Note: the function handles substitutions (as in `φ[α->β]`) as optional; i.e.
+# if there is a way of fully or partially applying the substitution that will
+# generate a mtach, a match is generated.
 findMatches = (expression, pattern, _matches) ->
   _matches ?= {}
   
+  # Note: returning anything other than undefined immediately ends the 
+  # topDown walk performed by `util.walkCompare` (to which `comparator` is sent)
   comparator = (expression, pattern) ->
     return undefined unless pattern?.type?
+    
+    if pattern.substitutions? 
+      # Abort comparison and switch to an alternative, branching method.
+      patternClone = util.cloneExpression pattern
+      # Note : we only take one of the substitutions so that there will be nested
+      # branching for multiple subsitutions.
+      # TODO: doesn't work!  Why not? 
+      theSub = patternClone.substitutions.pop()
+      if patternClone.substitutions.length is 0
+        delete patternClone.substitutions
+      _matchesClone = _.clone _matches
+      result =  _findMatchesSubstitutions(expression, patternClone, _matchesClone, theSub)
+      _matches = result
+      if result isnt false
+        return true
+      else
+        return false
     
     # Check whether `pattern` is an expression_variable; and, if so, test for a match.
     if pattern.type in ['expression_variable', 'term_metavariable']
@@ -230,16 +253,21 @@ findMatches = (expression, pattern, _matches) ->
       targetVar = pattern.name if pattern.type is 'term_metavariable' # eg τ2
       targetValue = expression
       if targetVar of _matches
+        # Note that we have to compare these sub-expressions using this `comparator`
+        # because there may be sustitutions to partially match.
+        # return util.walkCompare(targetValue, _matches[targetVar], comparator)
         return util.areIdenticalExpressions(targetValue, _matches[targetVar])
       else
-        _matches[targetVar] =targetValue
+        if comparator._trace?
+          console.log "matched #{targetVar} to  #{util.expressionToString targetValue}"
+        _matches[targetVar] = targetValue
         if pattern.box?
           return false if not expression.box?
           return util.walkCompare(expression.box, pattern.box, comparator)
         return true
         
     return undefined
-  
+
   expressionMatchesPattern = util.walkCompare(expression, pattern, comparator)
   if expressionMatchesPattern
     # Protect the expressions matched by cloning them. 
@@ -249,21 +277,45 @@ findMatches = (expression, pattern, _matches) ->
   else
     return false
 
-
 exports.findMatches = findMatches
 
-_findMatchesArray = (expression, arrayOfPatterns, _matches, o) ->
-  if not (_.isArray(expression))
-    return false
-  arrayOfExpressions = expression
-  if expression.length isnt arrayOfPatterns.length
-    return false
-  for pattern, i in arrayOfPatterns
-    result = findMatches arrayOfExpressions[i], arrayOfPatterns[i], _matches, o
-    return false if result is false
-  return _matches
+# This concerns patterns with substitutions like `φ[a->β]`.  This is
+# tricky because there are many valid substitution instances --- any
+# subset of the occurrences of `a` may be replaced with `β`.
+# This matters for correctly verifying rules of proof (see test id 
+# A7774B7C-57DA-11E5-B920-720262EA09BE and test id AF96B036-57DA-11E5-8511-720262EA09BE.  
+_findMatchesSubstitutions = (expression, pattern, _matches, theSub) ->
+  
+  console.log "branching for sub #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to} from pattern = #{util.expressionToString pattern}"
+  
+  comparator = (expression, pattern) ->
+    # Make a match without relying on substitutions if we can.
+    # (This avoids using metavariables unnecessarily, which would prevent
+    # them from matching when they are really necessary.)
+    priorMatches = _.clone _matches
+    firstTry = findMatches(expression, pattern, priorMatches)
+    if firstTry isnt false
+      _matches = _.defaults _matches, firstTry
+      return true
+    
+    # Attempt to make a match relying of substitutions if we cannot.
+    priorMatches = _.clone _matches
+    cloneForPatternWithSubApplied = util.cloneExpression(pattern)
+    patternWithSubApplied = replace(cloneForPatternWithSubApplied, theSub)
+    console.log "testing with sub #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to} from pattern = #{util.expressionToString pattern}"
+    # console.log "\tpatternWithSubApplied = #{JSON.stringify patternWithSubApplied,null,4}"
+    secondTry = findMatches(expression, patternWithSubApplied, priorMatches)
+    if secondTry isnt false
+      _matches = _.defaults _matches, secondTry
+      return true
+    
+    return undefined # Keep comparing
 
-
+  expressionMatchesPattern = util.walkCompare(expression, pattern, comparator)
+  if expressionMatchesPattern
+    return _matches
+  else
+    return false
 
 
 
