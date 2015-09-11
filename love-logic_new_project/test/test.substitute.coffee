@@ -365,9 +365,20 @@ describe 'substitute', ->
       expression = fol.parse '((F(a) or F(d)) and (F(c) and F(a)))'
       matches = substitute.findMatches expression, pattern
       expect(matches).to.be.false
+    it "does finds matches from `F(a)[a->β] and F(a)[a->β]` to `F(a) and F(c)`", ->
+      pattern = fol.parse 'F(a)[a->β] and F(a)[a->β]'
+      expression = fol.parse 'F(a) and F(c)'
+      matches = substitute.findMatches expression, pattern
+      expect(matches).not.to.be.false
+    it "doesn't finds matches from `F(a)[a->β] and F(a)[a->β]` to `F(b) and F(c)`", ->
+      # The concern here is that `β` could be matched with `d` in one
+      # branch and with `c` in the other branch.  But this would be incorrect:
+      # `expression` is not a substitution instance of `pattern`.
+      pattern = fol.parse 'F(a)[a->β] and F(a)[a->β]'
+      expression = fol.parse 'F(b) and F(c)'
+      matches = substitute.findMatches expression, pattern
+      expect(matches).to.be.false
     it "finds matches requiring partially applying a substitution involving a sentence variable", ->
-      # As above, it's important to test different ways around to avoid accidental success 
-      # contingent based on the route an expression tree walker takes
       pattern = fol.parse '(A and B)[B->φ]'
       expression = fol.parse 'A and A'
       matches = substitute.findMatches expression, pattern

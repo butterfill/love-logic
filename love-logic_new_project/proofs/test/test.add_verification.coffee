@@ -738,6 +738,7 @@ describe "the verify module:", ->
       result = verify._line 3, proof
       expect(result.verified).to.be.true
     it "=elim weird case (to check `rule` doesn't hang)", ->
+      # test id 2518C33E-587C-11E5-B046-B15A631DAC50
       proof = '''
         1  F(a) and G(a)
         2  a=a              

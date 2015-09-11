@@ -231,38 +231,53 @@ findMatches = (expression, pattern, _matches) ->
     return undefined unless pattern?.type?
     
     if pattern.substitutions? 
-      # Abort comparison and switch to an alternative, branching method.
-      patternClone = util.cloneExpression pattern
-      # Attach theSub to every part of pattern (so that all possibilities are
-      # considered).
-      theSub = patternClone.substitutions.pop()
-      walker = (e) ->
-        return e if not e?.type?
-        # It is essential that all expressions which could have substitions are considered
-        # here otherwise you'll get an error.
-        return e if not (e.type in util.expressionTypes )
-        if e.substitutions and not (theSub in e.substitutions)
-          e.substitutions.push(theSub)
-        else
-          e.substitutions = [theSub]
-        return e
-      pattern = util.walkMutate(patternClone, walker)
-    
-      # Note : we only take one of the substitutions so that there will be nested
+      # We will abort this comparison and switch to an alternative, branching method.
+      
+      # First, attach the first substitution to every part of pattern
+      # (so that all possible ways of applying and not applying the substitution
+      # are considered).
+      # Note: we only take one of the substitutions so that there will be nested
       # branching for multiple subsitutions.
-      # Note: theSub gets popped again because we re-added it in the above walk.
-      theSubTwo = patternClone.substitutions.pop()
-      if theSub is undefined or theSubTwo isnt theSub
-        throw "Coding error: probably your walker doesn't attach the sub to expressions of type #{pattern.type}"
-      if patternClone.substitutions.length is 0
-        delete patternClone.substitutions
-      _matchesClone = _.clone _matches
-      result =  _findMatchesSubstitutions(expression, patternClone, _matchesClone, theSub)
-      _matches = result
-      if result isnt false
-        return true
+      patternClone = util.cloneExpression pattern
+      theSub = patternClone.substitutions.pop()
+      # Tricky case: subs like `α->α`. These can arise in proofs
+      # (see test 2518C33E-587C-11E5-B046-B15A631DAC50) and as a consequence of
+      # multiple substitutions.  Save branching by ignoring them.
+      while patternClone.substitutions.length > 0 and util.areIdenticalExpressions(theSub.from, theSub.to)
+        theSub = patternClone.substitutions.pop()
+      if util.areIdenticalExpressions(theSub.from, theSub.to) 
+        # We will fall through and continue as if there was no
+        # substitution at all.
+        # TODO: this doesn't work if we first clone pattern to avoid mutating it.
+        # Why not?  (Test 2518C33E-587C-11E5-B046-B15A631DAC50 fails).
+        delete pattern.substitutions
       else
-        return false
+        walker = (e) ->
+          return e if not e?.type?
+          # It is essential that all expressions which could have substitions are considered
+          # here (ie. are in `util.expressionTypes`) otherwise you'll get an error.
+          return e if not (e.type in util.expressionTypes )
+          if e.substitutions and not util.expressionHasSub(e, theSub)
+            e.substitutions.push(theSub)
+            e.substitutions = _.uniq e.substitutions
+          else
+            e.substitutions = [theSub]
+          return e
+        pattern = util.walkMutate(patternClone, walker)
+      
+        # Now do the branch for `theSub` using `_findMatchesSubstitutions`.
+        # Note: theSub gets popped again because we re-added it in the above walk.
+        theSubTwo = patternClone.substitutions.pop()
+        if theSub is undefined or theSubTwo isnt theSub
+          throw "Coding error: probably `walker` doesn't attach the sub to expressions of type #{pattern.type}."
+
+        if patternClone.substitutions.length is 0
+          delete patternClone.substitutions
+        _matches = _findMatchesSubstitutions(expression, patternClone, _matches, theSub)
+        if _matches isnt false
+          return true
+        else
+          return false
     
     # Check whether `pattern` is an expression_variable; and, if so, test for a match.
     if pattern.type in ['expression_variable', 'term_metavariable']
@@ -272,16 +287,16 @@ findMatches = (expression, pattern, _matches) ->
       if targetVar of _matches
         # Note that we have to compare these sub-expressions using this `comparator`
         # because there may be sustitutions to partially match.
-        # return util.walkCompare(targetValue, _matches[targetVar], comparator)
-        return util.areIdenticalExpressions(targetValue, _matches[targetVar])
+        # E.g. `φ` has matched `A[A->B]`
+        return util.walkCompare(targetValue, _matches[targetVar], comparator)
+        # return util.areIdenticalExpressions(targetValue, _matches[targetVar])
       else
-        if comparator._trace?
-          console.log "matched #{targetVar} to  #{util.expressionToString targetValue}"
+        _matches = _.clone _matches
         _matches[targetVar] = targetValue
         if pattern.box?
           return false if not expression.box?
           return util.walkCompare(expression.box, pattern.box, comparator)
-        return true
+        return _matches
         
     return undefined
 
@@ -307,35 +322,46 @@ exports.findMatches = findMatches
 # to all subexpressions of pattern so that different combinations are considered.
 _findMatchesSubstitutions = (expression, pattern, _matches, theSub) ->
   
-  # console.log "branching for sub #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to} from pattern = #{util.expressionToString pattern}"
+  console.log "branching for sub #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to} from pattern = #{util.expressionToString pattern}"
   
   comparator = (expression, pattern) ->
     # Make a match without relying on substitutions if we can.
     # (This avoids using metavariables unnecessarily, which would prevent
     # them from matching when they are really necessary.)
-    priorMatches = _.clone _matches
     # console.log "testing without sub #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to} from pattern = #{util.expressionToString pattern}"
-    firstTry = findMatches(expression, pattern, priorMatches)
+    firstTry = findMatches(expression, pattern, _matches)
     if firstTry isnt false
-      _matches = _.defaults _matches, firstTry
-      return true
+      _matches = firstTry
+      return firstTry
     
     # Attempt to make a match relying of substitutions if we cannot.
-    priorMatches = _.clone _matches
     cloneForPatternWithSubApplied = util.cloneExpression(pattern)
     patternWithSubApplied = replace(cloneForPatternWithSubApplied, theSub)
     # console.log "testing with sub #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to} from pattern = #{util.expressionToString pattern}"
     # console.log "\tpatternWithSubApplied = #{JSON.stringify patternWithSubApplied,null,4}"
-    secondTry = findMatches(expression, patternWithSubApplied, priorMatches)
+
+    # Save further branching for `theSub` by removing `theSub` from the 
+    # substitutions of components.
+    walker = (e) ->
+      return e if not e?.type?
+      return e if not (e.type in util.expressionTypes )
+      if e.substitutions
+        _.pull e.substitutions, theSub
+      return e
+    patternWithSubApplied = util.walkMutate(patternWithSubApplied, walker)
+    
+    secondTry = findMatches(expression, patternWithSubApplied, _matches)
     if secondTry isnt false
-      _matches = _.defaults _matches, secondTry
-      return true
+      _matches =  secondTry
+      return secondTry
     
     return undefined # Keep comparing
 
   expressionMatchesPattern = util.walkCompare(expression, pattern, comparator)
   if expressionMatchesPattern
-    return _matches
+    # We can get true when there are no metavariables involved (so no matches).
+    return {} if expressionMatchesPattern is true
+    return expressionMatchesPattern
   else
     return false
 

@@ -479,3 +479,13 @@ expressionTypes = [
   'sentence_letter'
 ]
 exports.expressionTypes = expressionTypes
+
+
+# Return true if sub is in expression.substitutions
+expressionHasSub = (expression, sub) ->
+  return false unless expression?.substitutions? 
+  for candidateSub in expression.substitutions
+    if areIdenticalExpressions(candidateSub.from, sub.from) and areIdenticalExpressions(candidateSub.to, sub.to) 
+      return true
+  return false
+exports.expressionHasSub = expressionHasSub

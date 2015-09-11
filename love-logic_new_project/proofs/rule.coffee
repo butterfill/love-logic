@@ -318,12 +318,7 @@ class RequirementChecker
         moreNewMatches = @_checkOneLine @theRequirement.endReq, candidate.getLastLine(), newMatches
         return moreNewMatches
       # @theRequirement just concerns a line, not a subproof.
-      # TODO : I'm really unhappy because I don't know why `@saveMatches()` is needed 
-      # here.  Failure to do it results in weird substutitions (φ : null).  I think
-      # it's a bug in the `Pathfinder`.
-      @saveMatches() 
       newMatches = @_checkOneLine(@theRequirement, candidate, @matches)
-      @restoreMatches()
       return newMatches
     
     _checkOneLine : (aReq, aLine, priorMatches) ->
@@ -336,8 +331,9 @@ class RequirementChecker
       if testVerbotenName is null
         return false
 
-      # Note: We must NOT apply matches before doing `.findMatches`.
-      # (Because `.findMatches` needs to selectively apply substitutions.)
+      # Note: We must NOT apply substitutions before doing `.findMatches`.
+      # (Because `.findMatches` needs to selectively apply substitutions,
+      # whereas `.applySubstitutions` replaces all matches indiscriminately.)
       newMatches = aLine.sentence.findMatches reqClone, priorMatches
         
       # console.log "_checkOneLine sentence = #{aLine.sentence.toString()}"
