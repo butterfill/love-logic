@@ -376,6 +376,52 @@ describe 'substitute', ->
       expect(matches).not.to.be.false
       expect(matches).to.deep.equal(expectedMatches)
 
+  describe 'using findMatches with nested substitutions', ->
+    it "finds matches where nested substitutions are required", ->
+      pattern = fol.parse '(F(c)[c->α] and F(d))[d->β]'
+      expression = fol.parse 'F(a) and F(b)'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        α : NAME_A
+        β : NAME_B
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "finds matches where nested, partial substitutions are required", ->
+      pattern = fol.parse '((F(c) and F(d) and F(c))[c->α] and F(d))[d->β]'
+      expression = fol.parse '(F(c) and F(d) and F(a) and F(b))'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        α : NAME_A
+        β : NAME_B
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "finds matches where nested, partial substitutions are required (variant1)", ->
+      pattern = fol.parse '((F(c) and F(d) and F(c))[c->α] and F(d))[d->β]'
+      expression = fol.parse '((F(a) and F(d) and F(c)) and F(b))'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        α : NAME_A
+        β : NAME_B
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "finds matches where nested, partial substitutions are required (variant2)", ->
+      pattern = fol.parse '((F(c) and F(d) and F(c))[c->α] and F(d))[d->β]'
+      expression = fol.parse '(F(c) and F(b) and F(a) and F(d))'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        α : NAME_A
+        β : NAME_B
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
+    it "finds matches where nested, partial substitutions are required (variant2b)", ->
+      pattern = fol.parse '((F(c) and F(d) and F(c) and F(d))[c->α] and A)[d->β]'
+      expression = fol.parse '((F(c) and F(b) and F(a) and F(d)) and A)'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches =
+        α : NAME_A
+        β : NAME_B
+      expect(matches).not.to.be.false
+      expect(matches).to.deep.equal(expectedMatches)
 
   describe 'using findMatches with *multiple* substitutions', ->
     it "finds matches where multiple substitutions are required", ->
@@ -396,6 +442,11 @@ describe 'substitute', ->
         β : NAME_B
       expect(matches).not.to.be.false
       expect(matches).to.deep.equal(expectedMatches)
+    it "doesn't find matches with multiple, partial substitutions where one metavariable would have to have different values in subexpressions", ->
+      pattern = fol.parse '(F(c) and F(d) and F(c) and F(d))[c->α,d->β]'
+      expression = fol.parse '(F(b) and F(d) and F(a) and F(b))'
+      matches = substitute.findMatches expression, pattern
+      expect(matches).to.be.false
     it "finds matches where multiple, partial substitutions are required (variant1)", ->
       pattern = fol.parse '(F(c) and F(d) and F(c) and F(d))[c->α,d->β]'
       expression = fol.parse '(F(a) and F(d) and F(c) and F(b))'
@@ -405,6 +456,11 @@ describe 'substitute', ->
         β : NAME_B
       expect(matches).not.to.be.false
       expect(matches).to.deep.equal(expectedMatches)
+    it "doesn't find matches with multiple, partial substitutions where one metavariable would have to have different values in subexpressions (variant1)", ->
+      pattern = fol.parse '(F(c) and F(d) and F(c) and F(d))[c->α,d->β]'
+      expression = fol.parse '(F(a) and F(a) and F(c) and F(b))'
+      matches = substitute.findMatches expression, pattern
+      expect(matches).to.be.false
     it "finds matches where multiple, partial substitutions are required (variant2)", ->
       pattern = fol.parse '(F(c) and F(d) and F(c) and F(d))[c->α,d->β]'
       expression = fol.parse '(F(c) and F(b) and F(a) and F(d))'
@@ -414,6 +470,11 @@ describe 'substitute', ->
         β : NAME_B
       expect(matches).not.to.be.false
       expect(matches).to.deep.equal(expectedMatches)
+    it "doesn't find matches with multiple, partial substitutions where one metavariable would have to have different values in subexpressions (variant2)", ->
+      pattern = fol.parse '(F(c) and F(d) and F(c) and F(d))[c->α,d->β]'
+      expression = fol.parse '(F(c) and F(b) and F(a) and F(a))'
+      matches = substitute.findMatches expression, pattern
+      expect(matches).to.be.false
 
 
   describe 'replace (replaces one expression or term with another)', ->    

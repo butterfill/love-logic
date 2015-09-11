@@ -461,4 +461,21 @@ listMetaVariableNames = (expression) ->
 exports.listMetaVariableNames = listMetaVariableNames
     
     
-
+# A list of everything that counts as an expression in awFOL.
+expressionTypes = [
+  'existential_quantifier'
+  'universal_quantifier'
+  'and'
+  'or'
+  'nand'
+  'nor'
+  'arrow'
+  'double_arrow'
+  'not'
+  'value'
+  'predicate'
+  'identity'
+  'expression_variable'
+  'sentence_letter'
+]
+exports.expressionTypes = expressionTypes

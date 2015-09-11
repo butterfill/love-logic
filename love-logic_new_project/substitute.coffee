@@ -233,10 +233,27 @@ findMatches = (expression, pattern, _matches) ->
     if pattern.substitutions? 
       # Abort comparison and switch to an alternative, branching method.
       patternClone = util.cloneExpression pattern
+      # Attach theSub to every part of pattern (so that all possibilities are
+      # considered).
+      theSub = patternClone.substitutions.pop()
+      walker = (e) ->
+        return e if not e?.type?
+        # It is essential that all expressions which could have substitions are considered
+        # here otherwise you'll get an error.
+        return e if not (e.type in util.expressionTypes )
+        if e.substitutions and not (theSub in e.substitutions)
+          e.substitutions.push(theSub)
+        else
+          e.substitutions = [theSub]
+        return e
+      pattern = util.walkMutate(patternClone, walker)
+    
       # Note : we only take one of the substitutions so that there will be nested
       # branching for multiple subsitutions.
-      # TODO: doesn't work!  Why not? 
-      theSub = patternClone.substitutions.pop()
+      # Note: theSub gets popped again because we re-added it in the above walk.
+      theSubTwo = patternClone.substitutions.pop()
+      if theSub is undefined or theSubTwo isnt theSub
+        throw "Coding error: probably your walker doesn't attach the sub to expressions of type #{pattern.type}"
       if patternClone.substitutions.length is 0
         delete patternClone.substitutions
       _matchesClone = _.clone _matches
@@ -284,15 +301,20 @@ exports.findMatches = findMatches
 # subset of the occurrences of `a` may be replaced with `β`.
 # This matters for correctly verifying rules of proof (see test id 
 # A7774B7C-57DA-11E5-B920-720262EA09BE and test id AF96B036-57DA-11E5-8511-720262EA09BE.  
+#
+# Note that this function doesn't consider very much: only whether there's a match
+# with or without applying `theSub`.  This is because `findMatches` attaches `theSub`
+# to all subexpressions of pattern so that different combinations are considered.
 _findMatchesSubstitutions = (expression, pattern, _matches, theSub) ->
   
-  console.log "branching for sub #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to} from pattern = #{util.expressionToString pattern}"
+  # console.log "branching for sub #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to} from pattern = #{util.expressionToString pattern}"
   
   comparator = (expression, pattern) ->
     # Make a match without relying on substitutions if we can.
     # (This avoids using metavariables unnecessarily, which would prevent
     # them from matching when they are really necessary.)
     priorMatches = _.clone _matches
+    # console.log "testing without sub #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to} from pattern = #{util.expressionToString pattern}"
     firstTry = findMatches(expression, pattern, priorMatches)
     if firstTry isnt false
       _matches = _.defaults _matches, firstTry
@@ -302,7 +324,7 @@ _findMatchesSubstitutions = (expression, pattern, _matches, theSub) ->
     priorMatches = _.clone _matches
     cloneForPatternWithSubApplied = util.cloneExpression(pattern)
     patternWithSubApplied = replace(cloneForPatternWithSubApplied, theSub)
-    console.log "testing with sub #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to} from pattern = #{util.expressionToString pattern}"
+    # console.log "testing with sub #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to} from pattern = #{util.expressionToString pattern}"
     # console.log "\tpatternWithSubApplied = #{JSON.stringify patternWithSubApplied,null,4}"
     secondTry = findMatches(expression, patternWithSubApplied, priorMatches)
     if secondTry isnt false
