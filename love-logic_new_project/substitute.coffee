@@ -221,7 +221,14 @@ exports.doSubRecursive = doSubRecursive
 #
 # Note: the function handles substitutions (as in `φ[α->β]`) as optional; i.e.
 # if there is a way of fully or partially applying the substitution that will
-# generate a mtach, a match is generated.
+# generate a mtach, a match is generated.  It is liberal about the order of substitutions.
+# It doesn't work when there are multiple substitutions with expression metavariables (like `φ`)
+# on the right hand side.
+#
+# TODO: Separate out the bit that involves dealing with substitutions.
+# The subs part should generate different substitution instances and then
+# send them here for matching.
+#
 findMatches = (expression, pattern, _matches) ->
   _matches ?= {}
   
@@ -233,32 +240,39 @@ findMatches = (expression, pattern, _matches) ->
     if pattern.substitutions? 
       # We will abort this comparison and switch to an alternative, branching method.
       
-      # First, attach the first substitution to every part of pattern
-      # (so that all possible ways of applying and not applying the substitution
-      # are considered).
       # Note: we only take one of the substitutions so that there will be nested
-      # branching for multiple subsitutions.
+      # branching for multiple subsitutions.  
       patternClone = util.cloneExpression pattern
-      theSub = patternClone.substitutions.pop()
+      # Note: `shift` not `pop` because we want to the last substitution first 
+      # (if there are further substitutions, we'll be back here to pick them up before
+      # we try applying the shifted substitution.)
+      theSub = patternClone.substitutions.shift()
+
       # Tricky case: subs like `α->α`. These can arise in proofs
       # (see test 2518C33E-587C-11E5-B046-B15A631DAC50) and as a consequence of
       # multiple substitutions.  Save branching by ignoring them.
       while patternClone.substitutions.length > 0 and util.areIdenticalExpressions(theSub.from, theSub.to)
-        theSub = patternClone.substitutions.pop()
+        theSub = patternClone.substitutions.shift()
       if util.areIdenticalExpressions(theSub.from, theSub.to) 
-        # We will fall through and continue as if there was no
-        # substitution at all.
-        # TODO: this doesn't work if we first clone pattern to avoid mutating it.
-        # Why not?  (Test 2518C33E-587C-11E5-B046-B15A631DAC50 fails).
+        # We have a sub like  `α->α`.
+        # We will continue as if there was no
+        # substitutions at all.
+        # TODO: this doesn't work if we first clone pattern to avoid 
+        # mutating it; why not?  (Test 2518C33E-587C-11E5-B046-B15A631DAC50 fails).
         delete pattern.substitutions
       else
+        # First, attach the first substitution to every part of pattern
+        # (so that all possible ways of applying and not applying the substitution
+        # are considered).
         walker = (e) ->
           return e if not e?.type?
+           # Do not attach substitutions to substitutions.
+          return e if walker._inSub 
           # It is essential that all expressions which could have substitions are considered
           # here (ie. are in `util.expressionTypes`) otherwise you'll get an error.
           return e if not (e.type in util.expressionTypes )
           if e.substitutions and not util.expressionHasSub(e, theSub)
-            e.substitutions.push(theSub)
+            e.substitutions.unshift(theSub)
             e.substitutions = _.uniq e.substitutions
           else
             e.substitutions = [theSub]
@@ -267,7 +281,7 @@ findMatches = (expression, pattern, _matches) ->
       
         # Now do the branch for `theSub` using `_findMatchesSubstitutions`.
         # Note: theSub gets popped again because we re-added it in the above walk.
-        theSubTwo = patternClone.substitutions.pop()
+        theSubTwo = patternClone.substitutions.shift()
         if theSub is undefined or theSubTwo isnt theSub
           throw "Coding error: probably `walker` doesn't attach the sub to expressions of type #{pattern.type}."
 
@@ -292,6 +306,7 @@ findMatches = (expression, pattern, _matches) ->
         # return util.areIdenticalExpressions(targetValue, _matches[targetVar])
       else
         _matches = _.clone _matches
+        # console.log "matched #{targetVar} : #{util.expressionToString targetValue}"
         _matches[targetVar] = targetValue
         if pattern.box?
           return false if not expression.box?
@@ -302,14 +317,23 @@ findMatches = (expression, pattern, _matches) ->
 
   expressionMatchesPattern = util.walkCompare(expression, pattern, comparator)
   if expressionMatchesPattern
-    # Protect the expressions matched by cloning them. 
-    for k,v of _matches
-      _matches[k] = util.cloneExpression v
     return _matches
   else
     return false
 
-exports.findMatches = findMatches
+
+# Wrapper just for debugging
+findMatchesWrapper = (expression, pattern, _matches) ->
+  _matches = findMatches(expression, pattern, _matches)
+
+  # Protect the expressions matched by cloning them. 
+  if _matches
+    for k,v of _matches
+      _matches[k] = util.cloneExpression v
+    return _matches
+  return _matches
+
+exports.findMatches = findMatchesWrapper
 
 # This concerns patterns with substitutions like `φ[a->β]`.  This is
 # tricky because there are many valid substitution instances --- any
@@ -320,9 +344,11 @@ exports.findMatches = findMatches
 # Note that this function doesn't consider very much: only whether there's a match
 # with or without applying `theSub`.  This is because `findMatches` attaches `theSub`
 # to all subexpressions of pattern so that different combinations are considered.
+#
+# TODO: it's unclear how `_matches` should be treated.  It shouldn't be modified.s
 _findMatchesSubstitutions = (expression, pattern, _matches, theSub) ->
   
-  console.log "branching for sub #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to} from pattern = #{util.expressionToString pattern}"
+  # console.log "branching for sub #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to} from pattern = #{util.expressionToString pattern}"
   
   comparator = (expression, pattern) ->
     # Make a match without relying on substitutions if we can.
@@ -331,12 +357,13 @@ _findMatchesSubstitutions = (expression, pattern, _matches, theSub) ->
     # console.log "testing without sub #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to} from pattern = #{util.expressionToString pattern}"
     firstTry = findMatches(expression, pattern, _matches)
     if firstTry isnt false
+      console.log "got a match (without theSub) for #{util.expressionToString pattern}"
+      console.log "matches = #{util.matchesToString firstTry}"
       _matches = firstTry
       return firstTry
     
     # Attempt to make a match relying of substitutions if we cannot.
     cloneForPatternWithSubApplied = util.cloneExpression(pattern)
-    patternWithSubApplied = replace(cloneForPatternWithSubApplied, theSub)
     # console.log "testing with sub #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to} from pattern = #{util.expressionToString pattern}"
     # console.log "\tpatternWithSubApplied = #{JSON.stringify patternWithSubApplied,null,4}"
 
@@ -346,12 +373,17 @@ _findMatchesSubstitutions = (expression, pattern, _matches, theSub) ->
       return e if not e?.type?
       return e if not (e.type in util.expressionTypes )
       if e.substitutions
-        _.pull e.substitutions, theSub
+        e.substitutions = (x for x in e.substitutions when not (util.areIdenticalExpressions(x.from,theSub.from) and util.areIdenticalExpressions(x.to,theSub.to) ))
+        if e.substitutions.length is 0
+          delete e.substitutions
       return e
-    patternWithSubApplied = util.walkMutate(patternWithSubApplied, walker)
+    cloneForPatternWithSubApplied = util.walkMutate(cloneForPatternWithSubApplied, walker)
+    patternWithSubApplied = replace(cloneForPatternWithSubApplied, theSub)
     
     secondTry = findMatches(expression, patternWithSubApplied, _matches)
     if secondTry isnt false
+      console.log "used #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to} on #{util.expressionToString pattern} to get match with #{util.expressionToString patternWithSubApplied}"
+      console.log "matches = #{util.matchesToString secondTry}"
       _matches =  secondTry
       return secondTry
     
@@ -365,6 +397,119 @@ _findMatchesSubstitutions = (expression, pattern, _matches, theSub) ->
   else
     return false
 
+
+doAfterApplyingSubstitutions = (expression, process) ->
+  
+  applyOneSubstitution = (e) ->
+    return undefined if not e?.substitutions?
+    
+    # Note: `pullSub` modifies `e`
+    theSub = pullSub e
+    eParent = e.parent
+    eParentAttr = e.parentAttr
+    if theSub?
+      e = replace(e, theSub, noClone:true)
+      console.log "\treplaced #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to}; got #{util.expressionToString e}"
+    eParent[eParentAttr] = e
+    topExpression = eParent
+    while top.parent?
+      topExpression = top.parent
+    return topExpression
+    
+  skipOneSubstitution = (e) ->
+    return undefined if not e?.substitutions?
+
+    # Note: `pullSub` modifies `e`
+    theSub = pullSub e
+    if not theSub? 
+      return e  # abort
+    
+    # Add subs to e's subexpressions.
+    # (so that all possible ways of applying and not applying the substitution
+    # will be considered).
+    walker = (e) ->
+      return e if not e?.type?
+       # Do not attach substitutions to substitutions.
+      return e if walker._inSub 
+      # It is essential that all expressions which could have substitions are considered
+      # here (ie. are in `util.expressionTypes`) otherwise you'll get an error.
+      # TODO: Here we assign substitutions to elements that awFOL doesn't allow to have substiutions.
+      return e if not (e.type in util.expressionTypes.concat('name','variable','term_metavariable') )
+      if e.substitutions and not util.expressionHasSub(e, theSub)
+        e.substitutions.unshift(theSub)
+      else
+        e.substitutions = [theSub]
+      return e
+    e = util.walkMutate(e, walker)
+
+    # Note: theSub gets shifted again because we re-added it in the above walk.
+    theSubTwo = e.substitutions.shift()
+    if theSub is undefined or theSubTwo isnt theSub
+      throw "Coding error: probably `walker` doesn't attach the sub to expressions of type #{pattern.type}."
+    if e.substitutions.length is 0
+      delete e.substitutions
+    
+    return e
+  
+  # This will mutate `e`.
+  pullSub = (e) ->
+    theSub = e.substitutions.shift()
+
+    # Tricky case: subs like `α->α`. These can arise in proofs
+    # (see test 2518C33E-587C-11E5-B046-B15A631DAC50), and as a consequence of
+    # multiple substitutions.  Save branching by ignoring them.
+    while e.substitutions.length > 0 and util.areIdenticalExpressions(theSub.from, theSub.to)
+      theSub = e.substitutions.shift()
+    if util.areIdenticalExpressions(theSub.from, theSub.to) 
+      # We have a sub like  `α->α`. We will just delete this.
+      delete e.substitutions
+      return undefined
+
+    if e.substitutions.length is 0
+      delete e.substitutions
+    
+    return theSub
+    
+  
+  e1 = util.cloneExpression expression
+
+  console.log "expression : #{util.expressionToString e1}"
+
+  # TODO: use util.walkMutateFindOne, not util.find
+  util.find e1, applyOneSubstitution
+  if e1 is undefined
+    # There were no substitutions in `expression` (strictly: in its clone `e1`).
+    console.log "e1 is undefined"
+    return process(expression)
+
+  e2 = util.cloneExpression expression
+  util.find e2, skipOneSubstitution
+  e1done = not util.expressionContainsSubstitutions( e1 )
+  e2done = not util.expressionContainsSubstitutions( e2 )
+  
+  console.log "\t e1 : #{util.expressionToString e1} done: #{e1done}"
+  # console.log "\t\t e1 : #{JSON.stringify e1,null,4}"
+  console.log "\t e2 : #{util.expressionToString e2} done: #{e2done}"
+  # console.log "\t\t e2 : #{JSON.stringify e2,null,4}"
+  
+  if e1done
+    console.log "process e1 : #{util.expressionToString e1}"
+    result = process( e1 )
+    return result if result 
+  e1isNOTe2 = not util.areIdenticalExpressions(e1, e2)
+  if e2done and e1isNOTe2
+    console.log "process e2 : #{util.expressionToString e1}"
+    result = process( e2 )
+    return result if result
+  if not e1done
+    result = doAfterApplyingSubstitutions(e1, process)
+    return result if result
+  if not e2done and e1isNOTe2
+    result = doAfterApplyingSubstitutions(e2, process)
+    return result if result
+  return undefined
+
+exports.doAfterApplyingSubstitutions = doAfterApplyingSubstitutions
 
 
 # Replaces occurrences of an `expression_variable` in `pattern` with the corresponding
@@ -407,18 +552,29 @@ exports.applyMatches = applyMatches
 #
 # Special feature for substitutions like `[a->null]`: if it actually finds a match
 # to replace, it will throw Error with `.messsage` "_internal: replace to null".
-replace =  (expression, whatToReplace) ->
+replace =  (expression, whatToReplace, o) ->
+  o ?= 
+    noClone : false
   toFind = whatToReplace.from
   toReplace = whatToReplace.to
   walker = (e) ->
     return e if e is null or _.isArray(e)
+
+    # Do not replace expressions or names in substitutions.
+    return e if walker._inSub
+
     if util.areIdenticalExpressions(e, toFind)
       if toReplace is null
         throw new Error "_internal: replace to null"
       return util.cloneExpression(toReplace)
     return e
-  e = util.cloneExpression(expression)
+
+  if o.noClone
+    e = expression
+  else
+    e = util.cloneExpression(expression) 
   return util.walkMutate(e, walker)
+
 exports.replace = replace
 
 

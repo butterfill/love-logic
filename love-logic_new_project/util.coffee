@@ -13,6 +13,9 @@ _ = require 'lodash'
 #
 # If you don't need to change `expression`, use `.walk` to save having to
 # return things.
+#
+# NB: This (and all the walking things) will throw if given `undefined`;
+# this is useful because getting `undefined` is almost certainly an error.
 walkMutate = (expression, fn, o) ->
   if _.isArray(expression)  #e.g. it's a termlist, or `substitutions`
     return (walkMutate(e,fn,o) for e in expression)
@@ -23,7 +26,8 @@ walkMutate = (expression, fn, o) ->
   if o?.topDown? and o.topDown
     result = fn(expression)
   
-  #console.log "walkMutate got #{expressionToString expression}"
+  if fn._trace
+    console.log "walkMutate got #{util.expressionToString expression}"
 
   # Special case: the expression contains a box.
   if expression.box?
@@ -99,9 +103,6 @@ exports.walk = walk
 walkCompare = (firstExp, otherExp, comparator) ->
 
   if comparator
-    if comparator._trace
-      try 
-        console.log "walkCompare: #{expressionToString firstExp} with #{expressionToString otherExp}"
     result = comparator(firstExp, otherExp)
     return result unless result is undefined
   
@@ -137,6 +138,72 @@ exports.walkCompare = walkCompare
 areIdenticalExpressions = walkCompare
 exports.areIdenticalExpressions = areIdenticalExpressions
 
+
+find = (expression, finder) ->
+  decision = finder(expression)
+  return decision unless decision is undefined
+  
+  return undefined if expression is null
+  
+  for test in [_.isBoolean, _.isNumber, _.isString]
+    if test(expression)
+      return undefined
+  
+  if _.isArray(expression)
+    for x in expression
+      decision = find(x, finder)
+      return decision unless decision is undefined
+    return undefined
+  
+  for attr in [ 'substitutions', 'from', 'to'       #for substitions
+                'box','term'                        #for boxes
+                'boundVariable'
+                'termlist'
+                'left', 'right'
+                # attributes with primitive values:
+                'type', 'name', 'letter', 'value'   
+              ]
+    if attr of expression
+      decision = find(expression[attr], finder)
+      return decision unless decision is undefined
+
+  return undefined
+exports.find = find  
+  
+# `mutateFinder` returns on object containing two things: `newExpression` 
+# which replaces the expression it recieves (unless this is undefined,
+# which means no change is made); and `aResult`, which will be returned 
+# wrapped in an object along with `mutatedExpression`.
+# For convenience, `mutateFinder` may return undefined (which means keep going
+# without doing anything).
+walkMutateFindOne = (expression, mutateFinder, o) ->
+  theResult = undefined
+  
+  wrappedFn = (e) ->
+    
+    newExpression = undefined
+
+    # We will only call `mutateFinder` until it has yielded a result.
+    if theResult is undefined
+      # Because `.walkMutate` sets some properties on its `fn` parameter,
+      # we want the function provided to walk to have these properties too.
+      for own k,v of wrappedFn
+        mutateFinder[k] = v
+      test = mutateFinder(e)
+      if test isnt undefined
+        {newExpression, aResult } = test
+        if aResult isnt undefined
+          theResult = aResult
+
+    if newExpression isnt undefined
+      return newExpression
+    else
+      return e
+  mutatedExpression = walkMutate(expression, wrappedFn, o)
+  return {theResult, mutatedExpression}
+exports.walkMutateFindOne = walkMutateFindOne
+
+  
 
 # This modifies `expression` in place.
 # If you create a function that adds attributes to expressions, 
@@ -223,7 +290,8 @@ expressionToString = (expression) ->
       return '[undefined]' if e is undefined
     
     if e?.type in ['variable','name','term_metavariable']
-      return e.name
+      return e.name unless e.substitutions
+      return "{#{e.name}[#{e.substitutions}]}"
     
     if e.type is 'box'
       return "[#{e.term}]"
@@ -481,7 +549,17 @@ expressionTypes = [
 exports.expressionTypes = expressionTypes
 
 
-# Return true if sub is in expression.substitutions
+# Return true if an expression contains substitutions.
+expressionContainsSubstitutions = (expression) ->
+  finder = (e) ->
+    return true if e?.substitutions?
+    return undefined
+  test = find expression, finder
+  return true if test is true
+  return false
+exports.expressionContainsSubstitutions = expressionContainsSubstitutions
+
+# Return true if sub is in expression.substitutions.
 expressionHasSub = (expression, sub) ->
   return false unless expression?.substitutions? 
   for candidateSub in expression.substitutions
@@ -489,3 +567,4 @@ expressionHasSub = (expression, sub) ->
       return true
   return false
 exports.expressionHasSub = expressionHasSub
+

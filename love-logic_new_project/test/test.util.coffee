@@ -465,6 +465,20 @@ describe 'util', ->
       # console.log "#{JSON.stringify result,null,4}"
       console.log util.expressionToString(result)
       expect(result.term.name).to.equal('c')
+    it "doesn't alter an expression when doing an id walk", ->
+      eStr = "[a1](F(a2)[a2->a3] and B1)[a3->a4,B1->B2]"
+      eStr = "A[B->C,A->B] and B[B->C,A->B]"
+      e = fol.parse eStr
+      util.delExtraneousProperties e
+      ePreWalk = util.cloneExpression e
+      expect(e).to.deep.equal(ePreWalk)  # Test the test.
+      mutate = (e) ->
+        return e
+      result = util.walkMutate e, mutate
+      console.log util.expressionToString(result)
+      util.delExtraneousProperties result
+      expect(result).to.deep.equal(ePreWalk)
+      
     
 
   describe "walk", ->
@@ -506,6 +520,112 @@ describe 'util', ->
         fn = (e) ->
           return util.expressionToString(e)
         util.walk e, fn
+      
+      it "tells you tells you when you are in a substitution (complex case)", ->
+        e = fol.parse "(A1[B->C[D->A],A->B] and B1[B->C,A->B])[A->B,B->C]"
+        _inSubLetters = []
+        _outSubLetters = []
+        walker = (e) ->
+          if e?.letter?
+            if walker._inSub
+              _inSubLetters.push(e.letter)
+            else 
+              _outSubLetters.push(e.letter)
+        util.walk e, walker
+        _inSubLetters = _.uniq(_inSubLetters).sort()
+        _outSubLetters = _.uniq(_outSubLetters).sort()
+        expect(_inSubLetters).to.deep.equal(['A','B','C','D'])
+        expect(_outSubLetters).to.deep.equal(['A1','B1'])
+        
+
+  describe ".find", ->
+    it "looks in the box for name a", ->
+      e = fol.parse  '[a] A'
+      aFinder = (e) ->
+        return true if e?.name? and e.name is 'a'
+        return undefined
+      result = util.find e, aFinder
+      expect(result).to.be.true
+    it "looks in identity statements for name a", ->
+      e = fol.parse  '[b] a=b'
+      aFinder = (e) ->
+        return true if e?.name? and e.name is 'a'
+        return undefined
+      result = util.find e, aFinder
+      expect(result).to.be.true
+    it "looks in nested statements for name a", ->
+      e = fol.parse  '[b] (A or B and (C arrow (not F(a) and B)))'
+      aFinder = (e) ->
+        return true if e?.name? and e.name is 'a'
+        return undefined
+      result = util.find e, aFinder
+      expect(result).to.be.true
+    it "looks in substitutions (lhs) for name a", ->
+      e = fol.parse  '[b] (A or B and (C arrow (not F(c) and B)))[a->b]'
+      aFinder = (e) ->
+        return true if e?.name? and e.name is 'a'
+        return undefined
+      result = util.find e, aFinder
+      expect(result).to.be.true
+    it "looks in substitutions (rhs) for name a", ->
+      e = fol.parse  '[b] (A or B and (C arrow (not F(c) and B)))[b->a]'
+      aFinder = (e) ->
+        return true if e?.name? and e.name is 'a'
+        return undefined
+      result = util.find e, aFinder
+      expect(result).to.be.true
+    it "looks in nested  substitutions (rhs) for name a", ->
+      e = fol.parse  '[b] (A or B and (C[b->a] arrow (not F(c) and B)))'
+      aFinder = (e) ->
+        return true if e?.name? and e.name is 'a'
+        return undefined
+      result = util.find e, aFinder
+      expect(result).to.be.true
+    it "returns `undefined` when  'a' when it isn't there", ->
+      e = fol.parse  '[b] (A or B and (C[b->c] arrow (not F(c) and B)))'
+      aFinder = (e) ->
+        return true if e?.name? and e.name is 'a'
+        return undefined
+      result = util.find e, aFinder
+      expect(result).to.equal(undefined)
+
+
+  describe ".walkMutateFindOne", ->
+    it "replaces one thing with another and gives you a result", ->
+      e = fol.parse "A and B"
+      util.delExtraneousProperties e
+      mutateFinder = (e) ->
+        return undefined unless e?.letter is 'A'
+        newExpression = fol.parse "C"
+        return { newExpression, aResult:'got one'}
+      {theResult, mutatedExpression} = util.walkMutateFindOne e, mutateFinder
+      expectedE = util.delExtraneousProperties( fol.parse("C and B") )
+      util.delExtraneousProperties mutatedExpression
+      expect(mutatedExpression).to.deep.equal(expectedE)
+      expect(theResult).to.equal('got one')
+    it "stops mutating when you tell it you have a result", ->
+      e = fol.parse "A and A"
+      util.delExtraneousProperties e
+      mutateFinder = (e) ->
+        return undefined unless e?.letter is 'A'
+        newExpression = fol.parse "C"
+        return { newExpression, aResult:'got one'}
+      {theResult, mutatedExpression} = util.walkMutateFindOne e, mutateFinder
+      expect(mutatedExpression.left.letter).to.equal('C')
+      expect(mutatedExpression.right.letter).to.equal('A')
+    it "doesn't stop mutating if you never tell it you have a result", ->
+      e = fol.parse "A and not A"
+      util.delExtraneousProperties e
+      mutateFinder = (e) ->
+        return undefined unless e?.letter is 'A'
+        newExpression = fol.parse "C"
+        return { newExpression, aResult:undefined }
+      {theResult, mutatedExpression} = util.walkMutateFindOne e, mutateFinder
+      expectedE = util.delExtraneousProperties( fol.parse("C and not C") )
+      util.delExtraneousProperties mutatedExpression
+      expect(mutatedExpression).to.deep.equal(expectedE)
+      expect(theResult).to.equal(undefined)
+
         
   describe ".listMetaVariableNames", ->
     it "lists expression_variables in an expression", ->
@@ -545,4 +665,29 @@ describe 'util', ->
       expect( 'φ' in result.inSub.right ).to.be.true
       expect( 'ψ' in result.inSub.right ).to.be.true
       expect(result.inSub.right.length).to.equal(2)
+
                 
+  describe ".expressionContainsSubstitutions", ->
+    it "finds substitutions", ->
+      e = fol.parse "(A and B)[A->B]"
+      result = util.expressionContainsSubstitutions e
+      expect(result).to.be.true
+    it "finds nested substitutions", ->
+      e = fol.parse "(A[A->B] and B) and C"
+      result = util.expressionContainsSubstitutions e
+      expect(result).to.be.true
+    it "returns false if there are no substitutions", ->
+      e = fol.parse "A and B"
+      result = util.expressionContainsSubstitutions e
+      expect(result).to.be.false
+    it "returns false if there are no substitutions (for an identity statement)", ->
+      e = fol.parse "b=b"
+      result = util.expressionContainsSubstitutions e
+      expect(result).to.be.false
+    it "finds substitutions in names (despite being forbidden in awFOL’s syntax)", ->
+      e = fol.parse "a=b"
+      subs = fol.parse('A[a->b]').substitutions
+      e.termlist[0].substitutions = subs
+      result = util.expressionContainsSubstitutions e
+      console.log util.expressionToString(e) if result is false
+      expect(result).to.be.true
