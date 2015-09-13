@@ -398,118 +398,215 @@ _findMatchesSubstitutions = (expression, pattern, _matches, theSub) ->
     return false
 
 
+
+
+# ----
+# doAfterApplyingSubstitutions 
+# TOOD: move to own module
+# ----
 doAfterApplyingSubstitutions = (expression, process) ->
+  # Preliminary: move every substitution onto all terms in its scope
+  # (or onto all sentences in the case of a substitution for a sentence 
+  # letter or `expression_variable`).
+  eClone = util.cloneExpression expression
+  eClone = _moveAllSubsInwards eClone 
+  console.log "start: #{util.expressionToString eClone}"
   
-  applyOneSubstitution = (e) ->
-    return undefined if not e?.substitutions?
-    
-    # Note: `pullSub` modifies `e`
-    theSub = pullSub e
-    eParent = e.parent
-    eParentAttr = e.parentAttr
-    if theSub?
-      e = replace(e, theSub, noClone:true)
-      console.log "\treplaced #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to}; got #{util.expressionToString e}"
-    eParent[eParentAttr] = e
-    topExpression = eParent
-    while top.parent?
-      topExpression = top.parent
-    return topExpression
-    
-  skipOneSubstitution = (e) ->
-    return undefined if not e?.substitutions?
-
-    # Note: `pullSub` modifies `e`
-    theSub = pullSub e
-    if not theSub? 
-      return e  # abort
-    
-    # Add subs to e's subexpressions.
-    # (so that all possible ways of applying and not applying the substitution
-    # will be considered).
-    walker = (e) ->
-      return e if not e?.type?
-       # Do not attach substitutions to substitutions.
-      return e if walker._inSub 
-      # It is essential that all expressions which could have substitions are considered
-      # here (ie. are in `util.expressionTypes`) otherwise you'll get an error.
-      # TODO: Here we assign substitutions to elements that awFOL doesn't allow to have substiutions.
-      return e if not (e.type in util.expressionTypes.concat('name','variable','term_metavariable') )
-      if e.substitutions and not util.expressionHasSub(e, theSub)
-        e.substitutions.unshift(theSub)
-      else
-        e.substitutions = [theSub]
-      return e
-    e = util.walkMutate(e, walker)
-
-    # Note: theSub gets shifted again because we re-added it in the above walk.
-    theSubTwo = e.substitutions.shift()
-    if theSub is undefined or theSubTwo isnt theSub
-      throw "Coding error: probably `walker` doesn't attach the sub to expressions of type #{pattern.type}."
-    if e.substitutions.length is 0
-      delete e.substitutions
-    
-    return e
-  
-  # This will mutate `e`.
-  pullSub = (e) ->
-    theSub = e.substitutions.shift()
-
-    # Tricky case: subs like `α->α`. These can arise in proofs
-    # (see test 2518C33E-587C-11E5-B046-B15A631DAC50), and as a consequence of
-    # multiple substitutions.  Save branching by ignoring them.
-    while e.substitutions.length > 0 and util.areIdenticalExpressions(theSub.from, theSub.to)
-      theSub = e.substitutions.shift()
-    if util.areIdenticalExpressions(theSub.from, theSub.to) 
-      # We have a sub like  `α->α`. We will just delete this.
-      delete e.substitutions
-      return undefined
-
-    if e.substitutions.length is 0
-      delete e.substitutions
-    
-    return theSub
-    
-  
-  e1 = util.cloneExpression expression
-
-  console.log "expression : #{util.expressionToString e1}"
-
-  # TODO: use util.walkMutateFindOne, not util.find
-  util.find e1, applyOneSubstitution
-  if e1 is undefined
-    # There were no substitutions in `expression` (strictly: in its clone `e1`).
-    console.log "e1 is undefined"
-    return process(expression)
-
-  e2 = util.cloneExpression expression
-  util.find e2, skipOneSubstitution
-  e1done = not util.expressionContainsSubstitutions( e1 )
-  e2done = not util.expressionContainsSubstitutions( e2 )
-  
-  console.log "\t e1 : #{util.expressionToString e1} done: #{e1done}"
-  # console.log "\t\t e1 : #{JSON.stringify e1,null,4}"
-  console.log "\t e2 : #{util.expressionToString e2} done: #{e2done}"
-  # console.log "\t\t e2 : #{JSON.stringify e2,null,4}"
-  
-  if e1done
-    console.log "process e1 : #{util.expressionToString e1}"
-    result = process( e1 )
-    return result if result 
-  e1isNOTe2 = not util.areIdenticalExpressions(e1, e2)
-  if e2done and e1isNOTe2
-    console.log "process e2 : #{util.expressionToString e1}"
-    result = process( e2 )
-    return result if result
-  if not e1done
-    result = doAfterApplyingSubstitutions(e1, process)
-    return result if result
-  if not e2done and e1isNOTe2
-    result = doAfterApplyingSubstitutions(e2, process)
-    return result if result
-  return undefined
+  return _applyOrSkipSubstitutions(eClone, process)
 
 exports.doAfterApplyingSubstitutions = doAfterApplyingSubstitutions
+
+_applyOrSkipSubstitutions = (e, process) ->
+  e1 = _applyOneSubstitution e
+  e2 = _skipOneSubstitution  e
+
+  # Note: `e1` and `e2` contain the same number of substitutions but
+  # make it easy to change that without everything going wrong.
+  e1done = not util.expressionContainsSubstitutions( e1 )
+  e2done = not util.expressionContainsSubstitutions( e2 )
+
+  console.log "\t e1 : #{util.expressionToString e1} done: #{e1done}"
+  console.log "\t e2 : #{util.expressionToString e2} done: #{e2done}"
+
+  if e1done
+    result = process( e1 )
+    return result if result 
+    # Since `e1` didn't work, try `e2`.
+  
+  e1ISNTe2 = not util.areIdenticalExpressions(e1, e2)
+  
+  if e2done and e1ISNTe2
+    result = process( e2 )
+    # Note: at this point we must return whatever `result` is.
+    return result if result
+  
+  if not e1done
+    result = _applyOrSkipSubstitutions(e1, process)
+    return result if result
+
+  if not e2done and e1ISNTe2
+    result = _applyOrSkipSubstitutions(e2, process)
+    return result if result
+    
+  return undefined
+
+
+# Find the first (in the order of `util.walkMutate`) substitution in any
+# sub-expression of `expression`, remove it and apply it.  
+# Removes any identity substitutions found along the way.
+# Does not mutate `expression`.
+_applyOneSubstitution = (expression) ->
+  
+  mutateFinder = (e) ->
+    return undefined if not e?.substitutions?
+  
+    # Note: `pullSub` mutates `e`
+    newExpression = util.cloneExpression e
+    theSub = _pullSub newExpression
+    if not theSub?
+      # This might happen if the subs are all like `α->α`.
+      # In this case, remove `e.substitutions` but keep walking
+      return {newExpression:eClone, aResult:undefined}
+
+    if _canApplySubAtInnermostPoint(newExpression, theSub)
+      newTo = util.cloneExpression(theSub.to) 
+      if newExpression.substitutions?
+        newTo.substitutions = newExpression.substitutions
+      newExpression = newTo
+
+    newExpression = replace(newExpression, theSub)
+    console.log "\treplaced #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to}; got #{util.expressionToString newExpression}"
+    return {newExpression, aResult:theSub}
+  
+  eClone = util.cloneExpression expression
+  {theResult, mutatedExpression} = util.walkMutateFindOne(eClone, mutateFinder)
+  return mutatedExpression
+
+
+_canApplySubAtInnermostPoint = (e, theSub) ->
+  return false unless e.type is theSub.from.type
+  if e.name? and theSub.from.name? and e.name is theSub.from.name
+    return true
+  if e.letter? and theSub.from.letter? and e.letter is theSub.from.letter
+    return true
+  return false
+  
+_skipOneSubstitution = (expression) ->
+  mutateFinder = (e) ->
+    return undefined if not e?.substitutions?
+
+    # Note: `pullSub` modifies `e`
+    eClone = util.cloneExpression e
+    theSub = _pullSub eClone
+    # Note: `theSub` may be undefined; in which case, we will keep going.
+    return {newExpression:eClone, aResult:theSub}
+
+  eClone = util.cloneExpression expression
+  {theResult, mutatedExpression} = util.walkMutateFindOne(eClone, mutateFinder)
+  return mutatedExpression
+
+
+# Whenever a part of `e` other than a term has substitutions, 
+# remove those substitutions and attach them to all terms in that
+# part of `e`.
+# Does not mutate `expression`.
+_moveAllSubsInwards = (expression) ->
+  
+  walker = (e) ->
+    return e if not e?.substitutions?
+    return e if e?.type? and e.type in ['name','variable','term_metavariable']
+    theSub = _pullSub e
+    while theSub
+      if _isTermSub(theSub)
+        e = _addSubToEveryTerm(e, theSub)
+      else 
+        e = _addSubToEverySentence(e, theSub)
+      theSub = _pullSub e
+    return e
+  
+  eClone = util.cloneExpression expression
+  return util.walkMutate(eClone, walker)
+exports._moveAllSubsInwards = _moveAllSubsInwards    
+
+
+# Take one substitution from `e.substitutions`, ignoring identity substitutions
+# like α->α.
+# Mutate `e` by removing the the substitution from it, and deleting `e.substitutions` 
+# if necessary.
+_pullSub = (e) ->
+  if not e.substitutions?
+    return undefined
+  
+  # console.log "\t_pullSub got #{util.expressionToString e}"
+    
+  theSub = e.substitutions.shift()
+
+  # Tricky case: subs like `α->α`. These can arise in proofs
+  # (see test 2518C33E-587C-11E5-B046-B15A631DAC50), and as a consequence of
+  # multiple substitutions.  Save branching by ignoring them.
+  while e.substitutions.length > 0 and util.areIdenticalExpressions(theSub.from, theSub.to)
+    theSub = e.substitutions.shift()
+  if util.areIdenticalExpressions(theSub.from, theSub.to) 
+    # We have a sub like  `α->α`. We will just delete this.
+    delete e.substitutions
+    return undefined
+
+  if e.substitutions.length is 0
+    delete e.substitutions
+  
+  return theSub
+
+
+_isTermSub = (sub) ->
+  return true if sub.from.type in util.termTypes
+  return false
+
+
+# Add `theSub` to every name, variable and term_metavariable of `e`
+# (which, in awFOL syntax, aren't actually allowed to have substitutions.).
+# Note: this does not mutate `e`.
+# Note: Here we assign substitutions to elements that awFOL doesn't allow to have substiutions.
+# TODO: Should awFOL syntax be correspondingly modified?
+_addSubToEveryTerm = (expression, theSub) ->
+  return _addSubToEveryX(expression, theSub, util.termTypes)
+exports._addSubToEveryTerm = _addSubToEveryTerm
+
+_addSubToEverySentence = (expression, theSub) ->
+  return _addSubToEveryX(expression, theSub, util.atomicSentenceTypes)
+exports._addSubToEverySentence = _addSubToEverySentence
+
+_addSubToEveryX = (expression, theSub, expressionTypes) ->
+  walker = (e) ->
+    return e if not e?.type?
+    return e if not (e.type in expressionTypes)
+
+     # Do not attach substitutions when in substitutions.
+    return e if walker._inSub 
+
+    if e.substitutions and not util.expressionHasSub(e, theSubClone)
+      e.substitutions.push(theSubClone)
+    else
+      e.substitutions = [theSubClone]
+      # console.log "\tadded #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to}; got #{util.expressionToString e}"
+    return e
+    
+  eClone = util.cloneExpression expression
+  theSubClone = util.cloneExpression theSub
+  eClone = util.walkMutate(eClone, walker)
+  return eClone
+
+# This assumes that `_moveAllSubsInwards` has been done
+# (otherwise it's harder to know exactly which subs will make a difference.)
+_removeInefficaciousSubs = (e) ->
+  return e if not e?.substitutions?
+  
+
+
+# ----
+# END of doAfterApplyingSubstitutions 
+# ----
+
+
 
 
 # Replaces occurrences of an `expression_variable` in `pattern` with the corresponding

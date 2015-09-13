@@ -100,7 +100,7 @@ exports.walk = walk
 #
 # Note that `fn` can receive primitive values, and also null (when visiting 
 # substitutions like `ψ[α->null]`).
-walkCompare = (firstExp, otherExp, comparator) ->
+walkCompare = (firstExp, otherExp, comparator, o={}) ->
 
   if comparator
     result = comparator(firstExp, otherExp)
@@ -135,7 +135,8 @@ walkCompare = (firstExp, otherExp, comparator) ->
   return true
 exports.walkCompare = walkCompare
 
-areIdenticalExpressions = walkCompare
+areIdenticalExpressions = (firstExp, otherExp, o) ->
+  return walkCompare(firstExp, otherExp, undefined, o)
 exports.areIdenticalExpressions = areIdenticalExpressions
 
 
@@ -177,28 +178,24 @@ exports.find = find
 # For convenience, `mutateFinder` may return undefined (which means keep going
 # without doing anything).
 walkMutateFindOne = (expression, mutateFinder, o) ->
+  # `theResult` stores the result of applying `mutateFinder` to 
+  # `expression` and its parts.
   theResult = undefined
   
   wrappedFn = (e) ->
-    
-    newExpression = undefined
+    # Once `mutateFinder` has yielded a result, we do nothing.
+    return e unless theResult is undefined
 
-    # We will only call `mutateFinder` until it has yielded a result.
-    if theResult is undefined
-      # Because `.walkMutate` sets some properties on its `fn` parameter,
-      # we want the function provided to walk to have these properties too.
-      for own k,v of wrappedFn
-        mutateFinder[k] = v
-      test = mutateFinder(e)
-      if test isnt undefined
-        {newExpression, aResult } = test
-        if aResult isnt undefined
-          theResult = aResult
+    # Because `.walkMutate` sets some properties on its `fn` parameter,
+    # let `mutateFinder` have these properties too.
+    for own k,v of wrappedFn
+      mutateFinder[k] = v
+    # Note: `mutateFinder` can return undefined (that's why `or {}`).
+    {newExpression, aResult } = mutateFinder(e) or {} 
+    theResult = aResult
+    return newExpression unless newExpression is undefined
+    return e
 
-    if newExpression isnt undefined
-      return newExpression
-    else
-      return e
   mutatedExpression = walkMutate(expression, wrappedFn, o)
   return {theResult, mutatedExpression}
 exports.walkMutateFindOne = walkMutateFindOne
@@ -548,6 +545,20 @@ expressionTypes = [
 ]
 exports.expressionTypes = expressionTypes
 
+termTypes = [
+  'name'
+  'variable'
+  'term_metavariable'
+]
+exports.termTypes = termTypes
+
+atomicSentenceTypes = [
+  'sentence_letter'
+  'expression_variable'
+  'identity'
+  'predicate'
+]
+exports.atomicSentenceTypes = atomicSentenceTypes
 
 # Return true if an expression contains substitutions.
 expressionContainsSubstitutions = (expression) ->
