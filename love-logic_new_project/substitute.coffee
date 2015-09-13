@@ -416,6 +416,9 @@ doAfterApplyingSubstitutions = (expression, process) ->
 
 exports.doAfterApplyingSubstitutions = doAfterApplyingSubstitutions
 
+# Consider the substitutions in a fixed order (defined by `util.walkMutate` and
+# the fact that we do `sub1` first in `[sub1,sub2]`); for each sub,
+# create a branch in which it is (a) applied and (b) ignored.
 _applyOrSkipSubstitutions = (e, process) ->
   e1 = _applyOneSubstitution e
   e2 = _skipOneSubstitution  e
@@ -434,13 +437,13 @@ _applyOrSkipSubstitutions = (e, process) ->
     # Since `e1` didn't work, try `e2`.
   
   e1ISNTe2 = not util.areIdenticalExpressions(e1, e2)
-  
   if e2done and e1ISNTe2
     result = process( e2 )
     # Note: at this point we must return whatever `result` is.
     return result if result
   
-  if not e1done
+  e1ISNTe = not util.areIdenticalExpressions(e1, e)
+  if not e1done and e1ISNTe
     result = _applyOrSkipSubstitutions(e1, process)
     return result if result
 
