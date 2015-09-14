@@ -17,17 +17,22 @@ to = (block) ->
   
   walker = 
     visit : (item) ->
-      if item.type is 'line'
-        aLine = item
-        aLine.status = new LineStatus(aLine)
-        aLine.getErrorMessage = () ->
-          return aLine.status.getMessage()
-
-      if item.type is 'block'
-        aBlock = item
-        aBlock.listErrorMessages = () ->
-          # Walk lines collecting messages.
-          throw "Not implemented yet!"
+      return undefined unless item?.type?
+      switch item.type
+        when 'block'
+          aBlock = item
+          aBlock.listErrorMessages = () ->
+            # Walk lines collecting messages.
+            throw "Not implemented yet!"
+        else
+          item.status = new LineStatus(item)
+          # This might seem a bit pointless, but the idea is that
+          # only modules concerned with checking the proof need to
+          # access `line.status`; the UI just needs to know abotu
+          # `aLine.getErrorMessage()`.
+          item.getErrorMessage = () ->
+            return item.status.getMessage()
+          
       
       return undefined  # Keep walking.
   block.walk walker
@@ -39,6 +44,7 @@ exports.to = to
 
 class LineStatus
   constructor : (@line) ->
+    @messages = []
     @verified = false 
     @verificationAttempted = false
     @sentenceParsed = @line.sentence?
@@ -47,9 +53,6 @@ class LineStatus
       @addMessage "the sentence you wrote (#{@line.sentenceText}) is not a sentence of awFOL."
     if @line.justificationErrors?
       @addMessage "the justification your supplied (#{@line.justificationText}) either mentions a rule you can't use here or doesn't make sense."
-    
-    
-  messages : []
   
   addMessage : (text) -> 
     @messages.push text
@@ -66,15 +69,15 @@ class LineStatus
       @addMessage "although #{text}"
       @_addedAlthough = true
   getMessage : () ->
-    return "" if messages.length is 0
+    return "" if @messages.length is 0
     msg = "This line is not correct because #{@messages[0]}"
-    if messages.length > 1
+    if @messages.length > 1
       msg += "And also #{@messages[1]}"
-    if messages.length > 2
+    if @messages.length > 2
       msg += "Further, #{@messages[2]}"
-    if messages.length > 3
+    if @messages.length > 3
       msg += "And, for another thing, #{@messages[3]}"
-    if messages.length > 4
+    if @messages.length > 4
       ((msg += "And #{x}") for x in @messages.splice(4))
     return msg
   

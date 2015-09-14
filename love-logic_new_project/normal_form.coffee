@@ -14,19 +14,18 @@ substitute = require './substitute'
 
 # returns a clone of `expression` in prenex normal form
 prenexNormalForm = (expression) ->
-  result = expression #No need to clone: that is done by the substitutions.
+  result = util.cloneExpression expression
   
   # Some substitutions only need doing once.
-  result = substitute.doSubRecursive result, substitute.subsForPNF.replace_arrow
-  result = substitute.doSubRecursive result, substitute.subsForPNF.replace_double_arrow
+  result = substitute.doSubRecursive(result, substitute.subsForPNF.replace_arrow)
+  result = substitute.doSubRecursive(result, substitute.subsForPNF.replace_double_arrow)
   result = renameVariables result
 
   # The rest of the substitutions may need to be done repeatedly.
-  pnf = (expression) ->
-    result = expression
+  pnf = (e) ->
     for name,sub of substitute.subsForPNF when not (name in ['replace_arrow', 'replace_double_arrow'])
-      result = substitute.doSubRecursive result, sub
-    return result
+      e = substitute.doSubRecursive(e, sub)
+    return e
   result = util.exhaust result, pnf
 
   # # The above dnf thing is slow; it can be sped up by applying subsitutions

@@ -45,26 +45,30 @@ exports._parseProof = _parseProof
 to = (proof) ->
   walker = 
     visit : (item) ->
-
-      if item?.type is 'line'
-        aLine = item
-        aLine.verify = () ->
-          result = verifyLine(aLine, proof)
-          return true if result.verified
-          return result
-          
-      if item?.type is 'block'
-        aBlock = item
-        allLinesOk = true
-        aBlock.verify = () ->
-          verifyABlock = 
-            visit : (item) ->
-              if item.type is 'line'
-                result = item.verify()
-                allLinesOk = allLinesOk and result
-          aBlock.walk verifyABlock
-          return allLinesOk
-          
+      return undefined unless item?.type?
+      switch item.type
+        when 'line' 
+          aLine = item
+          aLine.verify = () ->
+            result = verifyLine(aLine, proof)
+            return true if result.verified
+            return result
+        when 'block' 
+          aBlock = item
+          allLinesOk = true
+          aBlock.verify = () ->
+            verifyABlock = 
+              visit : (item) ->
+                if item.type is 'line'
+                  result = item.verify()
+                  allLinesOk = allLinesOk and result
+            aBlock.walk verifyABlock
+            return allLinesOk
+        else
+          item.verify = () ->
+            return "(This is a blank line, a divider or a comment.)"
+        
+      
       return undefined
 
   proof.walk walker

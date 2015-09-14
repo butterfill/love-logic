@@ -11,7 +11,7 @@
 _ = require 'lodash'
 
 util = require './util'
-fol = require './parser/awFOL'  
+fol = require './parser/awFOL'
 match = require './match'
 
 _subsForPNF = 
@@ -190,7 +190,7 @@ exports.doSub = doSub
 
 # Apply the `sub` to the `expression` and all its components.  
 # (See doSub.)
-doSubRecursive = (expression, sub) ->
+doSubRecursive = (expression, sub, o={}) ->
   walker = (e) ->
     return e if e is null
     return e if _.isArray(e)
@@ -210,9 +210,7 @@ exports.doSubRecursive = doSubRecursive
 #
 # Special feature for substitutions like `[a->null]`: if it actually finds a match
 # to replace, it will throw Error with `.messsage` "_internal: replace to null".
-replace =  (expression, whatToReplace, o) ->
-  o ?= 
-    noClone : false
+replace =  (expression, whatToReplace, o={}) ->
   toFind = whatToReplace.from
   toReplace = whatToReplace.to
   walker = (e) ->

@@ -295,6 +295,7 @@ describe 'substitute', ->
       sub = substitute.subsForPNF.replace_arrow
       result = substitute.doSub expression, sub
       expectedResult = fol.parse 'not A or B'
+      console.log(util.expressionToString(result))
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
         
     it "converts arrow correctly (when antecedent is complex)", ->

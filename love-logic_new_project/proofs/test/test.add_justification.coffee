@@ -2,8 +2,7 @@ _ = require 'lodash'
 
 util = require 'util'
 
-chai = require('chai')
-assert = chai.assert
+chai = require 'chai'
 expect = chai.expect
 
 bp = require '../block_parser'

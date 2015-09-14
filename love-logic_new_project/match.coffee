@@ -107,29 +107,22 @@ doAfterApplyingSubstitutions = (expression, process) ->
   eClone = _moveAllSubsInwards eClone 
   
   return _applyOrSkipSubstitutions(eClone, process)
-
 exports.doAfterApplyingSubstitutions = doAfterApplyingSubstitutions
+
 
 # Consider the substitutions in a fixed order (defined by `util.walkMutate` and
 # the fact that we do `sub1` first in `[sub1,sub2]`); for each sub,
 # create a branch in which it is (a) applied and (b) ignored.
 _applyOrSkipSubstitutions = (e, process) ->
   e1 = _applyOneSubstitution e
-  e2 = _skipOneSubstitution  e
-
-  # Note: `e1` and `e2` contain the same number of substitutions but
-  # make it easy to change that without everything going wrong.
   e1done = not util.expressionContainsSubstitutions( e1 )
-  e2done = not util.expressionContainsSubstitutions( e2 )
-
-  # console.log "\t e1 : #{util.expressionToString e1} done: #{e1done}"
-  # console.log "\t e2 : #{util.expressionToString e2} done: #{e2done}"
-
   if e1done
     result = process( e1 )
     return result if result 
     # Since `e1` didn't work, try `e2`.
   
+  e2 = _skipOneSubstitution  e
+  e2done = not util.expressionContainsSubstitutions( e2 )
   e1ISNTe2 = not util.areIdenticalExpressions(e1, e2)
   if e2done and e1ISNTe2
     result = process( e2 )
@@ -311,7 +304,7 @@ _removeInefficaciousSubs = (e) ->
 # value from `matches`.  E.g. 
 #     `match.apply fol.parse("not not φ"), {φ:fol.parse('A and B')}`
 # will return fol.parse("not not (A and B)")
-apply = (pattern, matches) ->
+apply = (pattern, matches, o={}) ->
   walker = (pattern) ->
     # Screen out everything but the variables we might replace
     return pattern unless pattern?.type? and pattern.type in ['expression_variable', 'term_metavariable']
@@ -330,7 +323,9 @@ apply = (pattern, matches) ->
     toReplace.substitutions = pattern.substitutions if pattern.substitutions?
     toReplace.box = pattern.box if pattern.box?
     return toReplace
-
+  
+  if o.noClone
+    return util.walkMutate(pattern, walker)
   theClone = util.cloneExpression pattern
   return util.walkMutate(theClone, walker)
 
