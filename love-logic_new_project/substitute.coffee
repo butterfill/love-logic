@@ -333,7 +333,22 @@ findMatchesWrapper = (expression, pattern, _matches) ->
     return _matches
   return _matches
 
-exports.findMatches = findMatchesWrapper
+
+# Wrapper just for rewrite
+# TODO: something bad has gone wrong.
+findMatchesDoneRight = (expression, pattern, _matches) ->
+  _matches ?= {}
+  fM = (patternWithSubsDone) ->
+    newMatches = findMatches(expression, patternWithSubsDone, _matches)
+    return undefined if newMatches is false
+    for k,v of newMatches
+      newMatches[k] = util.cloneExpression v
+    return newMatches
+
+  return doAfterApplyingSubstitutions(pattern, fM) or false
+exports.findMatchesDoneRight = findMatchesDoneRight
+# exports.findMatches = findMatchesWrapper
+exports.findMatches = findMatchesDoneRight
 
 # This concerns patterns with substitutions like `φ[a->β]`.  This is
 # tricky because there are many valid substitution instances --- any
@@ -410,7 +425,6 @@ doAfterApplyingSubstitutions = (expression, process) ->
   # letter or `expression_variable`).
   eClone = util.cloneExpression expression
   eClone = _moveAllSubsInwards eClone 
-  console.log "start: #{util.expressionToString eClone}"
   
   return _applyOrSkipSubstitutions(eClone, process)
 
@@ -428,8 +442,8 @@ _applyOrSkipSubstitutions = (e, process) ->
   e1done = not util.expressionContainsSubstitutions( e1 )
   e2done = not util.expressionContainsSubstitutions( e2 )
 
-  console.log "\t e1 : #{util.expressionToString e1} done: #{e1done}"
-  console.log "\t e2 : #{util.expressionToString e2} done: #{e2done}"
+  # console.log "\t e1 : #{util.expressionToString e1} done: #{e1done}"
+  # console.log "\t e2 : #{util.expressionToString e2} done: #{e2done}"
 
   if e1done
     result = process( e1 )
@@ -475,10 +489,12 @@ _applyOneSubstitution = (expression) ->
       newTo = util.cloneExpression(theSub.to) 
       if newExpression.substitutions?
         newTo.substitutions = newExpression.substitutions
+      if newExpression.box?
+        newTo.box = newExpression.box
       newExpression = newTo
 
     newExpression = replace(newExpression, theSub)
-    console.log "\treplaced #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to}; got #{util.expressionToString newExpression}"
+    # console.log "\treplaced #{util.expressionToString theSub.from}->#{util.expressionToString theSub.to}; got #{util.expressionToString newExpression}"
     return {newExpression, aResult:theSub}
   
   eClone = util.cloneExpression expression

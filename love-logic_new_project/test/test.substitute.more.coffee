@@ -159,7 +159,6 @@ describe "substitute (module), further tests", ->
       results = []
       e = fol.parse '(F(a) and A)[a->b][A->B]'
       process = (e) ->
-        console.log "found #{util.expressionToString e}"
         results.push(e)
         return undefined
       _ignore = substitute.doAfterApplyingSubstitutions e, process
@@ -168,6 +167,28 @@ describe "substitute (module), further tests", ->
       results = _.uniq((util.expressionToString(x) for x in results)).sort()
       expectedResults = _.uniq((util.expressionToString(x) for x in expectedResults)).sort()
       expect(results).to.deep.equal(expectedResults)
+    it "stops when `process` returns a result", ->
+      results = []
+      e = fol.parse '(a=a)[a->b]'
+      process = (e) ->
+        results.push(e)
+        return 'hello' if e.termlist[0].name is 'a'
+        return undefined
+      result = substitute.doAfterApplyingSubstitutions e, process
+      expect(result).to.equal('hello')
+      results = _.uniq((util.expressionToString(x).replace(/\s/g,'') for x in results)).sort()
+      expect(results).to.deep.equal(["a=b","b=a","b=b"])
+    it "lists what I expect for two substitutions in a tricky case", ->
+      results = []
+      e = fol.parse '(A and A and A)[A->φ][φ->ψ][ψ->χ]'
+      util.delExtraneousProperties e
+      anExpectedResult = fol.parse "ψ and φ and χ"
+      util.delExtraneousProperties anExpectedResult
+      process = (e) ->
+        return true if util.areIdenticalExpressions(e, anExpectedResult)
+        return undefined
+      result = substitute.doAfterApplyingSubstitutions e, process
+      expect(result).to.be.true
     it "cares about the order in which substitutions are written", ->
       results = []
       # This is like the previous test but with subs in the opposite order.
@@ -182,4 +203,12 @@ describe "substitute (module), further tests", ->
       results = _.uniq((util.expressionToString(x) for x in results)).sort()
       expectedResults = _.uniq((util.expressionToString(x) for x in expectedResults)).sort()
       expect(results).to.deep.equal(expectedResults)
-                        
+      
+
+  describe "findMatchesDoneRight", ->
+    it "does something", ->
+      pattern = fol.parse '(φ and φ and φ)[φ->ψ][ψ->χ]'
+      expression = fol.parse 'B and C and A' 
+      matches = substitute.findMatchesDoneRight expression, pattern
+      expect(matches).not.to.be.false
+      

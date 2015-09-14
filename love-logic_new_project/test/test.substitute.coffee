@@ -451,9 +451,6 @@ describe 'substitute', ->
       expect(matches).not.to.be.false
     it "matches with multiple substitutions between metavariables: [φ->ψ][ψ->χ] $outerfirst", ->
       # Test id 0A5EAB88-588D-11E5-B11A-FEB2F2E18425 $outerfirst
-      # The problem isn't so much that this test fails as that `.findMatches` is 
-      # not easily predictable in when the order of substitutions matters (see
-      # surrounding tests).
       pattern = fol.parse '(φ and φ and φ)[φ->ψ][ψ->χ]'
       expression = fol.parse 'B and C and A' 
       matches = substitute.findMatches expression, pattern
@@ -467,31 +464,20 @@ describe 'substitute', ->
       expect(matches).not.to.be.false
       # There are multiple correct matches that could be made here.
       
-    it "matches with multiple substitutions between metavariables: [ψ->χ][φ->ψ]", ->
-      pattern = fol.parse '(φ and φ and φ)[ψ->χ][φ->ψ]'
-      expression = fol.parse 'B and C and A'
-      matches = substitute.findMatches expression, pattern
-      expect(matches).not.to.be.false
-      # There are multiple correct matches that could be made here.
-    it "matches with multiple substitutions, as above without metavariables", ->
-      pattern = fol.parse '(A and A and A)[B->C][A->B]'
+    it "matches with multiple substitutions, without metavariables", ->
+      pattern = fol.parse '(A and A and A)[A->B][B->C]'
       expression = fol.parse 'B and C and A'
       matches = substitute.findMatches expression, pattern
       expect(matches).not.to.be.false
       
     it "matches with multiple substitutions between metavariables: variation with nesting", ->
-      # This doesn't work because `.findMatches` doesn't try all combinations of 
-      # substitutions before making any matches.
-      # To make this work, we would need to change `.findMatches` so that it first
-      # does all substitutions (in one of each possible combination) and then 
-      # attempts to match.
-      pattern = fol.parse '((φ and φ)[ψ->χ] and φ)[φ->ψ]'
+      pattern = fol.parse '((φ and φ)[φ->ψ] and φ)[φ->χ]'
       expression = fol.parse 'B and C and A'
       matches = substitute.findMatches expression, pattern
       expect(matches).not.to.be.false
       # There are multiple correct matches that could be made here.
-    it "matches with multiple substitutions, variation; as above but without metavariables", ->
-      pattern = fol.parse '((A and A)[B->C] and A)[A->B]'
+    it "matches with multiple substitutions; variation; without metavariables", ->
+      pattern = fol.parse '((A and A)[A->B] and A)[B->C]'
       expression = fol.parse 'B and C and A'
       matches = substitute.findMatches expression, pattern
       expect(matches).not.to.be.false
@@ -684,25 +670,22 @@ describe 'substitute', ->
       expectedMatches = {}
       expect(matches).not.to.be.false
       expect(matches).to.deep.equal(expectedMatches)
-    it "finds matches where sequential substitutions are required irrespective of the order in which substitutions are written", ->
-      pattern = fol.parse '((F(c) and F(b))[x->a])[c->x]'
-      expression = fol.parse 'F(a) and F(b)'
-      matches = substitute.findMatches expression, pattern
-      expectedMatches = {}
-      expect(matches).not.to.be.false
-      expect(matches).to.deep.equal(expectedMatches)
-    it "finds matches where sequential substitutions are required irrespective of the order in which substitutions are written (other way around)", ->
+    it "finds matches where sequential substitutions are required depending on the order in which substitutions are written (other way around)", ->
       # Test id F72C790A-5887-11E5-8641-BAD061EA09BE
-      # You might regard this (or the previous) as an error.  I regard it as correct because `[x->a]` can
-      # be applied to the `x` in `[c->x]`.  To change the behaviour of `.findMatches` such 
-      # that this is incorrect, it would not be enough to restrice its use of `substitute.replace`
-      # so that it doesn't replace in substitutions.
       pattern = fol.parse '((F(c) and F(b))[c->x])[x->a]'
       expression = fol.parse 'F(a) and F(b)'
       matches = substitute.findMatches expression, pattern
       expectedMatches = {}
       expect(matches).not.to.be.false
       expect(matches).to.deep.equal(expectedMatches)
+    it "does not find matches where sequential substitutions are required irrespective of the order in which substitutions are written", ->
+      # This fails to match because the `[x->a]` substitution (which is innermost) is 
+      # applied (or not) first, and only then is the outer substitution (`[c->x]`) considered.
+      pattern = fol.parse '((F(c) and F(b))[x->a])[c->x]'
+      expression = fol.parse 'F(a) and F(b)'
+      matches = substitute.findMatches expression, pattern
+      expectedMatches = {}
+      expect(matches).to.be.false
 
 
   describe 'replace (replaces one expression or term with another)', ->    
