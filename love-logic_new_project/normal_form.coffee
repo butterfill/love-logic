@@ -1,13 +1,151 @@
-# TODO Should this be called 'normal form' or something?
+# This module provides functions for converting expressions to 
+# prenex normal form, and for comparing expressions in PNF in such a way
+# that some trivial differences (e.g. ordering of conjuncts) are ignored.
+
 
 _ = require 'lodash'
 
 util = require './util'
+match = require './match'
 substitute = require './substitute'
 
+
+
+
+# returns a clone of `expression` in prenex normal form
+prenexNormalForm = (expression) ->
+  result = expression #No need to clone: that is done by the substitutions.
+  
+  # Some substitutions only need doing once.
+  result = substitute.doSubRecursive result, substitute.subsForPNF.replace_arrow
+  result = substitute.doSubRecursive result, substitute.subsForPNF.replace_double_arrow
+  result = renameVariables result
+
+  # The rest of the substitutions may need to be done repeatedly.
+  pnf = (expression) ->
+    result = expression
+    for name,sub of substitute.subsForPNF when not (name in ['replace_arrow', 'replace_double_arrow'])
+      result = substitute.doSubRecursive result, sub
+    return result
+  result = util.exhaust result, pnf
+
+  # # The above dnf thing is slow; it can be sped up by applying subsitutions
+  # # in smaller sets as follows 
+  # # (but this makes it less obvious the alogrithm will always work).
+  # ```
+  # # First move the quantifiers out.
+  # quantifiersOut = (expression) ->
+  #   result = expression
+  #   for sub in [subs.not_all, subs.not_exists
+  #               subs.all_and_left, subs.all_and_right
+  #               subs.all_or_left, subs.all_or_right
+  #               subs.exists_and_left, subs.exists_and_right
+  #               subs.exists_or_left,  subs.exists_or_right
+  #             ]
+  #     result = doSubRecursive result, sub
+  #   return result
+  # result = util.exhaust result, quantifiersOut
+  #
+  # # Then fix the body: push negations all the way in to the atomic formulae.
+  # demorgan = (expression) ->
+  #   result = expression
+  #   for sub in [subs.dbl_neg, subs.demorgan1, subs.demorgan2]
+  #     result = doSubRecursive result, sub
+  #   return result
+  # result = util.exhaust result, demorgan
+  #
+  # # Finally, move disjunctions into conjunctions
+  # dnf = (expression) ->
+  #   result = expression
+  #   for sub in [subs.cnf_left, subs.cnf_right]
+  #     result = doSubRecursive result, sub
+  #   return result
+  # result = util.exhaust result, dnf
+  # ```
+  
+  return result
+  
+exports.prenexNormalForm = prenexNormalForm
+
+
+# Returns true just if expression is in prenex normal form.
+isPNF = (expression) ->
+  core = removeQuantifiers expression
+  conjuncts = listJuncts core, 'and'
+  nestedDisjuncts = ( listJuncts(junct, 'or') for junct in conjuncts)
+  for someDisjuncts in nestedDisjuncts
+    for disjunct in someDisjuncts
+      # We are only allowed sentence letters or negations in here
+      return false unless (disjunct.type in ['not', 'sentence_letter', 'predicate'])
+      if disjunct.type is 'not'
+        # The thing negated must be a sentence letter or predicate
+        return false unless disjunct.left.type in ['sentence_letter','predicate']
+  return true
+exports.isPNF = isPNF
+
+
+# Go through expression and rename variables so that each 
+# quantifier binds a distinct variable.
+# This may use variable names that are illegal in the awFOL lexer (e.g. xx1, xx2).
+# (This isn't strictly necessary: it just provides a visual marker that things have been changed.)
+#
+# The new variable names will have the form `newVariableBaseName[0-9]+` .
+# If you want to create a pattern to match, set `newVariableBaseName` to 'τ'.
+renameVariables = (expression, newVariableBaseName) ->
+  newVariableBaseName ?= 'xx'
+  newVariableType = ('term_metavariable' if newVariableBaseName[0] in ['α','β','γ','τ']) or 'variable'
+  
+  _newVarIdx = 0 #Note: this is not a number because we need to mutate it.
+  # The keys are the old variable names, values are their replacements.
+  _newVarNames = {} 
+  # The keys are the new variable names, values are what they replaced.
+  _oldVarNames = {}
+  
+  # Get a replacement name for the `variable`, either the current replacement
+  # if there is one, or else a new replacement (which is saved for next time
+  # we see a variable with the same name).
+  getReplacementName = (variable) ->
+    if not _newVarNames[variable.name]?
+      _newVarIdx += 1
+      newName = "#{newVariableBaseName}#{_newVarIdx}"
+      _newVarNames[variable.name] = newName
+    return _newVarNames[variable.name]
+
+  # Force whatever name was replaced by `variable.name` (if any)
+  # to be discarded, so that future occurrences of variables with this 
+  # name will get a different name.
+  setNewReplacementName = (variable) ->
+    if _newVarNames[variable.name]?
+      delete _newVarNames[variable.name]
+  
+  topDownWalker = (expression) ->
+    return expression if expression is null # Because null can occur in substitutions.
+    return expression unless (expression?.boundVariable?) or (expression?.type? and expression.type is 'variable')
+    
+    # Require that a new replacement name be used for a variable every time 
+    # we see it bound to a quantifier.
+    #
+    # Note: `expression.boundVariable?` is the test for whether an awFOL 
+    # expression is a quantifier.  
+    # (What follows should generalise in case new quantifiers are added.)
+    if expression.boundVariable?
+      setNewReplacementName(expression.boundVariable)
+  
+    if expression?.type? and expression.type is 'variable'
+      variable = expression
+      variable.name = getReplacementName(variable)
+      variable.type = newVariableType
+      
+    return expression
+  
+  return util.walkMutate(expression, topDownWalker, topDown:true)
+    
+exports.renameVariables = renameVariables
+
+
 areExpressionsEquivalent = (left, right) ->
-  left = substitute.prenexNormalForm left
-  right = substitute.prenexNormalForm right
+  left = prenexNormalForm left
+  right = prenexNormalForm right
   return arePNFExpressionsEquivalent left, right
 exports.areExpressionsEquivalent = areExpressionsEquivalent
 
@@ -21,19 +159,19 @@ arePNFExpressionsEquivalent = (left, right) ->
   right = eliminateRedundancyInPNF(right)
   right = sortPNFExpression(right)
   sortIdentityStatements(right)
-  pattern = substitute.renameVariables left, 'τ'
+  pattern = renameVariables left, 'τ'
   patternCore = removeQuantifiers pattern
   rightCore = removeQuantifiers right
 
   # Note: matches will found irrespective of the original order of terms 
   # in identity statements because we have sorted identity statements 
   # (using `sortIdentityStatements`).
-  matches = substitute.findMatches rightCore, patternCore 
+  matches = match.find rightCore, patternCore 
   return false if matches is false
   
   # From this point on, we know that the cores (expressions minus quantifiers)
   # match.  The question is just whether the quantifiers match.
-  modifiedLeft = substitute.applyMatches pattern, matches
+  modifiedLeft = match.apply pattern, matches
   
   # There's a potential catch.  If there were quantifiers that dont bind anything,
   # there could be unmatched term_metavariables in `modifiedLeft`.

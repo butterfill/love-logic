@@ -229,7 +229,7 @@ cloneExpression = (expression) ->
   # # Some things might be slow because `cloneExpression` is used a lot
   # # in doing substitutions (which get looped quite a bit).
   # # The following helps to trace where the calls are coming from 
-  # # (which is basically `findMatches`, `applyMatches`, and the walker
+  # # (which is basically `findMatches`, `match.apply`, and the walker
   # # in `substitute.replace`)
   # try
   #   throw new Error "view stack"

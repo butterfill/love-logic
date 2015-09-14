@@ -11,6 +11,7 @@ _ = require 'lodash'
 awFOL = require './parser/awFOL'
 
 util = require './util'
+match = require './match'
 substitute = require './substitute'
 
 parse = (text) ->
@@ -42,11 +43,11 @@ _decorate = (expression) ->
       return util.listMetaVariableNames e
       
     e.findMatches = (pattern, _matches, o) ->
-      result = substitute.findMatches e, pattern, _matches, o
+      result = match.find e, pattern, _matches, o
       _decorate(result)
       return result
     e.applyMatches = (matches) ->
-      result =  substitute.applyMatches e, matches
+      result =  match.apply e, matches
       _decorate(result)
       return result
     e.applySubstitutions = () ->
