@@ -4,12 +4,13 @@ chai = require('chai')
 assert = chai.assert
 expect = chai.expect
 
+util = require '../util'
 fol = require '../fol'
 
 describe "`fol`", ->
   describe "`_decorate`", ->
     it "adds a `.toString` method that works", ->
-      text = 'A and B'
+      text = 'A ∧ B'
       e = fol.parse text
       result = e.toString()
       expect(result).to.equal(text)
@@ -37,6 +38,8 @@ describe "`fol`", ->
       text = 'A and B'
       text2 = 'C or D'
       e = fol.parse text
+      expect(e.symbol).to.equal('and')
+      console.log util.expressionToString(e)
       e2 = fol.parse text2
       result = e.toString()
       result2 = e2.toString()

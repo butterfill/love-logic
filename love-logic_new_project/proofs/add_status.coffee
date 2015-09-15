@@ -53,6 +53,9 @@ class LineStatus
       @addMessage "the sentence you wrote (#{@line.sentenceText}) is not a sentence of awFOL."
     if @line.justificationErrors?
       @addMessage "the justification your supplied (#{@line.justificationText}) either mentions a rule you can't use here or doesn't make sense."
+    if @line.type is 'line' and not @line.justification? and not @line.justificationErrors?
+      @addMessage "you supplied no justification for this line."
+      
   
   addMessage : (text) -> 
     @messages.push text
@@ -70,7 +73,8 @@ class LineStatus
       @_addedAlthough = true
   getMessage : () ->
     return "" if @messages.length is 0
-    msg = "This line is not correct because #{@messages[0]}"
+    isCorrectText = ("not correct because" unless @verified) or ("correct but")
+    msg = "This line is #{isCorrectText} #{@messages[0]}"
     if @messages.length > 1
       msg += "And also #{@messages[1]}"
     if @messages.length > 2

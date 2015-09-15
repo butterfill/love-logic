@@ -19,6 +19,13 @@ BLOCK = bp.parse INPUT
 ln.to BLOCK
 addJustification.to BLOCK
 
+_parse = (proofText) ->
+  proof = bp.parse proofText
+  ln.to proof
+  addJustification.to proof
+  addSentences.to proof
+  return proof
+
 describe "add_sentences", ->
   describe ".to", ->
     it "doesn't throw", ->
@@ -35,4 +42,9 @@ describe "add_sentences", ->
       addSentences.to BLOCK
       lineWithError = BLOCK.getLine(5)
       expect( lineWithError.sentenceErrors.slice(0,5) ).to.equal('Parse')  
-      
+    it "tells you when a line has a syntax error", ->
+      proofText = 'hello\nbye'
+      proof = _parse proofText
+      line = proof.getLine(1)
+      expect(line.sentenceErrors?).to.be.true
+      expect(line.sentenceErrors.length>0).to.be.true

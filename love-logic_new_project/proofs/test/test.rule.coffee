@@ -3,14 +3,21 @@ expect = chai.expect
 _ = require 'lodash'
 
 
-util = require 'util'
-
 fol = require '../../fol'
-
-# TODO: remove this dependence (verify depends on rule!)
-verify = require '../add_verification'
-
+bp = require '../block_parser'
+ln = require '../add_line_numbers'
+addJustification = require '../add_justification'
+addSentences = require '../add_sentences'
+addStatus = require '../add_status'
 rule = require '../rule'
+
+_parse = (proofText) ->
+  block = bp.parse proofText
+  ln.to block
+  addJustification.to block
+  addSentences.to block
+  addStatus.to block
+  return block
 
 
 describe "`rule`", ->
@@ -44,12 +51,12 @@ describe "`rule`", ->
         2. not A            // reit 1
         3. a=a              // = intro
       ''' 
-      proof = verify._parseProof proof
+      proof = _parse proof
       idIntro = new rule.to('α=α')
       reit = (new rule.from('φ')).to('φ')
-      
-      result1 = reit.check(proof.getLine(2))
-      console.log result1.getMessage() if result1 isnt true
+      line = proof.getLine(2)
+      result1 = reit.check(line)
+      console.log line.status.getMessage() if result1 isnt true
       expect(result1).to.be.true
       
       result2 = idIntro.check(proof.getLine(3))
@@ -62,7 +69,7 @@ describe "`rule`", ->
       proof = '''
         1. A        // premise
       ''' 
-      proof = verify._parseProof proof
+      proof = _parse proof
       emptyRule = rule.from()
       result = emptyRule.check proof.getLine(1)
       expect(result).to.be.true
@@ -71,11 +78,9 @@ describe "`rule`", ->
         1. A
         2. A          // assumption 1
       ''' 
-      proof = verify._parseProof proof
+      proof = _parse proof
       emptyRule = rule.from()
       result = emptyRule.check proof.getLine(2)
-      # if result isnt true
-      #   console.log result.getMessage()
       expect(result).not.to.be.true
     it "the empty rule, `rule.from()`, checks that no subpoofs are cited", ->
       proof = '''
@@ -84,11 +89,9 @@ describe "`rule`", ->
         3.    B
         4. A          // assumption 2-3
       ''' 
-      proof = verify._parseProof proof
+      proof = _parse proof
       emptyRule = rule.from()
       result = emptyRule.check proof.getLine(4)
-      # if result isnt true
-      #   console.log result.getMessage()
       expect(result).not.to.be.true
       
       
@@ -97,7 +100,7 @@ describe "`rule`", ->
         proof = '''
           1. A        // premise
         ''' 
-        proof = verify._parseProof proof
+        proof = _parse proof
         premiseRule = rule.premise()
         result = premiseRule.check proof.getLine(1)
         expect(result).to.be.true
@@ -106,10 +109,10 @@ describe "`rule`", ->
           1. A        // premise
           2. B        // premise
         ''' 
-        proof = verify._parseProof proof
+        proof = _parse proof
         premiseRule = rule.premise()
         result = premiseRule.check proof.getLine(2)
-        console.log result.getMessage() if result isnt true
+        console.log line.status.getMessage() if result isnt true
         expect(result).to.be.true
       it "does not allow the second line of a subproof to be a premise", ->
         proof = '''
@@ -117,7 +120,7 @@ describe "`rule`", ->
           2.   A      // premise
           3.   B      // premise
         ''' 
-        proof = verify._parseProof proof
+        proof = _parse proof
         premiseRule = rule.premise()
         result = premiseRule.check proof.getLine(3)
         expect(result).not.to.be.true
@@ -127,7 +130,7 @@ describe "`rule`", ->
           2. B              // and elim 1
           3. C              // premise
         ''' 
-        proof = verify._parseProof proof
+        proof = _parse proof
         premiseRule = rule.premise()
         result = premiseRule.check proof.getLine(3)
         expect(result).not.to.be.true
@@ -138,21 +141,22 @@ describe "`rule`", ->
           3.    C              
           4. C           // premise
         ''' 
-        proof = verify._parseProof proof
+        proof = _parse proof
         premiseRule = rule.premise()
         result = premiseRule.check proof.getLine(4)
         expect(result).not.to.be.true
-      it "returns a results object with `.getMessage` method when a line is not verified", ->
+      it "adds a message to the `line.status` object when a line is not verified", ->
         proof = '''
           1. A        // premise
           2.   A      // premise
           3.   B      // premise
         ''' 
-        proof = verify._parseProof proof
+        proof = _parse proof
         premiseRule = rule.premise()
-        result = premiseRule.check proof.getLine(3)
+        line =  proof.getLine(3)
+        result = premiseRule.check line
         expect(result).not.to.be.true
-        expect( _.isString(result.getMessage?()) ).to.be.true
+        expect( line.status.getMessage().length > 0 ).to.be.true
   
   
   describe "`RequirementChecker`", ->
@@ -212,7 +216,7 @@ describe "`rule`", ->
       proof = '''
         1. not not A
       ''' 
-      proof = verify._parseProof proof
+      proof = _parse proof
       line = proof.getLine 1
       rc = new rule.RequirementChecker(req, [line])
       result = rc.check()
@@ -223,7 +227,7 @@ describe "`rule`", ->
       proof = '''
         1. not not A
       ''' 
-      proof = verify._parseProof proof
+      proof = _parse proof
       line = proof.getLine 1
       rc = new rule.RequirementChecker(req, [line])
       result = rc.check()
@@ -235,7 +239,7 @@ describe "`rule`", ->
       proof = '''
         1. A
       ''' 
-      proof = verify._parseProof proof
+      proof = _parse proof
       line = proof.getLine 1
       rc = new rule.RequirementChecker(req, [line])
       result = rc.check()
@@ -246,7 +250,7 @@ describe "`rule`", ->
       proof = '''
         1. [a]F(a)
       ''' 
-      proof = verify._parseProof proof
+      proof = _parse proof
       line = proof.getLine 1
       matches = 
         φ : fol.parse "F(x)"
@@ -265,11 +269,10 @@ describe "`rule`", ->
         1. not not A
         2. A            // not elim 1
       ''' 
-      proof = verify._parseProof proof
+      proof = _parse proof
       line = proof.getLine 2
-      # console.log util.inspect(line)
       result = rule.from('not not φ').to('φ').check(line)
-      console.log "result.getMessage() = #{result.getMessage()}" if result isnt true
+      console.log "getMessage() = #{line.status.getMessage()}" if result isnt true
       expect(result).to.be.true
 
     it "allows checking cited things are correct when one line and two subproofs are required", ->
@@ -282,12 +285,11 @@ describe "`rule`", ->
         6.    C
         7. C          // or elim 1, 2-3, 5-6
       '''
-      proof = verify._parseProof proof
+      proof = _parse proof
       line = proof.getLine 7
       test = rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ')).to('χ')
       result = test.check(line)
-      # console.log util.inspect(line)
-      console.log result.getMessage() if result isnt true
+      console.log line.status.getMessage() if result isnt true
       expect(result).to.be.true
 
     it "provides a message when required citations to subproofs are missing", ->
@@ -300,38 +302,34 @@ describe "`rule`", ->
         6.    C
         7. C          // or elim 1, 2-3
       '''
-      proof = verify._parseProof proof
+      proof = _parse proof
       line = proof.getLine 7
       test = rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ')).to('χ')
       result = test.check(line)
       expect(result).not.to.be.true
-      expect(_.isString(result.getMessage())).to.be.true
-      expect(result.getMessage().length > 0).to.be.true
+      expect(line.status.getMessage().length > 0).to.be.true
 
     it "provides a message when required citations to lines are missing", ->
       proof = '''
         1. not not A
         2. A            // not elim
       ''' 
-      proof = verify._parseProof proof
+      proof = _parse proof
       line = proof.getLine 2
-      # console.log util.inspect(line)
       result = rule.from('not not φ').to('φ').check(line)
       expect(result).not.to.be.true
-      expect(_.isString(result.getMessage())).to.be.true
-      expect(result.getMessage().length > 0).to.be.true
+      expect(line.status.getMessage().length > 0).to.be.true
 
     it "provides a message when superfluous citations are added", ->
       proof = '''
         1. not not A
         2. A            // not elim 1, 1
       ''' 
-      proof = verify._parseProof proof
+      proof = _parse proof
       line = proof.getLine 2
-      # console.log util.inspect(line)
       result = rule.from('not not φ').to('φ').check(line)
       expect(result).not.to.be.true
-      expect(result.getMessage().length > 0).to.be.true
+      expect(line.status.getMessage().length > 0).to.be.true
 
   describe "LineChecker, RequirementChecker and Pathfinder", ->
     it "allows you to confirm correct use of reit", ->
@@ -339,17 +337,17 @@ describe "`rule`", ->
         1. not A
         2. not A            // reit 1
       ''' 
-      proof = verify._parseProof proof
+      proof = _parse proof
       line = proof.getLine 2
       result = rule.from('φ').to('φ').check(line)
-      console.log result.getMessage() if result isnt true
+      console.log line.status.getMessage() if result isnt true
       expect(result).to.be.true
 
     it "works when there is no from (as in = intro)", ->
       proof = '''
         1. a=a        // = intro
       '''
-      proof = verify._parseProof proof
+      proof = _parse proof
       line = proof.getLine 1
       result = rule.from().to('α=α').check(line)
       expect(result).to.be.true
@@ -358,12 +356,11 @@ describe "`rule`", ->
       proof = '''
         1. a=b        // = intro
       '''
-      proof = verify._parseProof proof
+      proof = _parse proof
       line = proof.getLine 1
       result = rule.to('α=α').check(line)
       expect(result).not.to.be.true
-      expect(_.isString(result.getMessage())).to.be.true
-      expect(result.getMessage().length > 0).to.be.true
+      expect(line.status.getMessage().length > 0).to.be.true
 
     it "allows correct use of and intro for A and A citing the same line twice", ->
       proof = '''
@@ -371,7 +368,7 @@ describe "`rule`", ->
         2. B
         3. A and A     // and intro 1,1
       '''
-      proof = verify._parseProof proof
+      proof = _parse proof
       andIntro = rule.from('ψ').and('φ').to('φ and ψ')
       result = andIntro.check(proof.getLine(3))
       expect(result).to.be.true
@@ -382,7 +379,7 @@ describe "`rule`", ->
         2. B
         3. A and A     // and intro 1,2
       '''
-      proof = verify._parseProof proof
+      proof = _parse proof
       andIntro = rule.from('ψ').and('φ').to('φ and ψ')
       result = andIntro.check(proof.getLine(3))
       expect(result).not.to.be.true
@@ -395,7 +392,7 @@ describe "`rule`", ->
         2. A
         3. A            // arrow elim 1, 2
       ''' 
-      proof = verify._parseProof proof
+      proof = _parse proof
       arrowElim = rule.from('φ arrow ψ').and('φ').to('ψ')
       result = arrowElim.check proof.getLine(3)
       expect(result).not.to.be.true
@@ -407,7 +404,7 @@ describe "`rule`", ->
         2. A
         3. B            // arrow elim 1, 2
       ''' 
-      proof = verify._parseProof proof
+      proof = _parse proof
       arrowElim = rule.from('φ arrow ψ').and('φ').to('ψ')
       result = arrowElim.check proof.getLine(3)
       expect(result).to.be.true
@@ -418,7 +415,7 @@ describe "`rule`", ->
         2. A  arrow B
         3. B            // arrow elim 1, 2
       ''' 
-      proof = verify._parseProof proof
+      proof = _parse proof
       arrowElim = rule.from('φ arrow ψ').and('φ').to('ψ')
       result = arrowElim.check proof.getLine(3)
       expect(result).to.be.true
@@ -429,7 +426,7 @@ describe "`rule`", ->
         2. A  arrow B
         3. B            // arrow elim 1, 2
       '''
-      proof = verify._parseProof proof
+      proof = _parse proof
       arrowElim = rule.from('φ').and('φ arrow ψ').to('ψ')
       result = arrowElim.check proof.getLine(3)
       expect(result).to.be.true
@@ -438,9 +435,9 @@ describe "`rule`", ->
         2. A
         3. B            // arrow elim 1, 2
       '''
-      proof2 = verify._parseProof proof2
+      proof2 = _parse proof2
       result = arrowElim.check proof2.getLine(3)
-      console.log result.getMessage() if result isnt true
+      console.log line.status.getMessage() if result isnt true
       expect(result).to.be.true
 
 

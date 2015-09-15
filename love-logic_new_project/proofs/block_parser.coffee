@@ -252,15 +252,17 @@ exports.areLinesFormattedIndentationFirst = areLinesFormattedIndentationFirst
 _SPLIT_LINE_WHEN_INDENTATION_FIRST = /^([|\s]*)([\s\S]*)/ 
 
 # This says:
-#   ^               --- match start of line
-#   ([|\s]*)        --- capture any indentation at start of line
-#   \(?             --- match an optional bracket
-#   ([0-9][^|\s]*)? --- match a number (if present: note the final '?'), 
-#                       where a number is a digit followed by non-spaces and non-|s
-#   ([|\s]*)        --- match any indentation
-#   ([\s\S]*)       --- match everything else
+#   ^                   --- match start of line
+#   ([|\s]*)            --- capture any indentation at start of line
+#   (
+#       \(?             --- match an optional bracket
+#       [0-9]+[^|\s]*   --- match a number (if present: note the final '?'),
+#   )?                        where a number is a digit followed by non-spaces and non-|s
+#                           
+#   ([|\s]*)            --- match any indentation
+#   ([\s\S]*)           --- match everything else
 # It is assumed below that this expression always matches.
-_SPLIT_LINE_WHEN_NUMBER_FIRST = /^([|\s]*)\(?([0-9][^|\s]*)?([|\s]*)([\s\S]*)/
+_SPLIT_LINE_WHEN_NUMBER_FIRST = /^([|\s]*)(\(?[0-9]+[^|\s]*)?([|\s]*)([\s\S]*)/
 
 split = (line, indentationFirst) ->
   if indentationFirst
@@ -300,7 +302,7 @@ isDivider = (line) ->
   line = removeIndentationFrom line
   
   # A line that starts with -- or __ (after any indentation or whitespace) is a divider.
-  m = line.match /^\s*[(--)(__)]/
+  m = line.match /^\s*(--|__)/
   return true if m isnt null
   
   # Nothing else is a divider.
@@ -392,12 +394,11 @@ class Block
     return undefined
   
   # Returns the 1-based lineNumber-th line in this block.
-  # (This is mainly (or only?) used for testing.)
   getLine : (lineNumber) ->
     walker = {
       onLine : 0
       visit : (item) ->
-        return undefined if not (item.type in ['line','divider','blank_line'])
+        return undefined if item.type is 'block'
         @onLine += 1
         return item if @onLine is lineNumber
         return undefined

@@ -58,10 +58,35 @@ to = (block) ->
       return undefined if item.type isnt 'line'
       return undefined if item.justification? or item.justificationErrors?
       line = item
-      if isPremise line
+      if _isPremise(line)
         line.justification = PREMISE_JUSTIFICATION
       return undefined  # Keep walking.
   block.walk walker
+
+  # Third pass: add some useful functions to blocks.
+  walker =  
+    visit : (block) ->
+      return undefined if block.type isnt 'block'
+
+      block.getConclusion = () ->
+        last = _.last block.content
+        if last.type is 'line' and last.sentence?
+          return last.sentence
+        return false # There is no conclusion
+      
+      block.getPremises = () ->
+        premiseLines = _.filter( block.content, (item) ->
+          return false unless item.type is 'line'
+          return false unless item.sentence?
+          return false unless item.justification?.connective is 'premise'
+          return true
+        )
+        return (x.sentence for x in premiseLines )
+
+      return undefined  # Keep walking.
+      
+  block.walk walker
+
 
   return block
   
@@ -91,7 +116,7 @@ split = (text) ->
 
 
 # Return true if line is a premise.
-isPremise = (line) ->
+_isPremise = (line) ->
   parent = line.parent
   # The first line in any block is a premise.
   if line is parent.content[0]
@@ -115,7 +140,7 @@ isPremise = (line) ->
       lineIsBeforeDivider = true
   return true if lineIsBeforeDivider and thereIsADivider
   return false
-
+exports._isPremise = _isPremise
 
 # ---
 # Some functions that are added to lines for convenience later.

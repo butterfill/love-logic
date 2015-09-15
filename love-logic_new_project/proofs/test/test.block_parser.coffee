@@ -210,9 +210,38 @@ describe "block_parser", ->
           5.  C
         '''
         block = bp.parse proofText
+        line = block.getLine(4)
+        console.log line.content
+        expect(line.type).to.equal('blank_line')
+      it "will go to a divider", ->
+        proofText = '''
+          1.  A
+          2.  ---
+          3.  B
+          4.
+          5.  C
+        '''
+        block = bp.parse proofText
         line = block.getLine(2)
         console.log line.content
         expect(line.type).to.equal('divider')
+      it "will go to a divider (tricky example)", ->
+        proofText = '''
+          1. | (A->B)&(B->C)
+          2. |---
+          3. | A->B			
+          4. | B->C			
+          5. | |  A			
+          6. | |---
+          7. | |  B
+          8. | |  C		// arrow elim 4,7	
+          9. | A->C		// arrow intro 5-8
+        '''
+        block = bp.parse proofText
+        line = block.getLine(2)
+        expect(line.type).to.equal('divider')
+        line6 = block.getLine(6)
+        expect(line6.type).to.equal('divider')
 
     describe ".findAbove", ->
       it "finds things in earlier lines of the proof", ->
@@ -427,6 +456,21 @@ describe "block_parser", ->
       expect(block.indentation.length < subBlock2.indentation.length)
   
   describe "in some tricky cases", ->
+    it "gets the content of the first line right when there are no line numbers", ->
+      block = bp.parse '''
+        (A->B) and (B->C)
+ 
+        A->C
+      '''
+      expect(block.getLine(1).content).to.equal('(A->B) and (B->C)')
+    it "gets the content of the last line right when there are no line numbers", ->
+      block = bp.parse '''
+        (A->B) and (B->C)
+ 
+        (A->C)
+      '''
+      expect(block.getLine(3).content).to.equal('(A->C)')
+    
     it "does ok with blank line first followed by a subblock", ->
       proof = '''
            | 

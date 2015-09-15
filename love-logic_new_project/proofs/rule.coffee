@@ -107,7 +107,8 @@ premise = () ->
     
     lineIsInASubproof = line.parent.parent?
     if lineIsInASubproof
-      return { getMessage : () -> "only the first line of a subproof may be a premise." }
+      line.status.addMessage "only the first line of a subproof may be a premise."
+      return false
     
     # From this point on, we are in the main proof (not in a subproof).
     
@@ -123,7 +124,8 @@ premise = () ->
       return false
     thereIsANonPremiseAbove = line.findAbove( isNeitherAPremiseNorASubproof )
     if thereIsANonPremiseAbove
-      return { getMessage : () -> "premises may not occur after non-premises." }
+      line.status.addMessage  "premises may not occur after non-premises."
+      return false
     return true
     
   return premiseRule
@@ -152,14 +154,11 @@ _parseIfNecessaryAndDecorate = (requirement) ->
 # Objects of this class (a) check whether the right number of lines and subproofs 
 # have been cited; and (b) transform the requirements into `RequirementChecker`
 # objects to pass on to a `Pathfinder`.
+# TODO: simplify this and the rest into a chain of functions (don't need classes!).
 class LineChecker
   constructor : (@line, @requirements) ->
     @citedLines = @line.getCitedLines()
     @citedBlocks = @line.getCitedBlocks()
-
-    # The @message will provide an explanation of any mistakes for
-    # the person writing a proof.
-    @message = ''
 
     @ruleName = @line.getRuleName()
     
@@ -190,23 +189,9 @@ class LineChecker
     if pathFound
       return true
     else 
-      console.log "LineChecker instance, checked toRequirement, @getMessage() = #{@getMessage()}"
+      console.log "\tLineChecker instance, checked toRequirement, getMessage() = #{@line.status.getMessage()}"
       return @
   
-  addMessage : (text) ->
-    @message = "#{@message} #{text}"
-  getMessage : () ->
-    return "You cannot do this because #{@message.trim()}"
-
-  # An 'although' message is one that describes something correct about the
-  # use of the rule. (e.g. 'although your conclusion has the right form ...')
-  addAlthoughMessage : (text) ->
-    if @_addedAlthough?
-      @addMessage "and although #{text}"
-    else
-      @addMessage "although #{text}"
-      @_addedAlthough = true
-
   citedTypesAreCorrect : () ->
     expected = @whatToCite()
     actual = 
@@ -228,7 +213,7 @@ class LineChecker
       ("and " if actualLinesTxt and actualBlocksTxt) \
       or ("nothing" if not actualLinesTxt and not actualBlocksTxt) \
       or ""
-    @addMessage "you must cite #{expectedLinesTxt} #{expectedAndText}#{expectedBlocksTxt} when using the rule #{@ruleName} (you cited #{actualLinesTxt} #{actualAndText}#{actualBlocksTxt}).".replace /\s\s+/g, ' ' 
+    @line.status.addMessage "you must cite #{expectedLinesTxt} #{expectedAndText}#{expectedBlocksTxt} when using the rule #{@ruleName} (you cited #{actualLinesTxt} #{actualAndText}#{actualBlocksTxt}).".replace /\s\s+/g, ' ' 
 
     return false
 
@@ -432,7 +417,7 @@ class Pathfinder
   # path along which all requirements can be met.
   # Param `reqChecker` is the last in `reqCheckList` for which there is no path.
   writeMessage : (reqChecker) ->
-    @line.status.addMessage("to apply this rule you need to cite a line with the form ‘#{reqChecker.theRequirement.toString()}’ (‘#{reqChecker.theRequirement.clone().applyMatches(@matches)}’ in this case).")
+    @line.status.addMessage("to apply #{@line.getRuleName()} you need to cite a line with the form ‘#{reqChecker.theRequirement.toString()}’ (‘#{reqChecker.theRequirement.clone().applyMatches(@matches)}’ in this case).")
 
 
 

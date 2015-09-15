@@ -21,7 +21,7 @@ exports.parse = parse
 
 # Add some useful functions to an expression and every part of it.
 _decorate = (expression) ->
-  util.walk expression, (e) ->
+  walker = (e) ->
     return if e is null # (Because `null` can occur in substitutions.)
     return if _.isArray(e) or _.isString(e) or _.isBoolean(e) or _.isNumber(e)
     
@@ -37,8 +37,8 @@ _decorate = (expression) ->
       theClone = util.cloneExpression e
       _decorate theClone
       return theClone
-    e.toString = () ->
-      return util.expressionToString e
+    e.toString = (o) ->
+      return util.expressionToString e, o
     e.listMetaVariableNames = () ->
       return util.listMetaVariableNames e
       
@@ -79,6 +79,7 @@ _decorate = (expression) ->
         return undefined 
       e.walk letterFinder
       return _letters.sort()
-
+      
+  util.walk expression, walker
   return expression
 exports._decorate = _decorate

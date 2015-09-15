@@ -39,14 +39,21 @@ to = (block) ->
     usedLineNumbers : []
     lineCounter : 0
     userNumberedLines : false
+    
     visit : (item) ->
-      return undefined if item.type isnt 'line'
+      # Blocks will be numbered later.
+      return undefined if item.type is 'block'
       line = item
       @lineCounter += 1
       {lineNumber, rest} = split line
       @userNumberedLines = true if lineNumber or lineNumber is 0
-      if lineNumber is null and not @userNumberedLines
-        lineNumber = "#{@lineCounter}"
+      if lineNumber is null 
+        if item.type is 'line' 
+          lineNumber = "#{@lineCounter}"
+        else
+          # Protect the user from duplicates in case they are only numbering lines 
+          # that contain sentences
+          lineNumber = "#{@lineCounter}x"
       if lineNumber in @usedLineNumbers
         throw new Error "Duplicate line number '#{lineNumber}' used for the second time at line #{@lineCounter}.  Line numbers must be unique."
       @usedLineNumbers.push lineNumber
@@ -68,11 +75,14 @@ to = (block) ->
       firstLine = block.content[0]
       lastLine = _.last block.content
       
-      # We won't label a block that isn't yet closed.
-      return undefined if firstLine.type isnt 'line' or lastLine.type isnt 'line'
+      # A block that isn't yet closed finishes with a block.
+      # We will count to the end of that block
+      while lastLine.type is 'block'
+        subBlock = lastLine
+        lastLine = _.last subBlock.content
       
       # We won't label a block if for some reason its first or last line 
-      # didn't get a number (maybe one of these was a `block_parser.isDivider` line).
+      # didn't get a number.
       return undefined if not (firstLine.number? and lastLine.number?)
       
       lineNumber = "#{firstLine.number}-#{lastLine.number}"

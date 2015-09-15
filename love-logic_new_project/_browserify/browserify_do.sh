@@ -1,0 +1,2 @@
+#!/bin/sh
+browserify -t coffeeify  --extension=".coffee" awfol.browserifyme.coffee -o  /Users/stephenbutterfill/Documents/programming/love-logic-server/love-logic-server/client/lib/awfol/awfol.bundle.js

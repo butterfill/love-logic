@@ -124,7 +124,7 @@ describe "match (module)", ->
       console.log "\tresults.length = #{results.length}"
       results = _.uniq((util.expressionToString(x) for x in results)).sort()
       console.log "\t\t\tunique results.length = #{results.length}"
-      expect(results).to.deep.equal(["F(a) and G(a)","F(a) and G(b)","F(b) and G(a)","F(b) and G(b)"])
+      expect(results).to.deep.equal(["F(a) ∧ G(a)","F(a) ∧ G(b)","F(b) ∧ G(a)","F(b) ∧ G(b)"])
     it "lists possible substitutions for two substitutions", ->
       results = []
       e = fol.parse '(F(a) and G(b))[a->b][b->c]'

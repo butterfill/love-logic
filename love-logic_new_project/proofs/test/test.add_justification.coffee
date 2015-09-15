@@ -14,6 +14,13 @@ addJustification = require '../add_justification'
 INPUT = "1 // premise \n 2.1 no justification \n 2.2 // and elim 1\n\n 3.1 //assumption\n 3.2 // invalid justification and or elim\n  3.2.1 // and elim missing numbers\n4 //reit 1"
 BLOCK = bp.parse INPUT
 
+_parse = (input) ->
+  block = bp.parse input
+  ln.to block
+  addJustification.to block
+  return block
+
+
 describe "add_justification", ->
   describe "addJustification", ->
     it "adds justification to a test block", ->
@@ -43,6 +50,21 @@ describe "add_justification", ->
     it "adds justification to premises where necessary", ->
       block = addJustification.to BLOCK
       expect(block.getLine(2).justification.rule.connective).to.equal('premise')
+      
+    it "adds justification to premises where necessary (longer example)", ->
+      proof = _parse '''
+        A → B
+        B → C
+        ---
+          A
+          B		// arrow elim 1,3
+          C		// arrow elim 2,4
+        A → C // arrow intro 3-5
+      '''
+      line = proof.getLine(2)
+      expect(addJustification._isPremise(line)).to.be.true
+      expect(line.justification.rule.connective).to.equal('premise')
+
 
     it "adds doesn't add justification to non-premises", ->
       block = bp.parse "1. A\n2. A\n A"
@@ -83,12 +105,38 @@ describe "add_justification", ->
         | 3. contradiction
         4. not A // not elim 2-3
       '''
-      block = bp.parse input
-      ln.to block
-      addJustification.to block
+      block = _parse input
       expected = block.getLine(2).parent
       line4 = block.getLine 4
       # console.log input
       # console.log block.toString()
       expect(line4.getCitedBlocks()[0]).to.equal(expected)
+    
+    it "tells you when a line has faulty justification", ->
+      proof = _parse '''
+        1. A          // premise
+        2. A and B    // ayiu aksoupp
+      '''
+      line = proof.getLine(2)
+      expect(line.justification?).to.be.false
+      expect(line.justificationErrors?).to.be.true
+
+    it "does not add justification when a line has no justification", ->
+      proof = _parse '''
+        1. A      // premise
+        2. A and B // and intro 1
+        3. A and B  
+      '''
+      line = proof.getLine(3)
+      expect(line.justification?).to.be.false
+
+    it "tells you when a line has blank justification", ->
+      proof = _parse '''
+        1. A          // premise
+        2. A and B    //   
+      '''
+      line = proof.getLine(2)
+      expect(line.justification?).to.be.false
+      expect(line.justificationErrors?).to.be.true
+
     

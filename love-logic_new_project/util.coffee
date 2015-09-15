@@ -262,10 +262,23 @@ cloneExpression = (expression) ->
 
 exports.cloneExpression = cloneExpression
 
+SYMBOLS =
+  'not' : '¬'
+  'false' : "⊥"
+  'identity' : "="
+  'and' : "∧"
+  'arrow' : "→"
+  'double_arrow' : "↔"
+  'or' : "∨"
+  'nor' :  "↓"
+  'nand' : "↑"
+  'universal_quantifier' : "∀"
+  'existential_quantifier' : "∃" 
+    
 
 # Create a string representation of a fol expression.
 # It uses the symbols that were specified when the expression was parsed (where these exist).
-expressionToString = (expression) ->
+expressionToString = (expression, o={}) ->
   
   # Help with debug 
   for test in [_.isBoolean, _.isNumber, _.isString, _.isArray]
@@ -306,7 +319,7 @@ expressionToString = (expression) ->
       theSubs = "[#{e.substitutions}]"
     
     if e.termlist? 
-      symbol = e.name or e.symbol or e.type
+      symbol = e.name or e.symbol or SYMBOLS[e.type] or e.type
       middle = "#{symbol}(#{e.termlist.join(',')})"
   
     if e.type is 'identity'
@@ -328,20 +341,22 @@ expressionToString = (expression) ->
       right_bracket = " )" 
     
     if e.boundVariable?
-      symbol = (e.symbol or e.type)
-      symbol = '∀' if symbol is 'universal_quantifier'
-      symbol = '∃' if symbol is 'existential_quantifier'
+      symbol = (e.symbol or SYMBOLS[e.type] or e.type)
       variableName = e.boundVariable
       middle = "#{symbol} #{variableName} #{left_bracket}#{e.left}#{e.right or ''}#{right_bracket}"
     
     if e.left? and not e.boundVariable?
       if not e.right?   # e.g. `not P`
-        middle = "#{left_bracket}#{e.symbol or e.type or ''} #{e.left or ''}#{right_bracket}"
+        middle = "#{left_bracket}#{e.symbol or SYMBOLS[e.type] or e.type or ''} #{e.left or ''}#{right_bracket}"
       else 
-        middle = "#{left_bracket}#{e.left or ''} #{e.symbol or e.type or ''} #{e.right or ''}#{right_bracket}"
+        middle = "#{left_bracket}#{e.left or ''} #{e.symbol or SYMBOLS[e.type] or e.type or ''} #{e.right or ''}#{right_bracket}"
     return "#{aBox or ''}#{middle}#{theSubs or ''}"
 
-  eClone = cloneExpression expression
+  if o.replaceSymbols
+    eClone = cloneExpression expression
+  else
+    # Use `_.cloneDeep` to preserve extraneous properties here
+    eClone = _.cloneDeep expression
   expressionStr = walkMutate eClone, walker
   
   _cleanUp = 

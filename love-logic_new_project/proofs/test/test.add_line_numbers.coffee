@@ -31,4 +31,68 @@ describe "add_line_numbers", ->
     it "throws on duplicate line numbers", ->
       block = bp.parse "1. A\n 2. A\n 1. A"
       expect( -> ln.to block ).to.throw(Error)
+    it "correctly adds numbers to subproofs", ->
+      block = bp.parse '''
+        1. | (A->B)&(B->C)
+        2. |---
+        3. | A->B			
+        4. | B->C			
+        5. | |  A				
+        6. | |---
+        7. | |  B				
+        8. | |  C			
+        11.| A          
+      '''
+      ln.to block
+      expect(block.getLine(5).parent.number).to.equal("5-8")
+    it "correctly adds numbers to sub-subproofs", ->
+      block = bp.parse '''
+        1. | (A->B)&(B->C)
+        2. |---
+        3. | A->B			
+        4. | B->C			
+        5. | |  A				
+        6. | |---
+        7. | |  B				
+        8. | | | C			
+        9. | | |---
+        10.| | | A->C		
+        11.| A          
+      '''
+      ln.to block
+      expect(block.getLine(8).parent.number).to.equal("8-10")
+    it "correctly adds numbers to proofs with sub-subproofs that do close", ->
+      block = bp.parse '''
+        1. | (A->B)&(B->C)
+        2. |---
+        3. | A->B			
+        4. | B->C			
+        5. | |  A				
+        6. | |---
+        7. | |  B				
+        8. | | | C			
+        9. | | |---
+        10.| | | A->C
+        11.| | C
+        12.| A          
+      '''
+      ln.to block
+      expect(block.getLine(5).parent.number).to.equal("5-11")
+    it "correctly adds numbers to proofs with sub-subproofs that don't close", ->
+      block = bp.parse '''
+        1. | (A->B)&(B->C)
+        2. |---
+        3. | A->B			
+        4. | B->C			
+        5. | |  A				
+        6. | |---
+        7. | |  B				
+        8. | | | C			
+        9. | | |---
+        10.| | | A->C		
+        11.| A          
+      '''
+      ln.to block
+      expect(block.getLine(5).parent.number).to.equal("5-10")
+      
     

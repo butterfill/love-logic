@@ -11,7 +11,7 @@ addJustification = require '../add_justification'
 addSentences = require '../add_sentences'
 addStatus = require '../add_status'
 
-parse = (proofText) ->
+_parse = (proofText) ->
   block = blockParser.parse proofText
   addLineNumbers.to block
   addJustification.to block
@@ -23,7 +23,7 @@ parse = (proofText) ->
 describe "add_status", ->
   describe "`.getErrorMessage`", ->
     it "adds an error message to each line", ->
-      proof = parse '''
+      proof = _parse '''
         A
         B
         ---
@@ -33,7 +33,7 @@ describe "add_status", ->
         aLine = proof.getLine(n)
         expect(_.isString(aLine.getErrorMessage())).to.be.true
     it "adds a status object to each line", ->
-      proof = parse '''
+      proof = _parse '''
         A
         B
         ---
@@ -47,7 +47,7 @@ describe "add_status", ->
   
   describe "LineStatus", ->
     it ".addMessage allows you to add a message to a line", ->
-      proof = parse '''
+      proof = _parse '''
         A
         B
         ---
@@ -65,8 +65,8 @@ describe "add_status", ->
         ---
         A and B   // and intro: 1,2
       '''
-      proof1 = parse proofText
-      proof2 = parse proofText
+      proof1 = _parse proofText
+      proof2 = _parse proofText
       aLine1 = proof1.getLine(1)
       aLine1.status.addMessage('aarrgh')
       aLine2 = proof2.getLine(1)
@@ -74,7 +74,7 @@ describe "add_status", ->
       expect(aLine2.status.messages.length).to.equal(0)
       
     it ".popMessage allows you to remove the last message added to a line", ->
-      proof = parse '''
+      proof = _parse '''
         C
         B
         ---
@@ -89,7 +89,7 @@ describe "add_status", ->
       
     it ".addAlthoughMessage allows you to add an although message to a line"
     it ".getMessage allows you to get a composite message about a line", ->
-      proof = parse '''
+      proof = _parse '''
         C
         B
         ---
@@ -100,3 +100,32 @@ describe "add_status", ->
       aLine.status.addMessage('fffddddh')
       expect(aLine.status.getMessage().search('aarrgh')).not.to.equal(-1)
       expect(aLine.status.getMessage().search('fffddddh')).not.to.equal(-1)
+
+
+  describe "constructing error messages", ->
+    it "adds a message when a line has  a syntax error", ->
+      proof = _parse '''
+        1. A      // premise
+        2. &*^$&_)&*^  // premise
+      '''
+      line = proof.getLine(2)
+      expect(line.status.verified).to.be.false
+      expect(line.status.getMessage().search('sentence')).not.to.equal(-1)
+    it "adds a message when a line has no justification", ->
+      proof = _parse '''
+        1. A      // premise
+        2. A and B  
+      '''
+      line = proof.getLine(2)
+      expect(line.status.verified).to.be.false
+      expect(line.status.getMessage().search('justification')).not.to.equal(-1)
+    it "adds a message when a line has faulty justification", ->
+      proof = _parse '''
+        1. A      // premise
+        2. A and B  // alii asdyiuy ^(&*$
+      '''
+      line = proof.getLine(2)
+      expect(line.status.verified).to.be.false
+      expect(line.status.getMessage().search('justification')).not.to.equal(-1)
+
+

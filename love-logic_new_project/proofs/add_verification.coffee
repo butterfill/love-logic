@@ -29,7 +29,7 @@ addStatus = require './add_status'
 
 theRules = (require './fitch_rules').rules
 
-# TODO: remove (was used for testing).
+# This is only used for testing (so that `verifyLine` can take text).
 _parseProof = (proofText) ->
   block = blockParser.parse proofText
   addLineNumbers.to block
@@ -37,7 +37,6 @@ _parseProof = (proofText) ->
   addSentences.to block
   addStatus.to block
   return block
-exports._parseProof = _parseProof
 
 
 # Add a `verify` method to each line and block of `proof`.
@@ -46,28 +45,24 @@ to = (proof) ->
   walker = 
     visit : (item) ->
       return undefined unless item?.type?
-      switch item.type
-        when 'line' 
-          aLine = item
-          aLine.verify = () ->
-            result = verifyLine(aLine, proof)
-            return true if result.verified
-            return result
-        when 'block' 
-          aBlock = item
+      
+      if item.type is 'block' 
+        aBlock = item
+        aBlock.verify = () ->
           allLinesOk = true
-          aBlock.verify = () ->
-            verifyABlock = 
-              visit : (item) ->
-                if item.type is 'line'
-                  result = item.verify()
-                  allLinesOk = allLinesOk and result
-            aBlock.walk verifyABlock
-            return allLinesOk
-        else
-          item.verify = () ->
-            return "(This is a blank line, a divider or a comment.)"
-        
+          verifyABlockWalker = 
+            visit : (item) ->
+              if item.type is 'line'
+                result = item.verify()
+                allLinesOk = allLinesOk and result
+                return undefined # keep walking
+          aBlock.walk verifyABlockWalker
+          return allLinesOk
+      else
+        # item is a line, blank_line, divider or comment.
+        aLine = item
+        aLine.verify = () ->
+          return verifyLine(aLine, proof)
       
       return undefined
 
@@ -75,83 +70,89 @@ to = (proof) ->
 exports.to = to
 
 
-# Verifies whether the line at `lineNumber` is correct, 
+# Verifies whether the line at `lineOrLineNumber` is correct, 
 # returning error messages if not.
-# `lineNumber` is the 1-based number in the proofText.
-# `proofText` may be a parsed proof (used internally).
+# If `lineOrLineNumber`  is not of `.type` `line`, this function confirms 
+# that the line is correct but adds a message explaning that it has been treated
+# as a blank, divider or whatever.
+# `lineOrLineNumber` is the 1-based linenumber in the proofText (so
+# not the name of the line) or a line object.
+# `proofText` may be a parsed proof (or a string, for testing).
 verifyLine = (lineOrLineNumber, proofText) ->
   if _.isString proofText
     proofText = _parseProof proofText
   proof = proofText
 
-  if lineOrLineNumber.type is 'line'
+  if lineOrLineNumber.type?
     theLine = lineOrLineNumber
   else
     lineNumber = lineOrLineNumber
     theLine = proof.getLine lineNumber
     if not theLine
       throw new Error "Could not find line #{lineNumber} in #{proofText}"
+
+  theLine.status.verificationAttempted = true
   
-  result = 
-    verified: false 
-    message : ''
-    messages : []
-    addMessage : (txt) -> 
-      @messages.push txt
-      @message = "#{@message} #{txt}".trim()
-    popMessage : () ->
-      if @messages.length > 0
-        msg = @messages.pop()
-        @message = "#{@message}"
-        return msg
-      return ''
-    areThereErrors : ->
-      return true if @sentenceErrors? or @justificationErrors?
-      return false
+  # Blank lines, comments, dividers are fine; we don't need to check those.
+  # (Here we assume that the only thing we do check are things of `.type` `line`.)
+  if theLine.type isnt 'line'
+    theLine.status.verified = true
+    theLine.status.addMessage("(This is a #{theLine.type.replace(/_/g,' ')})")
+    return true
   
-  # We can't go on if there are errors.
-  if theLine.sentenceErrors? 
-    result.sentenceErrors = theLine.sentenceErrors 
-    result.addMessage 'there were errors with the sentence you wrote.'
-  if theLine.justificationErrors?  
-    result.justificationErrors = theLine.justificationErrors
-    result.addMessage 'there were errors with the justification you gave.'
-  if result.areThereErrors()
-    return result
-  
-  # Blank lines are fine; we don't need to check those.
-  if not theLine.sentence?  and theLine.content?.trim() is ''
-    result.verified = true
-    return result
-  
-  # A line missing justification is a mistake.
-  # (Note that justification is automatically added to premises 
-  # and assumptions by the `add_justification` module.)
-  if not theLine.justification?
-    result.addMessage 'You did not provide any justification'
-    return result
+  # We can't go on if there are errors, nor if justification is missing.
+  if theLine.sentenceErrors? or 
+      theLine.justificationErrors? or
+      not theLine.justification?
+    theLine.status.verified = false
+    return false 
   
   # From here on, we have a sentence and justification.
   
   # First, check that the lines cited are legit.
-  if not linesCitedAreOk(theLine)
-    result.addMessage 'you cited lines that cannot be cited here (either they do not exist, or they are below this line, or else they occur above but in a closed block).'
-    return result
+  areLinesCitedOk = _linesCitedAreOk(theLine)
+  if areLinesCitedOk isnt true
+    errorMessage = areLinesCitedOk
+    theLine.status.addMessage errorMessage
+    theLine.status.verified = false
+    return false
   
   result = checkItAccordsWithTheRules theLine, result
   return result
 
 exports._line = verifyLine   #for testing only
 
-
-linesCitedAreOk = (line) ->
+# This function checks that the lines cited are (i) visible to `line`
+# and (ii) contain correct sentences of awFOL.
+# It returns `true` if checks are passed, or an error string if they fail.
+# It does not check the rule of proof at all.
+_linesCitedAreOk = (line) ->
   numbers = line.justification.numbers
   return true if not numbers
   for num in numbers
     found = line.findLineOrBlock(num)
-    return false if not found
-    return false if (found is line.parent)
+    if not found
+      return "something you cited, #{num}, cannot be cited here (either it does not exist, or it is below this line, or else it occurs above but in a closed subproof)."
+    ancestors = []
+    parent = line.parent
+    while parent
+      ancestors.push parent
+      parent = parent.parent
+    if found in ancestors
+      return "you cannot cite a subproof (#{num}) from within that subproof (you must close it, then cite it)."
+    if not (found.type in ['line','block'])
+      return "you cannot cite line #{num} because it is a #{found.type.replace(/_/g,' ')}."
+    if found.type is 'line' and found.status.sentenceParsed isnt true
+      return "you cannot cite line #{num} yet because it does not contain a correct awFOL sentence."
+    if found.type is 'block' 
+      firstLine = found.getFirstLine()
+      lastLine = found.getLastLine()
+      if lastLine.type is 'block'
+        return "you cannot cite #{num} because it finishes with an unclosed (sub)subproof (you must close it, then cite it)"
+      if not (firstLine? and lastLine? and firstLine.status.sentenceParsed and lastLine.status.sentenceParsed)
+        return "you cannot cite subproof #{num} yet because it contains lines that are not correct sentence of awFOL."
   return true
+exports._linesCitedAreOk = _linesCitedAreOk
 
 
 checkItAccordsWithTheRules = (line, result) ->
@@ -165,27 +166,28 @@ checkItAccordsWithTheRules = (line, result) ->
   ruleMap = theRules[connective]
 
   if not ruleMap
-    result.addMessage ("the rule you specified, `#{connective} #{intronation or ''} #{side or ''}` does not exist (or, if it does, you are not allowed to use it in this proof).".replace /\s\s+/g,'')
-    result.verified = false 
-    return result
+    line.status.addMessage ("the rule you specified, `#{connective} #{intronation or ''} #{side or ''}` does not exist (or, if it does, you are not allowed to use it in this proof).".replace /\s\s+/g,'')
+    line.status.verified = false 
+    return false
   
   if not intronation
     # We need to check the rule specified is complete.
     if ruleMap.type is 'rule'
+      # Yes, the rule specified is complete.
       aRule = ruleMap
       return checkThisRule(aRule, line, result)
     # The rule specified is incomplete.
-    result.addMessage "you only partially specified the rule: `#{connective}` needs something extra (intro? elim?)."
-    result.verified = false 
-    return result
+    line.status.addMessage "you only partially specified the rule: `#{connective}` needs something extra (intro? elim?)."
+    line.status.verified = false 
+    return false
   
   # From here on, we know that `intronation` is specified.
   
   ruleMap = ruleMap[intronation]
   if not ruleMap
-    result.addMessage "you specified the rule #{connective} *#{intronation}* but there is no ‘#{intronation}’ version of the rule for #{connective} (or, if there is, you are not allowed to use it in this proof)."
-    result.verified = false
-    return result
+    line.status.addMessage "you specified the rule #{connective} *#{intronation}* but there is no ‘#{intronation}’ version of the rule for #{connective} (or, if there is, you are not allowed to use it in this proof)."
+    line.status.verified = false
+    return false
   
   if not side
     # Now there are two cases.  The simple case is where the rule specification
@@ -202,22 +204,21 @@ checkItAccordsWithTheRules = (line, result) ->
     # requirements are met.
     if ruleMap.left?
       result = checkThisRule(ruleMap.left, line, result)
-      if result.verified 
-        # meeting the `left` requirement is sufficient when no `side is specified 
-        return result 
+      # Meeting the `left` requirement is sufficient when no `side is specified.
+      return result if result is true
     if not ruleMap.right?
-      # There are no further checks so the line has not been verified.
       return result
       
-    leftMessage = result.popMessage()
+    # Remove any error message resulting from having tried the `left` variant of the rule.
+    leftMessage = line.status.popMessage()
     result = checkThisRule(ruleMap.right, line, result)
-    if not result.verified 
-      rightMessage = result.popMessage()
+    if result is false 
+      rightMessage = line.status.popMessage()
       if leftMessage? and rightMessage?
-        result.addMessage "Either #{leftMessage}, or else #{rightMessage}."
+        line.status.addMessage "Either #{leftMessage}, or else #{rightMessage}."
       else 
         # Just put the one message we got (if any) back again
-        result.addMessage leftMessage or rightMessage or ''
+        line.status.addMessage(leftMessage or rightMessage or '')
         
     return result
   
@@ -225,21 +226,20 @@ checkItAccordsWithTheRules = (line, result) ->
   
   # Preliminary check : if `side` is specified, there must be a corresponding rule.
   if not ruleMap[side]?
-    result.addMessage "you specified the rule #{connective} #{intronation} *#{side}* but there is no ‘#{side}’ version of  #{connective} #{intronation} (or, if there is, you are not allowed to use it in this proof)."
-    result.verified = false
-    return result
+    line.status.addMessage "you specified the rule #{connective} #{intronation} *#{side}* but there is no ‘#{side}’ version of  #{connective} #{intronation} (or, if there is, you are not allowed to use it in this proof)."
+    line.status.verified = false
+    return false
   
   return checkThisRule(ruleMap[side], line, result)  
 
-  
+# TODO: remove this --- can just call rule.check directly.  
 checkThisRule = (rule, line, result) ->
   outcome = rule.check(line)
   if outcome is true
-    result.verified = true
+    line.status.verified = true
+    return true
   else
-    result.verified = false
-    msg = outcome.getMessage()
-    result.addMessage(msg)
-  return result
+    line.status.verified = false
+    return false
       
 
