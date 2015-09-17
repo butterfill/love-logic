@@ -84,6 +84,9 @@ subproof = (startReq, endReq) ->
       result = _.defaults( result, @endReq.listMetaVariableNames() )
       return result
     
+    toString : () ->
+      return "#{startReq.toString()} ⊢ #{endReq.toString()}"
+    
   }
 exports.subproof = subproof
 
@@ -139,6 +142,7 @@ exports._notImplementedYet = _notImplementedYet
 
 _parseIfNecessaryAndDecorate = (requirement) ->
   return requirement if not requirement   # Using `.to` creates undefined requirements.
+  return requirement if requirement.type is 'subproof'
   if _.isString requirement
     requirement = fol.parse requirement
   fol._decorate requirement
@@ -417,7 +421,8 @@ class Pathfinder
   # path along which all requirements can be met.
   # Param `reqChecker` is the last in `reqCheckList` for which there is no path.
   writeMessage : (reqChecker) ->
-    @line.status.addMessage("to apply #{@line.getRuleName()} you need to cite a line with the form ‘#{reqChecker.theRequirement.toString()}’ (‘#{reqChecker.theRequirement.clone().applyMatches(@matches)}’ in this case).")
+    # TODO: make this work for subproofs too!
+    @line.status.addMessage("to apply #{@line.getRuleName()} you need to cite a #{reqChecker.theRequirement.type} with the form ‘#{reqChecker.theRequirement.toString()}’.")
 
 
 

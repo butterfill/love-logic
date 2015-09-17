@@ -12,7 +12,7 @@ assert = chai.assert
 expect = chai.expect
 
 fol = require '../../parser/awFOL'
-
+util = require '../../util'
 
 bp = require '../block_parser'
 ln = require '../add_line_numbers'
@@ -36,6 +36,49 @@ _parse = (proofText) ->
   return block
 
 describe "the verify module:", ->
+  describe "`.getPremises` (added to blocks in proof)", ->
+    it "returns the premises of a proof", ->
+      proofText = '''
+        | (A->B)
+        | (B->C)
+        |---
+        | A->B			// and elim 1
+        | B->C			// and elim 1
+        | |  A				
+        | |---
+        | |  B				// arrow elim 3,5
+        | |  C				// arrow elim 4,7
+        | A->C		// arrow intro 5-8
+      '''
+      proof = _parse proofText
+      premises = proof.getPremises()
+      expect(premises.length).to.equal(2)
+      expectedPremise1 = fol.parse 'A->B'
+      expectedPremise1 = util.delExtraneousProperties expectedPremise1 
+      premises[0] = util.delExtraneousProperties premises[0]
+      expect(premises[0]).to.deep.equal(expectedPremise1)
+      expectedPremise2 = fol.parse 'B->C'
+      expectedPremise2 = util.delExtraneousProperties expectedPremise2
+      premises[1] = util.delExtraneousProperties premises[1]
+      expect(premises[1]).to.deep.equal(expectedPremise2)
+    it "returns [] when the proof has no premises", ->
+      proofText = '''
+        | 
+        |---
+        | A->B			// and elim 1
+        | B->C			// and elim 1
+        | |  A				
+        | |---
+        | |  B				// arrow elim 3,5
+        | |  C				// arrow elim 4,7
+        | A->C		// arrow intro 5-8
+      '''
+      proof = _parse proofText
+      premises = proof.getPremises()
+      expect(premises.length).to.equal(0)
+      expect(premises).to.deep.equal([])
+      
+    it "treats [a] as a premise"
   describe "`._linesCitedAreOk`", ->
     it "(preliminary to tests) confirms correct citations", ->
       proofText = '''
@@ -1073,3 +1116,45 @@ describe "the verify module:", ->
         result = verify._line n, proof
         console.log result if not result
         expect(result).to.be.true
+    
+    it "verifies a proof of ¬∃x (F(x) ∨ ¬ F(x) ) from no premises", ->
+      proof = _parse '''
+        | 
+        |---
+        | | ¬∃x (F(x) ∨ ¬ F(x) )
+        | |---
+        | | | F(a)
+        | | |---
+        | | | F(a) ∨ ¬ F(a)		// or intro 5
+        | | | ∃x (F(x) ∨ ¬ F(x) ) // exists intro 7
+        | | | false 				// contradiction intro 3,8
+        | | not F(a)			// not intro 5-9
+        | | | ¬F(a)
+        | | |---
+        | | | F(a) ∨ ¬ F(a)		// or intro 10
+        | | | ∃x (F(x) ∨ ¬ F(x) ) // exists intro 13
+        | | | false					// contradiction intro 3,14
+        | | not not F(a)		// negation intro 11-15
+        | | false 		//		contradiction intro 10,16
+        | ¬¬∃x (F(x) ∨ ¬ F(x) ) // negation intro 3-17
+        | ∃x (F(x) ∨ ¬ F(x) )  // negation elim 18
+      '''
+      verify.to proof
+      expect( proof.verify() ).to.be.true
+      
+    it "provides a sensible message when you make a mistake in citing a subproof of the wrong form", ->
+      # TODO: this is a test of the `rule` module.
+      proof = _parse '''
+        | A → B
+        | B → C
+        |---
+        | | A 
+        | | B
+        | | D
+        | A → C	//arrow intro 4-6
+      '''
+      verify.to proof
+      line = proof.getLine(7)
+      result = verify._line line, proof
+      console.log line.status.getMessage()
+      expect(line.status.getMessage().search('undefined')).to.equal(-1)

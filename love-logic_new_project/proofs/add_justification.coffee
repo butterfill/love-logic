@@ -12,6 +12,8 @@
 #
 #
 
+_ = require 'lodash'
+
 jp = require './justification_parser'
 
 # We are going to apply the same `cleanNumber` function to line number references
@@ -78,7 +80,7 @@ to = (block) ->
         premiseLines = _.filter( block.content, (item) ->
           return false unless item.type is 'line'
           return false unless item.sentence?
-          return false unless item.justification?.connective is 'premise'
+          return false unless item.justification?.rule?.connective is 'premise'
           return true
         )
         return (x.sentence for x in premiseLines )

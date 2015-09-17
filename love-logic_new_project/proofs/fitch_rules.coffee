@@ -20,8 +20,8 @@ rules =
   'or' :
     elim  : rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ') ).to('χ' )
     intro : 
-      left  : rule.from('φ or ψ').to('φ')
-      right : rule.from('φ or ψ').to('ψ')
+      left  : rule.from('φ').to('φ or ψ')
+      right : rule.from('φ').to('ψ or φ')
 
   'not' : 
     elim : rule.from('not not φ').to('φ') 
