@@ -103,6 +103,9 @@ describe 'awFOL', ->
       assert.deepEqual util.delExtraneousProperties(res.left), util.delExtraneousProperties(fol.parse "true")
       assert.deepEqual util.delExtraneousProperties(res.right), util.delExtraneousProperties(fol.parse "A arrow false")
 
+    it 'should parse "Orange(a)" even though this starts with `or`', ->
+      res = fol.parse("Orange(a)")
+      # Will throw if there’s a problem
   
   describe "upper and lower case", ->
     it 'is fine with title case', ->
@@ -163,10 +166,6 @@ describe 'awFOL', ->
       result = fol.parse "R(a,b)"
       expect(result.type).to.equal("predicate")
       
-    it "should identify R (a,b) as a predicate (note the space)", ->
-      result = fol.parse "R (a,b)"
-      expect(result.type).to.equal("predicate")
-
     it "should identify R as a sentence variable", ->
       result = fol.parse "R"
       expect(result.type).to.equal("sentence_letter")

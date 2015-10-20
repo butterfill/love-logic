@@ -658,41 +658,41 @@ var YYSTATE=YY_START;
 switch($avoiding_name_collisions) {
 case 0: /* skip whitespace */             
 break;
-case 1: return 19; 
+case 1: return 9; 
 break;
-case 2: return 20; 
+case 2: return 10; 
 break;
-case 3: return 25; 
+case 3: return 26; 
 break;
-case 4: return 12; 
+case 4: return 28; 
 break;
-case 5: return 16; 
+case 5: return 33; 
 break;
-case 6: return 17; 
+case 6: return 22;               
 break;
-case 7: return 13; 
+case 7: return 19; 
 break;
-case 8: return 18; 
+case 8: return 20; 
 break;
-case 9: return 15; 
+case 9: return 25; 
 break;
-case 10: return 14; 
+case 10: return 12; 
 break;
-case 11: return 11; 
+case 11: return 16; 
 break;
-case 12: return 7; 
+case 12: return 17; 
 break;
-case 13: return 9; 
+case 13: return 13; 
 break;
-case 14: return 10; 
+case 14: return 18; 
 break;
-case 15: return 26; 
+case 15: return 15; 
 break;
-case 16: return 28; 
+case 16: return 14; 
 break;
-case 17: return 33; 
+case 17: return 11; 
 break;
-case 18: return 22;               
+case 18: return 7; 
 break;
 case 19: return 30; 
 break;
@@ -712,7 +712,7 @@ case 26: return 'invalid_character';
 break;
 }
 },
-rules: [/^(?:\s+)/,/^(?:[tT][rR][uU][eE])/,/^(?:[fF][aA][lL][sS][eE]|⊥|[cC][oO][nN][tT][rR][aA][dD][iI][cC][tT][iI][oO][nN])/,/^(?:=)/,/^(?:[aA][nN][dD]|&|∧|•)/,/^(?:[aA][rR][rR][oO][wW]|->|⇒|→|⊃)/,/^(?:↔|≡|⇔|double_arrow\b)/,/^(?:[oO][rR]|∨|\+|ǀǀ)/,/^(?:[nN][oO][tT]|¬|˜|!)/,/^(?:[nN][oO][rR]|↓)/,/^(?:[nN][aA][nN][dD]|↑)/,/^(?:[aA][lL][lL]|∀|[eE][vV][eE][rR][yY])/,/^(?:[sS][oO][mM][eE]|[eE][xX][iI][sS][tT][sS]|∃)/,/^(?:\()/,/^(?:\))/,/^(?:\[)/,/^(?:\])/,/^(?:,)/,/^(?:[A-Z][A-Za-z0-9]*(?=((\s)*\()))/,/^(?:[A-Z][0-9]*)/,/^(?:[a-d][0-9]*)/,/^(?:[etxyzw][0-9]*)/,/^(?:[φψχ][0-9]*)/,/^(?:[αβγτ][0-9]*)/,/^(?:[nN][uU][lL][lL])/,/^(?:$)/,/^(?:.)/],
+rules: [/^(?:\s+)/,/^(?:\()/,/^(?:\))/,/^(?:\[)/,/^(?:\])/,/^(?:,)/,/^(?:[A-Z][A-Za-z0-9]*(?=(\()))/,/^(?:[tT][rR][uU][eE])/,/^(?:[fF][aA][lL][sS][eE]|⊥|[cC][oO][nN][tT][rR][aA][dD][iI][cC][tT][iI][oO][nN])/,/^(?:=)/,/^(?:[aA][nN][dD]|&|∧|•)/,/^(?:[aA][rR][rR][oO][wW]|->|⇒|→|⊃)/,/^(?:↔|≡|⇔|double_arrow\b)/,/^(?:[oO][rR]|∨|\+|ǀǀ)/,/^(?:[nN][oO][tT]|¬|˜|!)/,/^(?:[nN][oO][rR]|↓)/,/^(?:[nN][aA][nN][dD]|↑)/,/^(?:[aA][lL][lL]|∀|[eE][vV][eE][rR][yY])/,/^(?:[sS][oO][mM][eE]|[eE][xX][iI][sS][tT][sS]|∃)/,/^(?:[A-Z][0-9]*)/,/^(?:[a-d][0-9]*)/,/^(?:[etxyzw][0-9]*)/,/^(?:[φψχ][0-9]*)/,/^(?:[αβγτ][0-9]*)/,/^(?:[nN][uU][lL][lL])/,/^(?:$)/,/^(?:.)/],
 conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26],"inclusive":true}}
 });
 return lexer;

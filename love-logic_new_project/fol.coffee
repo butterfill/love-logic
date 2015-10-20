@@ -13,6 +13,8 @@ awFOL = require './parser/awFOL'
 util = require './util'
 match = require './match'
 substitute = require './substitute'
+normalForm = require './normal_form'
+evaluate = require('./evaluate')
 
 parse = (text) ->
   e = awFOL.parse text
@@ -32,7 +34,7 @@ _decorate = (expression) ->
       # Note: this will remove all `_decoration`s and break the chain.
       util.delExtraneousProperties e
     e.isIdenticalTo = (otherExpression) ->
-      return util.areIdenticalExpressions e, otherExpression
+      return util.areIdenticalExpressions(e, otherExpression)
     e.clone = () ->
       theClone = util.cloneExpression e
       _decorate theClone
@@ -62,6 +64,7 @@ _decorate = (expression) ->
       e.walk subFinder
       return _subsFound
     
+    # Get all names in the expression
     e.getNames = () ->
       _names = []
       nameFinder = (expression) ->
@@ -71,6 +74,7 @@ _decorate = (expression) ->
       e.walk nameFinder
       return _names
 
+    # Get all sentence letters in the expression
     e.getSentenceLetters = () ->
       _letters = []
       letterFinder = (expression) ->
@@ -79,7 +83,27 @@ _decorate = (expression) ->
         return undefined 
       e.walk letterFinder
       return _letters.sort()
+    
+    # Return the names of any variables not bound by a quantifier
+    e.getFreeVariableNames = () ->
+      allTerms = util.listTerms(e)
+      allVariableNames = _.uniq( (t.name for t in allTerms when t.type is 'variable') )
+      unboundVariables = (v for v in allVariableNames when normalForm.isVariableFree(v, expression))
+      return unboundVariables
+
       
+    e.convertToPNFsimplifyAndSort = () ->
+      newE = normalForm.convertToPNFsimplifyAndSort(expression)
+      _decorate(newE)
+      return newE
+    
+    e.isPNFExpressionEquivalent = (other) ->
+      return normalForm.arePNFExpressionsEquivalent(e, other)
+    
+    e.evaluate = (world) ->
+      return evaluate.evaluate(e, world)
+      
+    
   util.walk expression, walker
   return expression
 exports._decorate = _decorate

@@ -18,8 +18,6 @@
 # the expressions or terms they have matched (see the core module `substitute.findMatches`).
 #
 
-nodeutil = require 'util'
-
 _ = require 'lodash'
 
 util = require '../util'

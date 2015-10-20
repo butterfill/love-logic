@@ -41,6 +41,21 @@ parse = (proofText) ->
   catch e
     return e.message
   
-  return block
+  proof = block
+  
+  # Only call this after verifying the proof
+  proof.listErrorMessages = () ->
+    errorMessages = []
+    walker = 
+      visit : (item) ->
+        return undefined unless item?.type is 'line'
+        if item.status.verified is false
+          lineName = item.number
+          errorMsg = item.status.getMessage()
+          errorMessages.push "#{lineName}: #{errorMsg}"
+    proof.walk walker
+    return errorMessages.join('\n')
+  
+  return proof
   
 exports.parse = parse

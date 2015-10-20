@@ -91,7 +91,7 @@ exports.isPNF = isPNF
 # The new variable names will have the form `newVariableBaseName[0-9]+` .
 # If you want to create a pattern to match, set `newVariableBaseName` to 'τ'.
 renameVariables = (expression, newVariableBaseName) ->
-  newVariableBaseName ?= 'xx'
+  newVariableBaseName ?= 'x'
   newVariableType = ('term_metavariable' if newVariableBaseName[0] in ['α','β','γ','τ']) or 'variable'
   
   _newVarIdx = 0 #Note: this is not a number because we need to mutate it.
@@ -141,6 +141,16 @@ renameVariables = (expression, newVariableBaseName) ->
     
 exports.renameVariables = renameVariables
 
+
+convertToPNFsimplifyAndSort = (expression) ->
+  expression = prenexNormalForm expression
+  expression =  eliminateRedundancyInPNF(expression)
+  # Strictly speaking, we don't need to sort as `eliminateRedundancyInPNF` currently does so anyway.
+  # But it's essential that we are sorted, so I'll do it anyway.
+  expression = sortPNFExpression(expression)
+  sortIdentityStatements(expression)
+  return expression
+exports.convertToPNFsimplifyAndSort = convertToPNFsimplifyAndSort
 
 areExpressionsEquivalent = (left, right) ->
   left = prenexNormalForm left

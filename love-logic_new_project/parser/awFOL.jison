@@ -17,21 +17,6 @@
 
 \s+                     { /* skip whitespace */             }
 
-/*  Connectives.  */
-[tT][rR][uU][eE]             { return 'true'; }
-[fF][aA][lL][sS][eE]|"⊥"|[cC][oO][nN][tT][rR][aA][dD][iI][cC][tT][iI][oO][nN]  
-                             { return 'false'; }
-"="                          { return 'identity'; }
-[aA][nN][dD]|"&"|"∧"|"•"            { return 'and'; }
-[aA][rR][rR][oO][wW]|"->"|"⇒"|"→"|"⊃"    { return 'arrow'; }
-"↔"|"≡"|"⇔"|"double_arrow" { return 'double_arrow'; }
-[oO][rR]|"∨"|"+"|"ǀǀ"        { return 'or'; }
-[nN][oO][tT]|"¬"|"˜"|"!"     { return 'not'; }
-[nN][oO][rR]|"↓"             { return 'nor'; }
-[nN][aA][nN][dD]|"↑"         { return 'nand'; }
-[aA][lL][lL]|"∀"|[eE][vV][eE][rR][yY]         { return 'universal_quantifier'; }
-[sS][oO][mM][eE]|[eE][xX][iI][sS][tT][sS]|"∃" { return 'existential_quantifier'; }
-
 /*  Punctuation.
     Round brackets, '(' and ')', are used for grouping expressions and for predication.
     Square brackets, '[' and ']', are used for defining substitutions (e.g. φ[τ->α])
@@ -46,20 +31,38 @@
 /*  Predicates.
     A predicate starts with a capital letter followed by any number
     of digits or letters, which is then followed by a left bracket.
-    Whitespace may separate the letter and the bracket.
-    Examples: F(x), R (a,b), LeftOf(a,b), F2(x)
+    Whitespace may NOT separate the letter and the bracket.
+    Examples: F(x), LeftOf(a,b), F2(x)
     
     Note that the left bracket is not consumed by the lexer.
     In the following, '/((\s)*\()' is lex for lookahead:
      /      -- the lex symbol for look ahead
-     (\s)*  -- allow any amount of whitespace
      \(     -- match a bracket (the bracket is escaped)
     
     Note that this only works because connectives like and are 
     defined first and the lexer matches in the order things are defined.
     Otherwise the `And` in `A And (B Or C)` could be a predicate.
 */
-[A-Z][A-Za-z0-9]*/((\s)*\()  { return 'predicate';               }    
+[A-Z][A-Za-z0-9]*/(\()  { return 'predicate';               }    
+
+
+/*  Connectives.  
+    (These must come after predicates as predicates may start with connectives, e.g. `Orange(a)`.)
+*/
+[tT][rR][uU][eE]             { return 'true'; }
+[fF][aA][lL][sS][eE]|"⊥"|[cC][oO][nN][tT][rR][aA][dD][iI][cC][tT][iI][oO][nN]  
+                             { return 'false'; }
+"="                          { return 'identity'; }
+[aA][nN][dD]|"&"|"∧"|"•"            { return 'and'; }
+[aA][rR][rR][oO][wW]|"->"|"⇒"|"→"|"⊃"    { return 'arrow'; }
+"↔"|"≡"|"⇔"|"double_arrow" { return 'double_arrow'; }
+[oO][rR]|"∨"|"+"|"ǀǀ"        { return 'or'; }
+[nN][oO][tT]|"¬"|"˜"|"!"     { return 'not'; }
+[nN][oO][rR]|"↓"             { return 'nor'; }
+[nN][aA][nN][dD]|"↑"         { return 'nand'; }
+[aA][lL][lL]|"∀"|[eE][vV][eE][rR][yY]         { return 'universal_quantifier'; }
+[sS][oO][mM][eE]|[eE][xX][iI][sS][tT][sS]|"∃" { return 'existential_quantifier'; }
+
 
 /*  Sentence letters.
     A sentence letter (or 'sentence variable') is a capital letter 

@@ -80,4 +80,28 @@ describe "`fol`", ->
       e = fol.parse "F(a) and y=x"
       n = e.getSentenceLetters()
       expect(n.length).to.equal(0)
-                        
+
+  describe ".getFreeVariableNames()", ->
+    it "returns the names of free variables in an expression", ->
+      e = fol.parse "( (∃x ∃y ∃z Fish(x) ∧ Between(y,x,z) ) ∧ Person(y) ) ∧ Person(z)"
+      fv = e.getFreeVariableNames()
+      expect(fv.length).to.equal(3)
+      expect('x' in fv).to.be.true
+      expect('y' in fv).to.be.true
+      expect('z' in fv).to.be.true
+    it "returns the names of free variables in an expression (another example)", ->
+      e = fol.parse "( (∃x ∃y ∃z Fish(x) ) ∧ Person(y) ) ∧ Person(z)"
+      fv = e.getFreeVariableNames()
+      expect(fv.length).to.equal(2)
+      expect('x' in fv).to.be.false
+      expect('y' in fv).to.be.true
+      expect('z' in fv).to.be.true
+    it "returns an empty list if there are no free variables in  an expression", ->
+      e = fol.parse "∃x ∃y ∃z (( (Fish(x) ∧ Between(y,x,z) ) ∧ Person(y) ) ∧ Person(z))"
+      fv = e.getFreeVariableNames()
+      expect(fv.length).to.equal(0)
+    it "returns an empty list if there are no variables in  an expression", ->
+      e = fol.parse "A and B"
+      fv = e.getFreeVariableNames()
+      expect(fv.length).to.equal(0)
+      

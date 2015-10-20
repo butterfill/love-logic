@@ -14,7 +14,10 @@ evaluate = (sentenceText, world) ->
 # the world in which we're evaluating the sentence, and 
 # the values assigned to variables (for evaluating quantifiers).
 Evaluator = (sentenceText, @world) ->
-  @sentence = fol.parse(sentenceText)
+  if _.isString(sentenceText)
+    @sentence = fol.parse(sentenceText)
+  else
+    @sentence = sentenceText    
   # `varStack` is used in interpreting quantifier expressions.
   # it is a map from variable names to 
   @varStack = {}

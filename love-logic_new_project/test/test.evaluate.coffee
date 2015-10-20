@@ -163,11 +163,17 @@ describe 'evaluate.evaluate', ->
   it "should evaluate '#{e10}'", ->
     res = evaluate(e10, {domain:[1,2,3], predicates:{F:[[1],[2],[3]],G:[[2]]}, names:{a:1, b:1}})
     expect(res).to.be.true
-
-
-
-
-
-
   
+  it "should evaluate a test case from the love logic ui", ->
+    world = {"domain":[0,1,2],"predicates":{"Sad":[[0]],"White":[[0]],"Short":[[0],[1],[2]],"Narrow":[[0],[1],[2]],"Neutral":[[1]],"Yellow":[[1]],"Happy":[[2]],"Green":[[2]],"LeftOf":[[1,0],[1,2]],"RightOf":[[0,1],[2,1]],"Above":[[0,2],[1,2]],"Below":[[2,0],[2,1]],"HorizontallyAdjacent":[],"VerticallyAdjacent":[[0,2],[2,0]],"Adjacent":[[0,2],[2,0]],"WiderThan":[],"NarrowerThan":[],"TallerThan":[[0,1],[0,2]],"ShorterThan":[[1,0],[2,0]],"SameShape":[[0,0],[1,1],[1,2],[2,1],[2,2]],"SameSize":[[0,0],[1,1],[1,2],[2,1],[2,2]]},"names":{a:0}}
+    res = evaluate("White(a)", world)
+    expect(res).to.be.true
+
+  it "should evaluate another test case from the love logic ui", ->
+    world = {"domain":[0,1,2],"predicates":{"Sad":[[0]],"White":[[0]],"Tall":[[0]],"Short":[[0],[1],[2]],"Narrow":[[0],[1],[2]],"Neutral":[[1]],"Yellow":[[1]],"Happy":[[2]],"Green":[[2]],"LeftOf":[[1,0],[1,2]],"RightOf":[[0,1],[2,1]],"Above":[[0,2],[1,2]],"Below":[[2,0],[2,1]],"HorizontallyAdjacent":[],"VerticallyAdjacent":[[0,2],[2,0]],"Adjacent":[[0,2],[2,0]],"WiderThan":[],"NarrowerThan":[],"TallerThan":[[0,1],[0,2]],"ShorterThan":[[1,0],[2,0]],"SameShape":[[0,0],[1,1],[1,2],[2,1],[2,2]],"SameSize":[[0,0],[1,1],[1,2],[2,1],[2,2]]},"names":{}}
+    res = evaluate("exists x Tall(x)", world)
+    expect(res).to.be.true
+
+
+
 

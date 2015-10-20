@@ -499,15 +499,16 @@ _typeComparator = (left, right) ->
   
 # Returns a list of terms in `expression`.
 # (What is returned are the actual terms (objects), not their names.)
-# This does not include variables bound by a quantifier.
+# This does not include variables attached to a quantifier.
 listTerms = (expression) ->
   terms = []
   fn = (expression) ->
     if expression.type in ['variable','name','term_metavariable']
       terms.push(expression)
-    return terms
-  return walk expression, fn
+  walk expression, fn
+  return terms
 exports.listTerms = listTerms
+
 
 
 # Returns an object with lists of the names of the metavariables (such as α and ψ)

@@ -80,8 +80,8 @@ describe "normalForm", ->
       expression = fol.parse 'exists(x) F(x)'
       normalForm.renameVariables expression
       #console.log "expression #{JSON.stringify expression,null,4}"
-      expect(expression.boundVariable.name).to.equal('xx1')
-      expect(expression.left.termlist[0].name).to.equal('xx1')
+      expect(expression.boundVariable.name).to.equal('x1')
+      expect(expression.left.termlist[0].name).to.equal('x1')
       
     it "should rename the variables in a multiple quantifier phrase properly", ->
       expression = fol.parse 'exists(x) all(y) some(z) R(y,a,x,z)'
@@ -91,9 +91,9 @@ describe "normalForm", ->
       quantifier3 = quantifier2.left
       predicate =  quantifier3.left
       terms = predicate.termlist
-      expect(quantifier1.boundVariable.name).to.equal('xx1')
-      expect(quantifier2.boundVariable.name).to.equal('xx2')
-      expect(quantifier3.boundVariable.name).to.equal('xx3')
+      expect(quantifier1.boundVariable.name).to.equal('x1')
+      expect(quantifier2.boundVariable.name).to.equal('x2')
+      expect(quantifier3.boundVariable.name).to.equal('x3')
       expect(terms[0].name).to.equal(quantifier2.boundVariable.name)
       expect(terms[1].name).to.equal('a') #i.e. was not renamed
       expect(terms[2].name).to.equal(quantifier1.boundVariable.name)
@@ -109,15 +109,15 @@ describe "normalForm", ->
       # Note: this test is a bit fragile because it depends on the particular 
       # renaming strategy used.
       console.log util.expressionToString(expression)
-      expect(quantifier1.boundVariable.name).to.equal('xx1')
-      expect(quantifier2.boundVariable.name).to.equal('xx2')
+      expect(quantifier1.boundVariable.name).to.equal('x1')
+      expect(quantifier2.boundVariable.name).to.equal('x2')
       expect(predicate1.termlist[0].name).to.equal(quantifier1.boundVariable.name)
       expect(predicate2.termlist[0].name).to.equal(quantifier2.boundVariable.name)
       
     it "should rename the variables in expressions involving identity", ->
       expression = fol.parse 'exists(x) x=a'
       normalForm.renameVariables expression
-      expect(expression.left.termlist[0].name).to.equal('xx1')
+      expect(expression.left.termlist[0].name).to.equal('x1')
     
     it "does not repeat a variable name", ->
       expression = fol.parse '(exists x F(x)) and (exists x G(x))'
@@ -126,8 +126,8 @@ describe "normalForm", ->
       quantifier2 = expression.right
       predicate1 = quantifier1.left
       predicate2 = quantifier2.left
-      expect(quantifier1.boundVariable.name).to.equal('xx1')
-      expect(quantifier2.boundVariable.name).to.equal('xx2')
+      expect(quantifier1.boundVariable.name).to.equal('x1')
+      expect(quantifier2.boundVariable.name).to.equal('x2')
       
     it "should create patterns if newVariableBaseName is a term metavariable symbol", ->
       expression = fol.parse '(exists x F(x)) and (exists x G(x))'
@@ -136,6 +136,18 @@ describe "normalForm", ->
       expression2 = fol.parse '(exists y F(y)) and (exists x1 G(x1))'
       theMatch = match.find expression2, pattern
       expect(theMatch).not.to.be.false
+
+    it "is fine with expressions that already contain names like `x1`", ->
+      expression = fol.parse '(exists x2 F(x2)) and (exists x1 G(x1))'
+      normalForm.renameVariables expression
+      quantifier1 = expression.left
+      quantifier2 = expression.right
+      predicate1 = quantifier1.left
+      predicate2 = quantifier2.left
+      expect(quantifier1.boundVariable.name).to.equal('x1')
+      expect(quantifier2.boundVariable.name).to.equal('x2')
+      expect(predicate1.termlist[0].name).to.equal(quantifier1.boundVariable.name)
+      expect(predicate2.termlist[0].name).to.equal(quantifier2.boundVariable.name)
   
   
   describe "listJuncts", ->
