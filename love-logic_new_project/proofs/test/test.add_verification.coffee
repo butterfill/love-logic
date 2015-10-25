@@ -383,6 +383,17 @@ describe "the verify module:", ->
         6. contradiction              // exists elim 1, 3-5
       '''
       result = verify._line 4, proof
+      expect(result).to.be.true
+    it "lets spots incorrect use of exists elim", ->
+      proof = '''
+        1. exists x (F(x) and G(x))   // premise
+        2. not F(a)                   // premise
+        3.    [a] F(a) and G(a)       // assumption
+        4.    F(a)                    // and elim 3
+        5.    contradiction           // contradiction intro 2,4
+        6. contradiction              // exists elim 1, 3-5
+      '''
+      result = verify._line 6, proof
       expect(result).to.be.false
 
     it "lets you use and reit to get from `[a] F(a)` to `F(a)`", ->
@@ -395,9 +406,30 @@ describe "the verify module:", ->
         6. contradiction              // exists elim 1, 3-5
       '''
       result = verify._line 4, proof
-      expect(result).to.be.false
+      expect(result).to.be.true
+      # NB: this proof isn’t correct because [a] appears as a premise;
+      # line 6 will therefore fail verification.
 
-
+    it "correctly verifies a proof involving boxes and all elim", ->
+      proof = _parse '''
+        | ∃x ∀y Loves(x,y)
+        |---
+        | | [a]
+        | | ---
+        | | | [b] ∀y Loves(b,y)
+        | | | Loves(b,a)					  // all elim 5
+        | | | exists x Loves(x,a)		// exists intro 6
+        | | exists x Loves(x,a)			// exists elim 1, 5-7
+        | ∀y ∃x Loves(x,y) 					// all intro 3-8
+      '''
+      verify.to proof
+      line = proof.getLine(5)
+      result = verify._line line, proof
+      console.log line.status.getMessage()
+      expect(line.status.getMessage().search('undefined')).to.equal(-1)
+      expect( proof.verify() ).to.be.true
+      
+      
   describe "proofs with reit", ->
     it "confirms correct use of reit", ->
       proof = '''
@@ -1158,3 +1190,9 @@ describe "the verify module:", ->
       result = verify._line line, proof
       console.log line.status.getMessage()
       expect(line.status.getMessage().search('undefined')).to.equal(-1)
+      
+
+      
+      
+      
+      

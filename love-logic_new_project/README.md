@@ -1,7 +1,7 @@
 Parsers for a first-order language and for Fitch-style proofs.
 Can evaluate sentences against possible situations.
 Can convert sentences to prenex normal form.
-Can test whether an expression matches a logical form, applying substitutions as necessary (e.g. φ[τ->α]).
+Can test whether an expression matches a logical form, applying substitutions as necessary (e.g. `φ[τ->α]`).
 Rules of proof can be expressed in a natural way, e.g.
 ```
 universal :
@@ -10,6 +10,6 @@ universal :
 ```
 There are tests covering most functions.
 
-(c) Stephen A. Butterfill 2015
+(c) Stephen A. Butterfill 2015.
 All rights reserved.
 Contact me if you want to use this code.

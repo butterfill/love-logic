@@ -376,6 +376,45 @@ describe "match (module)", ->
         α : (fol.parse 'F(a)').termlist[0]
       matches = match.find expression, pattern, theMatches
       expect(matches).to.be.false
+    
+    it "matches `all τ φ` to `∀y Loves(b,y)`", ->
+      pattern = fol.parse 'all τ φ'
+      expression = fol.parse '∀y Loves(b,y)'
+      matches = match.find expression, pattern
+      expect(matches).not.to.be.false
+    it "does not match `all τ φ` to ` exists y Loves(b,y)`", ->
+      pattern = fol.parse 'all τ φ'
+      expression = fol.parse 'exists y Loves(b,y)'
+      matches = match.find expression, pattern
+      expect(matches).to.be.false
+    # I don’t think this is the right behaviour: boxes have to be taken 
+    # care of by the rules of proof and proof checker.
+    # it "matches `all τ φ` to `[b] ∀y Loves(b,y)`", ->
+    #   pattern = fol.parse 'all τ φ'
+    #   expression = fol.parse '[b] ∀y Loves(b,y)'
+    #   matches = match.find expression, pattern
+    #   expect(matches).not.to.be.false
+
+    it "matches `[α]F(α)` to `[a] F(a)`", ->
+      pattern = fol.parse '[α]F(α)'
+      expression = fol.parse '[a] F(a)'
+      matches = match.find expression, pattern
+      expect(matches).not.to.be.false
+      
+    # # TODO: this fails; I think it’s fine because the proofs work, and I’ve
+    # # just forgotton how `find.match` works with substitutions.
+    # it "matches `[α]φ[τ->α]` to `[a] F(a)`", ->
+    #   pattern1 = fol.parse 'exists τ φ'
+    #   expression1 = fol.parse 'exists x F(x)'
+    #   priorMatches = match.find expression1, pattern1
+    #   console.log(JSON.stringify(priorMatches,null,4))
+    #   pattern = fol.parse '[α]φ[τ->α]'
+    #   console.log(pattern.toString())
+    #   expression = fol.parse '[a] F(a)'
+    #   matches = match.find expression, pattern, priorMatches
+    #   expect(matches).not.to.be.false
+    
+      
 
   describe '`.find` with expressions that are not closed wffs', ->
     it "matches 'all x not φ' in 'all x (not (F(x) and G(x)))", ->

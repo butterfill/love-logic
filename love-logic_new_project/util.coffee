@@ -331,7 +331,7 @@ expressionToString = (expression, o={}) ->
       middle = e.letter
 
     if e.type is 'value'
-      middle = "#{((e.symbol if e.symbol?) or ('⊥' if e.value is "false") or e.value)}"
+      middle = "#{((e.symbol if e.symbol?) or ('⊥' if e.value is "false" or e.value is false) or e.value)}"
     
     bracketsNeeded = e.right?
     left_bracket = " "

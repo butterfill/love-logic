@@ -321,7 +321,11 @@ class RequirementChecker
       # Note: We must NOT apply substitutions before doing `.findMatches`.
       # (Because `.findMatches` needs to selectively apply substitutions,
       # whereas `.applySubstitutions` replaces all matches indiscriminately.)
-      newMatches = aLine.sentence.findMatches reqClone, priorMatches
+      aSentence = aLine.sentence
+      if not reqClone.box? and aSentence.box?
+        aSentence = aSentence.clone()
+        delete aSentence.box
+      newMatches = aSentence.findMatches reqClone, priorMatches
         
       # console.log "_checkOneLine sentence = #{aLine.sentence.toString()}"
       # console.log "_checkOneLine aReq = #{aReq.toString()}"
