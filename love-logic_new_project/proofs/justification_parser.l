@@ -80,7 +80,7 @@
     { yytext = 'and';
       return 'connective'; }
 
-"double arrow"|"↔"|"≡"|"⇔"           
+"double_arrow"|"↔"|"≡"|"⇔"|"<->"           
     { yytext = 'double_arrow';
       return 'connective'; }
 
@@ -118,8 +118,8 @@
 "right" 
   { return 'right'; }
 
-[\s,\-]+                     
-    { /*  Skip whitespace, commas and dashes. 
+[\s,]+                     
+    { /*  Skip whitespace and commas. 
       */ 
     }
 <<EOF>>
