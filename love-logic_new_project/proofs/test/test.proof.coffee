@@ -65,3 +65,18 @@ describe "proof", ->
     
     it "enables us to get errors associated with a single line"
     it "enables us to get errors associated with each line of the proof"
+    
+    it "allows blank lines without messing up justification", ->
+      proofText = '''
+        | A
+        | ---
+        | | B
+        | | ---
+        | | 
+        | | B				// reit 3
+      '''
+      theProof = proof.parse proofText
+      result = theProof.verify()
+      expect(result).to.be.true
+      
+    

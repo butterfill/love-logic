@@ -60,7 +60,7 @@
 #   3. <blank line>
 #   4.    c
 # line 5 should be the first line in the second subblock of a's block,
-# and line 3 and 4 should lines in a's block::
+# and line 3 and 4 should lines in a's block:
 #   1. a
 #   2.    b
 #   3. <blank line>
@@ -77,8 +77,12 @@
 #   2.     b
 #   3. <blank line>
 #   4.   c
+# line 4. should be the third line in b’s block:
+#   | a
+#   | | b
+#   | | 
+#   | | c
 
-  
 
 
 _ = require 'lodash'
@@ -102,6 +106,7 @@ parse = (lines) ->
   lines = extractIndentationAndContentFrom lines
   
   firstLine = lines[0]
+  usingBars = '|' in firstLine.indentation
   topBlock = new Block(firstLine.indentation)
   block = topBlock
   
@@ -111,7 +116,7 @@ parse = (lines) ->
     # Do we need to start a new block, or to close one?
     
     # Case 1 : ordinary line (not a divider or blank line).
-    if line.type is 'line'
+    if (line.type is 'line') or (usingBars and line.type is 'blank_line')
       # Increasing the indentation means starting a new block.
       if line.indentation.length > block.indentation.length
         block = block.newBlock(line.indentation)
@@ -129,13 +134,13 @@ parse = (lines) ->
       continue
       
     # Case 3 : blank line.  
-    if line.type is 'blank_line' 
+    if line.type is 'blank_line' and not usingBars
       # In case there is a sequence of blank lines, we want to get all of them.
       blankLines = [line]
       while lines.length > 0 and lines[0].type is 'blank_line'
         blankLines.push( lines.shift() )
       
-      # What to do with the blank lines?
+      # What to do with the blank lines (where indentation is not done using bars (|))?
       if block is topBlock
         # Just add the blank lines to the top block and move on (they don't mean anything).
         ( block.newLine(l) for l in blankLines ) 

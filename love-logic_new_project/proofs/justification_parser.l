@@ -92,7 +92,7 @@
     { yytext = 'not';
       return 'connective'; }
 
-"⊥"|"contradiction"
+"⊥"|"contradiction"|"false"
     { yytext = 'contradiction';
       return 'connective'; }
 
