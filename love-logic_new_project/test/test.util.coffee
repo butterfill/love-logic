@@ -274,7 +274,23 @@ describe 'util', ->
           string = util.expressionToString expression1
           expression2 = fol.parse string
           expect(util.areIdenticalExpressions(expression1, expression2)).to.be.true
-          
+      
+      # These tests are fragile: check strings instead of parsing the HTML
+      describe "setting `o.wrapWithDivs` to wrap sub expressions and connectives with divs", ->
+        it "can do `A`", ->
+          expression1 = fol.parse 'A'
+          string = util.expressionToString expression1, {wrapWithDivs:true}
+          expect(string).to.equal("<span class='_expressionWrap'>A</span>")
+        it "can do `A arrow B`", ->
+          expression1 = fol.parse 'A arrow B'
+          string = util.expressionToString expression1, {wrapWithDivs:true}
+          # console.log string
+          expect(string).to.equal("<span class='_expressionWrap'> (<span class='_expressionWrap'>A</span> <span class='_symbolWrap' data-symbolNum='3'>arrow</span> <span class='_expressionWrap'>B</span> )</span>")
+        it "can do `all x (F(x) arrow G(x))`", ->
+          expression1 = fol.parse 'all x (F(x) arrow G(x))'
+          string = util.expressionToString expression1, {wrapWithDivs:true}
+          # console.log string
+          expect(string).to.equal("<span class='_expressionWrap'><span class='_symbolWrap' data-symbolNum='7'>all</span> x <span class='_expressionWrap'> (<span class='_expressionWrap'>F(x)</span> <span class='_symbolWrap' data-symbolNum='6'>arrow</span> <span class='_expressionWrap'>G(x)</span> )</span> </span>")
 
   describe "exhaust", ->
     it "removes all elements from a simple list", ->

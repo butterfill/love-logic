@@ -277,18 +277,22 @@ SYMBOLS =
     
 
 # Create a string representation of a fol expression.
-# It uses the symbols that were specified when the expression was parsed (where these exist).
+# It uses the symbols that were specified when the expression was parsed (where these exist) unless param `o.replaceSymbols` is true.
 expressionToString = (expression, o={}) ->
   
   # Help with debug 
   for test in [_.isBoolean, _.isNumber, _.isString, _.isArray]
     if test(expression)
       return "#{expression}"
-  
+
+  # This counter is used to index the symbols when param `o.wrapWithDivs` is true.
+  symbolNum = 0
   
   walker = (e) ->
     return 'null' if e is null 
-
+    
+    symbolNum += 1
+    
     for test in [_.isBoolean, _.isNumber, _.isString]
       if test(e)
         return "#{e}"
@@ -339,17 +343,25 @@ expressionToString = (expression, o={}) ->
     if bracketsNeeded 
       left_bracket = " (" 
       right_bracket = " )" 
+
+    # All of the following need the `symbol`, e.g. `and` or `arrow`
+    symbol = e.symbol or SYMBOLS[e.type] or e.type or ''
+    if o.wrapWithDivs
+      symbol = "<span class='_symbolWrap' data-symbolNum='#{symbolNum}'>#{symbol}</span>"
     
     if e.boundVariable?
-      symbol = (e.symbol or SYMBOLS[e.type] or e.type)
       variableName = e.boundVariable
       middle = "#{symbol} #{variableName} #{left_bracket}#{e.left}#{e.right or ''}#{right_bracket}"
     
     if e.left? and not e.boundVariable?
       if not e.right?   # e.g. `not P`
-        middle = "#{left_bracket}#{e.symbol or SYMBOLS[e.type] or e.type or ''} #{e.left or ''}#{right_bracket}"
+        middle = "#{left_bracket}#{symbol} #{e.left or ''}#{right_bracket}"
       else 
-        middle = "#{left_bracket}#{e.left or ''} #{e.symbol or SYMBOLS[e.type] or e.type or ''} #{e.right or ''}#{right_bracket}"
+        middle = "#{left_bracket}#{e.left or ''} #{symbol} #{e.right or ''}#{right_bracket}"
+        
+    if o.wrapWithDivs
+      middle = "<span class='_expressionWrap'>#{middle}</span>"
+      
     return "#{aBox or ''}#{middle}#{theSubs or ''}"
 
   if o.replaceSymbols
