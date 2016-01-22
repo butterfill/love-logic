@@ -44,8 +44,6 @@ rules =
   identity :
     intro : rule.to('α=α')
     elim : 
-      # Note: this rule will fail as things stand because `α=β` might match
-      # what φ should match when =elim is applied to an identity statement.
       left : rule.from('α=β').and('φ').to('φ[α->β]')
       right : rule.from('α=β').and('φ').to('φ[β->α]')
         
