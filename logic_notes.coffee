@@ -85,11 +85,95 @@ console.log 'all( (x) -> all( (y) -> all( (z) -> ( theif( leftOf(x,y) and leftOf
 #
 #
 # 1. A and B (premise)
-# 2. suppose not A, then ...
+# ---
+#   2. suppose not A, then ...
+#   --- 
 #   3. A (from 1 using and-elim)
 #   4. contradiction (applying contradiction-intro to 2, 3)
 # 5. not not A (not-intro applied to 2-4)
 # 6. A (not-elim 5)
+
+
+block       17
+  line      16
+  line      15
+  block     3
+    line    14
+    line    13
+    line    12
+    block   9
+      line  11
+      line  10
+    block   6
+      line  8
+      line  7  
+    line    5
+    line    4
+  line      2
+  line      1
+
+
+
+proof = 
+  type : 'block'
+  startName : '1'
+  endName : '6'
+  premises : [
+    { type : 'sentence'
+      name : '1'
+      expression : 'A and B'
+      justification : 'premise'
+    }
+  ]
+  lines [
+    { type : 'block', ... },
+    { type : 'sentence', ... }
+    { type : 'sentence', ... }
+  ]
+
+# 1. A and B 
+# ---
+# 2. A       // and-elim 1
+proof = 
+  type : 'block'
+  startName : '1'
+  endName : '2'
+  premises : [
+    { type : 'sentence'
+      name : '1'
+      expression : 'A and B'
+      justification : null
+    }
+  ]
+  lines [
+    { 
+      type : 'sentence'
+      name : '2'
+      expression : 'A'
+      justification : 'and-elim 1'
+  ]
+
+
+# We're going to use numbers on the inside, like this.
+# 
+# | 1. exists x F(x)    // premise
+# | 1b. all x not F(x)  // premise
+# ---
+# | | 2. consider a. suppose F(a), then ...
+# | --- 
+# | | 3. not F(a)       // from n. using universal-elim
+# | | 4. contradiction  // applying contradiction-intro to 2, 3
+# | 5. contradiction      //  universal-elim applied to 1, 2-4
+
+# 1.  |  exists x F(x)    // premise
+# 1b. |  all x not F(x)  // premise
+#     ---
+# 2.  | | consider a. suppose F(a), then ...
+#     | --- 
+# 3.  | | not F(a)       // from n. using universal-elim
+# 4.  | | contradiction  // applying contradiction-intro to 2, 3
+# 5.  | contradiction      //  universal-elim applied to 1, 2-4
+
   
 # everything(x) is such that: it(x) is tall or it(x) is bald
 # everything( (x) ->           tall(x)       or bald(x) )

@@ -48,15 +48,16 @@
 
 /*  Connectives.  
     (These must come after predicates as predicates may start with connectives, e.g. `Orange(a)`.)
+    Note that the ⊥ symbol is tricky: _|_ contains or and ‘contra’ and ‘contradiction’ are both allowed.
 */
 [tT][rR][uU][eE]             { return 'true'; }
-[fF][aA][lL][sS][eE]|"⊥"|[cC][oO][nN][tT][rR][aA][dD][iI][cC][tT][iI][oO][nN]  
+[fF][aA][lL][sS][eE]|"⊥"|"_|_"|[cC][oO][nN][tT][rR][aA][dD][iI][cC][tT][iI][oO][nN]|[cC][oO][nN][tT][rR][aA]  
                              { return 'false'; }
 "="                          { return 'identity'; }
 [aA][nN][dD]|"&"|"∧"|"•"            { return 'and'; }
 [aA][rR][rR][oO][wW]|"->"|"⇒"|"→"|"⊃"    { return 'arrow'; }
 "↔"|"≡"|"⇔"|"double_arrow"|"<->" { return 'double_arrow'; }
-[oO][rR]|"∨"|"+"|"ǀǀ"        { return 'or'; }
+[oO][rR]|"∨"|"+"|"ǀǀ"|"|"        { return 'or'; }
 [nN][oO][tT]|"¬"|"˜"|"!"     { return 'not'; }
 [nN][oO][rR]|"↓"             { return 'nor'; }
 [nN][aA][nN][dD]|"↑"         { return 'nand'; }

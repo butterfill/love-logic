@@ -24,6 +24,7 @@ id          [A-Z][0-9]*
 
 /* operator associations and precedence */
 
+/* shouldn't it be %nonassoc 'arrow' ? (because A->B->C is an error) */
 %left 'arrow'
 %left 'and' 'or'
 %left 'not'

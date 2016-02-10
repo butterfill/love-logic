@@ -74,6 +74,17 @@ _decorate = (expression) ->
       e.walk nameFinder
       return _names
 
+    e.getPredicates = () ->
+      _predicates = []
+      predicateFinder = (expression) ->
+        return undefined unless expression?.type is 'predicate'
+        _predicates.push {name:expression.name, arity:expression.termlist.length}
+        return undefined 
+      e.walk predicateFinder
+      eq = (p1) -> "#{p1.name}*&!#{p1.arity}"
+      return _.uniq( _predicates, eq )
+        
+
     # Get all sentence letters in the expression
     e.getSentenceLetters = () ->
       _letters = []

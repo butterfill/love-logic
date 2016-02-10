@@ -104,4 +104,39 @@ describe "`fol`", ->
       e = fol.parse "A and B"
       fv = e.getFreeVariableNames()
       expect(fv.length).to.equal(0)
-      
+  
+  describe ".getPredicates()", ->
+    it "gets predicates from F(a,b)", ->
+      e = fol.parse "F(a,b)"
+      p = e.getPredicates()
+      expect(p.length).to.equal(1)
+      expect(p[0].name).to.equal 'F'
+      expect(p[0].arity).to.equal 2
+    it "gets predicates from all x (F(x,b) arrow exists y Garage(x,y,z))", ->
+      e = fol.parse "all x (F(x,b) arrow exists y Garage(x,y,z))"
+      p = e.getPredicates()
+      expect(p.length).to.equal(2)
+      expect(p[0].name).to.equal 'F'
+      expect(p[0].arity).to.equal 2
+      expect(p[1].name).to.equal 'Garage'
+      expect(p[1].arity).to.equal 3
+    it "gets predicates from (A and F(b))", ->
+      e = fol.parse " (A and F(b))"
+      p = e.getPredicates()
+      expect(p.length).to.equal(1)
+      expect(p[0].name).to.equal 'F'
+      expect(p[0].arity).to.equal 1
+    it "gets unique predicates from (F(a) and F(b))", ->
+      e = fol.parse " (F(a) and F(b))"
+      p = e.getPredicates()
+      expect(p.length).to.equal(1)
+      expect(p[0].name).to.equal 'F'
+      expect(p[0].arity).to.equal 1
+    it "gets recognises predicates of different arities as different", ->
+      e = fol.parse " (F(a) and F(b,c))"
+      p = e.getPredicates()
+      expect(p.length).to.equal(2)
+      expect(p[0].name).to.equal 'F'
+      expect(p[0].arity).to.equal 1
+      expect(p[1].name).to.equal 'F'
+      expect(p[1].arity).to.equal 2

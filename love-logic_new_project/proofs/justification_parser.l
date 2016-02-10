@@ -68,8 +68,12 @@
 "introduction"|"introduce"|"intro"  
     { return 'intro'; }
 
+"⊥"|"_|_"|"contradiction"|"contra"|"false"
+    { yytext = 'contradiction';
+      return 'connective'; }
 
-"or"|"∨"|"+"|"ǀǀ"       
+
+"or"|"∨"|"+"|"ǀǀ"|"|"     
     { yytext = 'or';
       return 'connective'; }
 "="|"identity"          
@@ -90,10 +94,6 @@
 
 "not"|"¬"|"˜"|"!"|"negation"
     { yytext = 'not';
-      return 'connective'; }
-
-"⊥"|"contradiction"|"false"
-    { yytext = 'contradiction';
       return 'connective'; }
 
 "reit"|"reiteration"
