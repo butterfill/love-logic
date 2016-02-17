@@ -424,7 +424,15 @@ class Pathfinder
   # Param `reqChecker` is the last in `reqCheckList` for which there is no path.
   writeMessage : (reqChecker) ->
     # TODO: make this work for subproofs too!
-    @line.status.addMessage("to apply #{@line.getRuleName()} you need to cite a #{reqChecker.theRequirement.type} with the form ‘#{reqChecker.theRequirement.toString()}’.")
+    # `reqChecker.theRequirement.type` is 'subproof' or the type of the awFOL sentence (e.g. `not` or `or`)
+    # TODO: user reqChecker.candidateLinesOrSubproofs to work out if the requirement concerns the current line
+    requirementConcernsCurrentLine = @line.number is reqChecker.candidateLinesOrSubproofs[0]?.number
+    if requirementConcernsCurrentLine
+      @line.status.addMessage("You can only use #{@line.getRuleName()} on a line with the form ‘#{reqChecker.theRequirement.toString()}’.")
+    else
+      thingToCite = reqChecker.theRequirement.type
+      thingToCite = 'line' unless thingToCite is 'subproof'
+      @line.status.addMessage("to apply #{@line.getRuleName()} you need to cite a #{thingToCite} with the form ‘#{reqChecker.theRequirement.toString()}’.")
 
 
 
