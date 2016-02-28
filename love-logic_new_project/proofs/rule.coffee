@@ -147,6 +147,29 @@ _parseIfNecessaryAndDecorate = (requirement) ->
   return requirement
 
 
+
+# helper : create all permutations involving every element of `list`
+# modified from https://gist.github.com/md2perpe/8210411
+# (Different from the `permutations` function below which gives numbered lists.)
+_permutations = (list) ->
+  # Empty list has one permutation
+  return [ [] ] if list.length is 0
+    
+  result = []
+  for i in [0..(list.length-1)]
+    copy = _.clone(list)
+    # Cut one element from list
+    head = copy.splice(i, 1)
+    # Permute rest of list
+    rest = _permutations(copy)
+    # Add head to each permutation of rest of list
+    for j in [0..(rest.length-1)]
+      next = head.concat(rest[j])
+      result.push next
+  result
+# exported for testing only
+exports._permutations = _permutations
+
 # ------------------
 # The following provide a way of checking whether a line citing
 # a rule is correct.  (You should only need to use these via `rule.from`.)
@@ -183,11 +206,21 @@ class LineChecker
     # If possible we will start with the `.to` requirement and then check 
     # the `.from` requirements in the order they were given.  (This allows rule 
     # writers to optimise by writing the rule in an intuitive way.)
-    # (Note that the `Pathfinder` need to change the order.)
+    # (Note that the `Pathfinder` may need to change the order.)
+    # (TODO: the `Pathfinder` does still need to change the order, but why?)
     reqCheckList.reverse()
     
-    path = new Pathfinder( reqCheckList, @line )
-    pathFound = path.find()
+    # Cycle through all possible orderings of rules
+    # (This matters because in cases like a=c, b=c therefore a=b there may
+    # be multiple ways of meeting any single requirement.)
+    reqCheckListPermutations = _permutations(reqCheckList)
+    pathFound = false
+    while not pathFound and reqCheckListPermutations.length > 0
+      toCheck = reqCheckListPermutations.shift()
+      path = new Pathfinder( toCheck, @line )
+      pathFound = path.find()
+      # console.log "#{reqCheckListPermutations.length} #{pathFound}"
+    
     if pathFound
       return true
     else 
@@ -371,6 +404,7 @@ class Pathfinder
     # We will make a copy of `reqCheckList` to avoid mutating our parameters
     # (which is essential given that we'll use this class recursively).
     @reqCheckList = (x for x in reqCheckList)
+    @line.status.clearMessages()
     
   find : () ->
     # If there are no more requirements to meet, we have found a 
@@ -383,7 +417,6 @@ class Pathfinder
     reqChecker.setMatches(@matches)
     
     # Find the first item in `reqCheckList` that we can already check;
-    # or, if we can't already check any, just start with the first and hope for the best.
     numChecked = 0
     # Note: the limit is `(@reqCheckList.length+1)` because we already popped one from `@reqCheckList`.
     while ( not reqChecker.canCheckAlready() ) and (numChecked < (@reqCheckList.length+1))
@@ -423,9 +456,7 @@ class Pathfinder
   # path along which all requirements can be met.
   # Param `reqChecker` is the last in `reqCheckList` for which there is no path.
   writeMessage : (reqChecker) ->
-    # TODO: make this work for subproofs too!
     # `reqChecker.theRequirement.type` is 'subproof' or the type of the awFOL sentence (e.g. `not` or `or`)
-    # TODO: user reqChecker.candidateLinesOrSubproofs to work out if the requirement concerns the current line
     requirementConcernsCurrentLine = @line.number is reqChecker.candidateLinesOrSubproofs[0]?.number
     if requirementConcernsCurrentLine
       @line.status.addMessage("You can only use #{@line.getRuleName()} on a line with the form ‘#{reqChecker.theRequirement.toString()}’.")

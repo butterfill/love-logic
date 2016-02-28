@@ -89,8 +89,8 @@ describe 'awFOL', ->
       expect( util.areIdenticalExpressions(result.right,expectedRight) ).to.be.true
       
     it '"A arrow B arrow C" should throw', ->
-      expect( -> fol.parse "A arrow B arrow C").to.throw()
-      
+      expect( -> fol.parse "A arrow B arrow C").to.throw
+            
     it 'should parse "A arrow B and C" so that arrow has widest scope', ->
       res = fol.parse("A arrow B and C")
       assert.equal res.type, "arrow"

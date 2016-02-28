@@ -1192,6 +1192,56 @@ describe "the verify module:", ->
       expect(line.status.getMessage().search('undefined')).to.equal(-1)
       
 
+  describe "universal intro", ->
+    it "allows conditional intro", ->
+      proof = _parse '''
+        | all x G(x)
+        |---
+        | | [a] 
+        | | ---
+        | | G(a)      // all elim 1
+        | all x G(x)	// all intro 3-5
+      '''
+      verify.to proof
+      expect( proof.verify() ).to.be.true
+      
+    it "allows the general conditional intro from LPL", ->
+      proof = _parse '''
+        | all x G(x)
+        |---
+        | | [a] F(a) 
+        | | ---
+        | | G(a)      // all elim 1
+        | all x (F(x) → G(x))	// all intro 3-5
+      '''
+      verify.to proof
+      expect( proof.verify() ).to.be.true
+      
+    it "rejects an error with general conditional intro from LPL", ->
+      proof = _parse '''
+        | all x F(x)
+        |---
+        | | [a] F(a) 
+        | | ---
+        | | F(a)      // all elim 1
+        | all x (F(x) → G(x))	// all intro 3-5
+      '''
+      verify.to proof
+      expect( proof.verify() ).to.be.false
+
+    it "rejects errors with the general conditional intro from LPL", ->
+      proof = _parse '''
+        | all x G(x)
+        | a=a
+        |---
+        | | [a] F(a) 
+        | | ---
+        | | G(a)      // all elim 1
+        | all x (F(x) → G(x))	// all intro 4-6
+      '''
+      verify.to proof
+      expect( proof.verify() ).to.be.false
+      
       
       
       

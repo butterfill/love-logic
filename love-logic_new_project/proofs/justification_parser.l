@@ -40,7 +40,7 @@
       return 'number'; 
     }    
 
-/*  '-' needs for the same reason as 'to' does.
+/*  '-' needs special treatment for the same reason as 'to' does.
     [0-9][^,\s]*? --  the number, non-greedy (`?`) because otherwise it could eat 
                       into the - separator.
     (?:\-+)       --  matches `-`, `--`, ... 

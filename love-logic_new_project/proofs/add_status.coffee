@@ -59,6 +59,8 @@ class LineStatus
   
   addMessage : (text) -> 
     @messages.push text
+  clearMessages : () ->
+    @messages = []
   popMessage : () ->
     if @messages.length > 0
       return @messages.pop()

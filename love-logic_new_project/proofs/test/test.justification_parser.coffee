@@ -19,7 +19,7 @@ describe "justification_parser", ->
     expect(result.rule.variant.side?).to.be.false
 
   it "throws on empty input", ->
-    expect( -> jp.parse "" ).to.throw(Error)
+    expect( -> jp.parse "" ).to.throw
 
   it "allows you to use upper case", ->
     result = jp.parse "ELIM LEFT CONJUNCTION"
@@ -114,18 +114,18 @@ describe "justification_parser", ->
     expect(result.rule.variant.intronation).to.equal('elim')
 
   it "throws without a variant specified", ->
-    expect(-> jp.parse "conjunction ").to.throw(Error)
+    expect(-> jp.parse "conjunction ").to.throw
 
   it "throws given something incoherent", ->
-    expect(-> jp.parse "and or elim ").to.throw(Error)
+    expect(-> jp.parse "and or elim ").to.throw
 
   it "throws given something incoherent (version two)", ->
-    expect(-> jp.parse "and elim all ").to.throw(Error)
+    expect(-> jp.parse "and elim all ").to.throw
 
   it "doesn't throws without a variant specified if the rule doesn't require one", ->
-    expect(-> jp.parse "reit 44").not.to.throw(Error)
-    expect(-> jp.parse "premise ").not.to.throw(Error)
-    expect(-> jp.parse "assumption ").not.to.throw(Error)
+    expect(-> jp.parse "reit 44").not.to.throw
+    expect(-> jp.parse "premise ").not.to.throw
+    expect(-> jp.parse "assumption ").not.to.throw
 
   it "recognizes 'premise' as a justification", ->
     j = jp.parse "this is a premise "

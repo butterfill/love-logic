@@ -83,11 +83,8 @@ describe "block_parser", ->
     it "recognises a simple divider ---", ->
       r = bp._isDivider("---")
       expect(r).to.be.true
-    it "recognises a simple divider __", ->
-      r = bp._isDivider("__")
-      expect(r).to.be.true
     it "recognises a number followed by divider ", ->
-      r = bp._isDivider("1. __")
+      r = bp._isDivider("1. --")
       expect(r).to.be.true
     it "does not treat blank lines as dividers ", ->
       r = bp._isDivider("")
@@ -99,7 +96,7 @@ describe "block_parser", ->
       r = bp._isDivider("1.  ")
       expect(r).to.be.false
     it "allows whitespace after a divider ", ->
-      r = bp._isDivider("1. __  ")
+      r = bp._isDivider("1. --  ")
       expect(r).to.be.true
       r = bp._isDivider("---   ")
       expect(r).to.be.true
@@ -107,7 +104,7 @@ describe "block_parser", ->
       r = bp._isDivider("   ---   ")
       expect(r).to.be.true
     it "allows whitespace before a divider with a number", ->
-      r = bp._isDivider("  1. __  ")
+      r = bp._isDivider("  1. --  ")
       expect(r).to.be.true
     it "doesn't treat non-dividers as dividers", ->
       r = bp._isDivider("hello")

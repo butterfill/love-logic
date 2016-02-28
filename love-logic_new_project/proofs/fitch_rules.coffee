@@ -54,6 +54,10 @@ rules =
 
   universal :
     elim : rule.from('all τ φ').to('φ[τ->α]')
-    intro : rule.from( rule.subproof('[α]', 'φ') ).to('all τ φ[α->τ]')
+    intro : 
+      # This is the standard rule (not really `left`):
+      left : rule.from( rule.subproof('[α]', 'φ') ).to('all τ φ[α->τ]')
+      # This is what LPL calls `general conditional proof`: 
+      right : rule.from( rule.subproof('[α]φ[τ->α]', 'ψ[τ->α]') ).to('all τ (φ arrow ψ)')
 
 exports.rules = rules

@@ -436,8 +436,165 @@ describe "`rule`", ->
         3. B            // arrow elim 1, 2
       '''
       proof2 = _parse proof2
-      result = arrowElim.check proof2.getLine(3)
+      line = proof2.getLine(3)
+      result = arrowElim.check line
       console.log line.status.getMessage() if result isnt true
       expect(result).to.be.true
+      
+      
+    it "can verify correct use of arrow elim where every sentence is an arrow", ->
+      proof = '''
+        1. (A arrow B) arrow (C arrow D)
+        2. A arrow B
+        3. C arrow D            // arrow elim 1, 2
+      '''
+      proof = _parse proof
+      arrowElim = rule.from('φ').and('φ arrow ψ').to('ψ')
+      result = arrowElim.check proof.getLine(3)
+      expect(result).to.be.true
+      proof2 = '''
+        1. A arrow B
+        2. A
+        3. B            // arrow elim 1, 2
+      '''
+      proof2 = _parse proof2
+      line = proof2.getLine(3)
+      result = arrowElim.check line
+      console.log line.status.getMessage() if result isnt true
+      expect(result).to.be.true
+    
+    it "can verify correct use of arrow elim where every sentence is an arrow (reverse order)", ->
+      proof = '''
+        1. A arrow B
+        2. (A arrow B) arrow (C arrow D)
+        3. C arrow D            // arrow elim 1, 2
+      '''
+      proof = _parse proof
+      arrowElim = rule.from('φ').and('φ arrow ψ').to('ψ')
+      result = arrowElim.check proof.getLine(3)
+      expect(result).to.be.true
+      proof2 = '''
+        1. A arrow B
+        2. A
+        3. B            // arrow elim 1, 2
+      '''
+      proof2 = _parse proof2
+      line = proof2.getLine(3)
+      result = arrowElim.check line
+      console.log line.status.getMessage() if result isnt true
+      expect(result).to.be.true
+    
+    
+    it "can do =elim where all the statements involve identity (a=c version)", ->
+      proof = '''
+        1. a=c
+        2. b=c
+        3. a=b	// = elim 1,2
+      '''
+      proof = _parse proof
+      eqElimLeft = rule.from('α=β').and('φ').to('φ[α->β]')
+      eqElimRight = rule.from('α=β').and('φ').to('φ[β->α]')
+      # eqElimLeft = rule.from('φ').and('α=β').to('φ[α->β]')
+      # eqElimRight = rule.from('φ').and('α=β').to('φ[β->α]')
+      line = proof.getLine(3)
+      result1 = eqElimLeft.check line
+      result2 = eqElimRight.check line
+      result = result1 is true or result2 is true
+      console.log line.status.getMessage() if result isnt true
+      expect(result).to.be.true
+      
+    it "can do =elim where all the statements involve identity (a=c, reversed premise order version)", ->
+      proof = '''
+        1. b=c
+        2. a=c
+        3. a=b	// = elim 1,2
+      '''
+      proof = _parse proof
+      eqElimLeft = rule.from('α=β').and('φ').to('φ[α->β]')
+      eqElimRight = rule.from('α=β').and('φ').to('φ[β->α]')
+      line = proof.getLine(3)
+      result1 = eqElimLeft.check line
+      result2 = eqElimRight.check line
+      result = result1 is true or result2 is true
+      console.log line.status.getMessage() if result isnt true
+      expect(result).to.be.true
+      
+    it "can detect incorrect use of =elim ", ->
+      # This proof is incorrect:
+      proof = '''
+        1. c=a
+        2. b=c
+        3. a=b	// = elim 1,2
+      '''
+      proof = _parse proof
+      eqElimLeft = rule.from('α=β').and('φ').to('φ[α->β]')
+      eqElimRight = rule.from('α=β').and('φ').to('φ[β->α]')
+      line = proof.getLine(3)
+      result1 = eqElimLeft.check line
+      result2 = eqElimRight.check line
+      result = result1 is true or result2 is true
+      expect(result).to.be.false
+      
+    it "can detect incorrect use of =elim (reversed premise order version)", ->
+      # This proof is incorrect:
+      proof = '''
+        1. b=c
+        2. c=a
+        3. a=b	// = elim 1,2
+      '''
+      proof = _parse proof
+      eqElimLeft = rule.from('α=β').and('φ').to('φ[α->β]')
+      eqElimRight = rule.from('α=β').and('φ').to('φ[β->α]')
+      line = proof.getLine(3)
+      result1 = eqElimLeft.check line
+      result2 = eqElimRight.check line
+      result = result1 is true or result2 is true
+      expect(result).to.be.false
+      
+    it "can do =elim where all the statements involve identity (c=a, c=b version)", ->
+      proof = '''
+        1. c=a
+        2. c=b
+        3. a=b	// = elim 1,2
+      '''
+      proof = _parse proof
+      eqElimLeft = rule.from('α=β').and('φ').to('φ[α->β]')
+      eqElimRight = rule.from('α=β').and('φ').to('φ[β->α]')
+      line = proof.getLine(3)
+      result1 = eqElimLeft.check line
+      result2 = eqElimRight.check line
+      result = result1 is true or result2 is true
+      console.log line.status.getMessage() if result isnt true
+      expect(result).to.be.true
+      
+    it "can do =elim where all the statements involve identity (c=a, c=b, reversed premise order version)", ->
+      proof = '''
+        1. c=b
+        2. c=a
+        3. a=b	// = elim 1,2
+      '''
+      proof = _parse proof
+      eqElimLeft = rule.from('α=β').and('φ').to('φ[α->β]')
+      eqElimRight = rule.from('α=β').and('φ').to('φ[β->α]')
+      line = proof.getLine(3)
+      result1 = eqElimLeft.check line
+      result2 = eqElimRight.check line
+      result = result1 is true or result2 is true
+      console.log line.status.getMessage() if result isnt true
+      expect(result).to.be.true
+      
+      
+  describe "_permutations", ->
+    it "can permute a single element list", ->
+      result = rule._permutations [1]
+      expect(result).to.deep.equal([[1]])
+    it "can permute a two element list (fragile: depends on list order)", ->
+      result = rule._permutations [1,2]
+      expect(result).to.deep.equal([[1,2],[2,1]])
+    it "can permute a three element list (fragile: depends on list order)", ->
+      result = rule._permutations [1,2,3]
+      expect(result).to.deep.equal([[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]])
+  
 
+      
 

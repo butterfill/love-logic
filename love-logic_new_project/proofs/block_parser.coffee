@@ -34,7 +34,7 @@
 #     line 4
 # ```
 #
-# Any line starting with -- or __ (after any amount of indentation) is considered to be 
+# Any line starting with -- (after any amount of indentation) is considered to be 
 # at the same indentation level as the previous line.  (This is specified by `isDivider`.)
 #
 # This is work towards a proof parser.  
@@ -306,8 +306,8 @@ isDivider = (line) ->
   # So strip out all of these before doing the tests.
   line = removeIndentationFrom line
   
-  # A line that starts with -- or __ (after any indentation or whitespace) is a divider.
-  m = line.match /^\s*(--|__)/
+  # A line that starts with -- (after any indentation or whitespace) is a divider.
+  m = line.match /^\s*(--)/
   return true if m isnt null
   
   # Nothing else is a divider.
