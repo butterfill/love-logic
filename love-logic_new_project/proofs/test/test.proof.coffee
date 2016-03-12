@@ -91,5 +91,15 @@ describe "proof", ->
       theProof = proof.parse proofText
       result = theProof.verify()
       expect(result).to.be.true
-      
+    
+    it "allows Copi-style use of the |", ->
+      proofText = '''
+        B
+         | A
+         | B         reit 1
+        A arrow B    arrow intro 2-3
+      '''
+      theProof = proof.parse proofText
+      result = theProof.verify()
+      expect(result).to.be.true
     
