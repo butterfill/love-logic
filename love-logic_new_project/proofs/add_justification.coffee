@@ -2,7 +2,7 @@
 # as its lines, extracts and parses the justification (using `justification_parser`),
 # and adds the justification objects to the lines of the `Block`.
 #
-# Currently we take justification to start with '//', '\\' or '--'.
+# Currently we take justification to start with '//', '\\' or '--' or '   ' (3 spaces).
 # So a line should look like `<awFOL expression> // <justification>`
 #
 # After `addJustification`, a `Block.line` should have:
@@ -102,14 +102,24 @@ exports.to = to
 
 # Split the `text` (content of a line) into justification and non-
 # justification parts, returning the parsed justification.
-_FIND_JUSTIFICATION = /(\/\/)|(\\)|(--)/
+_FIND_JUSTIFICATION = /((\s)*\/\/)|(\\)|(--)/
+_FIND_WHITESPACE_JUSTIFICATION = /(\S+)(\s\s\s)(?=\s*\S+)/
 split = (text) ->
   m = text.match _FIND_JUSTIFICATION
-  if not m
-    # No justification found
-    return { justification: null, rest: text, justificationErrors:null }
-  rest = text.slice(0, m.index)
-  justificationText = text.slice(m.index+2)
+  if m?
+    rest = text.slice(0, m.index)
+    matchLength = m[0].length
+    justificationText = text.slice(m.index+matchLength)
+  else
+    m = text.match _FIND_WHITESPACE_JUSTIFICATION
+    if m?
+      preTextMatched = m[1]
+      rest = text.slice(0, m.index+preTextMatched.length)
+      matchLength = m[0].length
+      justificationText = text.slice(m.index+matchLength)
+    else
+      # No justification found
+      return { justification: null, rest: text, justificationErrors:null }
   try 
     justification = jp.parse justificationText
   catch e 

@@ -35,7 +35,7 @@ describe "add_justification", ->
 
     it "strips justification from `line.content`", ->
       block = addJustification.to BLOCK
-      expect(block.getLine(3).content).to.equal('2.2 ')
+      expect(block.getLine(3).content).to.equal('2.2')
 
     it "records error messages where justification can't be parsed", ->
       block = addJustification.to BLOCK
@@ -46,7 +46,70 @@ describe "add_justification", ->
     it "doesn't mess with the text of lines missing justification", ->
       block = addJustification.to BLOCK
       expect(block.getLine(2).content.trim()).to.equal(INPUT.split('\n')[1].trim())
-
+    
+    it "can treat 3 or more spaces as indicating the start of justification", ->
+      r = bp.parse "1 A and B \n2 ---\n3 A   and elim 1"
+      block = addJustification.to r
+      expect(block.getLine(3).justification.rule.connective).to.equal('and')
+    
+    it "correctly identifies the justification in a simple proof", ->
+      proof = _parse '''
+        | A
+        | C
+        |---
+        | B or C						// or intro 2
+        | 
+        | A ∧ (B ∨ C )			// and intro 1, 4
+      '''
+      line = proof.getLine(4)
+      expect(line.justification.rule.connective).to.equal('or')
+      line = proof.getLine(6)
+      expect(line.justification.rule.connective).to.equal('and')
+    
+    it "correctly identifies the justification in a simple proof (where whitespace separates justification)", ->
+      proof = _parse '''
+        | A
+        | C
+        |---
+        | B or C						or intro 2
+        | 
+        | A ∧ (B ∨ C )			and intro 1, 4
+      '''
+      line = proof.getLine(4)
+      expect(line.justification.rule.connective).to.equal('or')
+      line = proof.getLine(6)
+      expect(line.justification.rule.connective).to.equal('and')
+    
+    it "correctly identifies the justification in a simple proof (no |)", ->
+      proof = _parse '''
+        (A->B)&(B->C)
+        A->B			// and elim 1
+        B->C			// and elim 1
+          A				
+          B				// arrow elim 2,4
+          C				// arrow elim 3,5
+        A->C		// arrow intro 4-6
+      '''
+      expect(proof.getLine(2).justification.rule.connective).to.equal('and')
+      expect(proof.getLine(6).justification.rule.connective).to.equal('arrow')
+      expect(proof.getLine(7).justification.rule.connective).to.equal('arrow')
+    
+    it "correctly identifies the justification in a simple proof (no |, whitespace separates justification)", ->
+      proof = _parse '''
+        (A->B)&(B->C)
+        A->B			 and elim 1
+        B->C			 and elim 1
+          A				
+          B				 arrow elim 2,4
+          C				 arrow elim 3,5
+        A->C		 arrow intro 4-6
+      '''
+      console.log proof.getLine(5)
+      expect(proof.getLine(2).justification.rule.connective).to.equal('and')
+      expect(proof.getLine(6).justification.rule.connective).to.equal('arrow')
+      expect(proof.getLine(7).justification.rule.connective).to.equal('arrow')
+    
+    
     it "adds justification to premises where necessary", ->
       block = addJustification.to BLOCK
       expect(block.getLine(2).justification.rule.connective).to.equal('premise')
@@ -64,6 +127,8 @@ describe "add_justification", ->
       line = proof.getLine(2)
       expect(addJustification._isPremise(line)).to.be.true
       expect(line.justification.rule.connective).to.equal('premise')
+
+    
 
 
     it "adds doesn't add justification to non-premises", ->

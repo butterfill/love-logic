@@ -618,4 +618,10 @@ describe "normalForm", ->
         console.log "the F : #{util.expressionToString e} "
       # throw "E"
 
-    
+  describe "", ->
+    it "can compare quantifier expressions", ->
+      b = fol.parse "∃x ( (Survivor(x) ∧ ∀y (Survivor(y) → x = y ) ) ∧ Female(x) )"
+      a = fol.parse "∃x ( (Survivor(x) ∧ Female(x) ) ∧ ∀y (Survivor(y) → y = x ) )"
+      res = normalForm.areExpressionsEquivalent(a,b)
+      expect(res).to.be.true
+      

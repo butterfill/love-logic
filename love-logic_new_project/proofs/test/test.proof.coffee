@@ -66,6 +66,19 @@ describe "proof", ->
     it "enables us to get errors associated with a single line"
     it "enables us to get errors associated with each line of the proof"
     
+    it "verifies a simple proof", ->
+      text = '''
+        | A
+        | C
+        |---
+        | B or C						// or intro 2
+        | 
+        | A ∧ (B ∨ C )			// and intro 1, 4
+      '''
+      theProof = proof.parse text
+      result = theProof.verify()
+      expect(result).to.be.true
+    
     it "allows blank lines without messing up justification", ->
       proofText = '''
         | A

@@ -1243,6 +1243,25 @@ describe "the verify module:", ->
       expect( proof.verify() ).to.be.false
       
       
-      
+  describe "proofs that caused errors in the past", ->
+    it "should spot error without throwing", ->
+      proof = _parse '''
+        | (A ∧ C ) ∨ (A ∧ B )
+        |---
+        | |A ∧ C
+        | |---
+        | |A //∧Elim 3
+        | |C //∧Elim 3
+        | |B ∨ C //∨Intro 6
+        | 
+        | |A ∧ B
+        | |---
+        | |B //∧Elim 9
+        | |B ∨ C //∨Intro 11
+        | |A //∧Elim 9
+        | B ∨ C //∨Elim 1,3-7,9-13
+      '''
+      verify.to proof
+      expect( proof.verify() ).to.be.false
       
       

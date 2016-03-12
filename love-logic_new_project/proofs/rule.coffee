@@ -224,7 +224,7 @@ class LineChecker
     if pathFound
       return true
     else 
-      console.log "\tLineChecker instance, checked toRequirement, getMessage() = #{@line.status.getMessage()}"
+      # console.log "\tLineChecker instance, checked toRequirement, getMessage() = #{@line.status.getMessage()}"
       return @
   
   citedTypesAreCorrect : () ->
@@ -333,11 +333,17 @@ class RequirementChecker
     
     _checkOne : (candidate) ->
       if @theRequirement.type? and @theRequirement.type is 'subproof'
+        # If the candidate isn’t a subproof, the requirement can’t be met
+        return false unless candidate.type is 'block'
+        
         newMatches = @_checkOneLine @theRequirement.startReq, candidate.getFirstLine(), @matches
         return false if newMatches is false
         moreNewMatches = @_checkOneLine @theRequirement.endReq, candidate.getLastLine(), newMatches
         return moreNewMatches
+      
       # @theRequirement just concerns a line, not a subproof.
+      # If the candidate is a block, the requirement can’t be met
+      return false unless candidate.type isnt 'block'
       newMatches = @_checkOneLine(@theRequirement, candidate, @matches)
       return newMatches
     
@@ -355,6 +361,8 @@ class RequirementChecker
       # (Because `.findMatches` needs to selectively apply substitutions,
       # whereas `.applySubstitutions` replaces all matches indiscriminately.)
       aSentence = aLine.sentence
+      # We might in principle be citing a blank line or something:
+      return false unless aSentence?
       if not reqClone.box? and aSentence.box?
         aSentence = aSentence.clone()
         delete aSentence.box

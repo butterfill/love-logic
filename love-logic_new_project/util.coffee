@@ -274,11 +274,12 @@ SYMBOLS =
   'nand' : "↑"
   'universal_quantifier' : "∀"
   'existential_quantifier' : "∃" 
-    
+exports.SYMBOLS = SYMBOLS
 
 # Create a string representation of a fol expression.
 # It uses the symbols that were specified when the expression was parsed (where these exist) unless param `o.replaceSymbols` is true.
 expressionToString = (expression, o={}) ->
+  o.symbols ?= SYMBOLS
   
   # Help with debug 
   for test in [_.isBoolean, _.isNumber, _.isString, _.isArray]
@@ -323,7 +324,7 @@ expressionToString = (expression, o={}) ->
       theSubs = "[#{e.substitutions}]"
     
     if e.termlist? 
-      symbol = e.name or e.symbol or SYMBOLS[e.type] or e.type
+      symbol = e.name or e.symbol or o.symbols[e.type] or e.type
       middle = "#{symbol}(#{e.termlist.join(',')})"
   
     if e.type is 'identity'
@@ -345,7 +346,7 @@ expressionToString = (expression, o={}) ->
       right_bracket = " )" 
 
     # All of the following need the `symbol`, e.g. `and` or `arrow`
-    symbol = e.symbol or SYMBOLS[e.type] or e.type or ''
+    symbol = e.symbol or o.symbols[e.type] or e.type or ''
     if o.wrapWithDivs
       symbol = "<span class='_symbolWrap' data-symbolNum='#{symbolNum}'>#{symbol}</span>"
     
