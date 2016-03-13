@@ -208,7 +208,7 @@ exports.doSubRecursive = doSubRecursive
 # Note: This will not take into account whether or not a variable is bound
 # when replacing it.
 #
-# Special feature for substitutions like `[a->null]`: if it actually finds a match
+# Special feature for substitutions like `[a-->null]`: if it actually finds a match
 # to replace, it will throw Error with `.messsage` "_internal: replace to null".
 replace =  (expression, whatToReplace, o={}) ->
   toFind = whatToReplace.from
@@ -234,15 +234,15 @@ replace =  (expression, whatToReplace, o={}) ->
 exports.replace = replace
 
 
-# Given `A[A->B]` as the `expression`, return `B`.
+# Given `A[A-->B]` as the `expression`, return `B`.
 # (By contrast, `doSub` and `doSubRecursive` perform substitutions using 
 # patterns like `φ arrow ψ` to `(not φ) or ψ`; this is about applying
-# the substitutions that are part of an awFOL expression (as in `A[A->B]`).
+# the substitutions that are part of an awFOL expression (as in `A[A-->B]`).
 #
 # Note: `expression` will not be mutated.
 applySubstitutions = (expression) ->
   # We are going to do this by starting at a point innermost in the expression
-  # and walking outwards, so that `(A[A->B] and C)[B->D]` returns `D and C`.
+  # and walking outwards, so that `(A[A-->B] and C)[B-->D]` returns `D and C`.
   walker = (e) ->
     return e if not e?.substitutions?
     theSubs = _.cloneDeep e.substitutions

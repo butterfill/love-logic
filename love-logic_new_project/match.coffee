@@ -1,4 +1,4 @@
-# Match is for finding and applying matches between patterns like `φ[a->β]`
+# Match is for finding and applying matches between patterns like `φ[a-->β]`
 # and awFOL expressions like `F(b)`.  This is used in converting
 # expressions to PNF, and in verifying rules of proof.
 #
@@ -19,12 +19,12 @@ util = require './util'
 # `expression` unless `expression` is not an instance of `pattern`.  In that case,
 # this function returns false.
 #
-# Note: the function handles substitutions (as in `φ[α->β]`) as optional; i.e.
+# Note: the function handles substitutions (as in `φ[α-->β]`) as optional; i.e.
 # if there is a way of fully or partially applying the substitution that will
 # generate a mtach, a match is generated.  
 #
 # See below for how the order in which it consideres applying substitutions.
-# (In essence, `C` is an instance of `A[A->B,B->C]` but not of `A[B->C,A->B]`.)
+# (In essence, `C` is an instance of `A[A-->B,B-->C]` but not of `A[B-->C,A-->B]`.)
 find = (expression, pattern, _matches={}) ->
   _matches ?= {}
   

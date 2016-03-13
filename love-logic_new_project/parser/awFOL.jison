@@ -12,6 +12,7 @@
 /* lexical grammar */
 %lex
 
+%x expectLeftBracket
 
 %%
 
@@ -22,6 +23,7 @@
     Square brackets, '[' and ']', are used for defining substitutions (e.g. φ[τ->α])
     and for initial boxes which express 
 */
+<expectLeftBracket>"("     { this.popState(); return '('; }
 "("     { return '('; }
 ")"     { return ')'; }
 "["     { return '['; }
@@ -43,8 +45,10 @@
     defined first and the lexer matches in the order things are defined.
     Otherwise the `And` in `A And (B Or C)` could be a predicate.
 */
-[A-Z][A-Za-z0-9]*/(\()  { return 'predicate';               }    
+[A-Z][A-Za-z0-9]*/(\()  { this.begin('expectLeftBracket');
+                          return 'predicate';               }    
 
+"-->"    { return 'substitution'; }
 
 /*  Connectives.  
     (These must come after predicates as predicates may start with connectives, e.g. `Orange(a)`.)
@@ -58,11 +62,12 @@
 [aA][rR][rR][oO][wW]|"->"|"⇒"|"→"|"⊃"    { return 'arrow'; }
 "↔"|"≡"|"⇔"|"double_arrow"|"<->" { return 'double_arrow'; }
 [oO][rR]|"∨"|"+"|"ǀǀ"|"|"        { return 'or'; }
-[nN][oO][tT]|"¬"|"˜"|"!"     { return 'not'; }
+[nN][oO][tT]|"¬"|"~"|"˜"|"!"     { return 'not'; }
 [nN][oO][rR]|"↓"             { return 'nor'; }
 [nN][aA][nN][dD]|"↑"         { return 'nand'; }
 [aA][lL][lL]|"∀"|[eE][vV][eE][rR][yY]         { return 'universal_quantifier'; }
 [sS][oO][mM][eE]|[eE][xX][iI][sS][tT][sS]|"∃" { return 'existential_quantifier'; }
+
 
 
 /*  Sentence letters.
@@ -73,8 +78,10 @@
     Note: this clause must come AFTER the Predicates so that
     the `A` in `A(x)` is parsed as a predicate rather than as a sentence 
     letter.
+    
+    Note: p, q, r and s are Copi sentence 
 */  
-[A-Z][0-9]*             { return 'sentence_letter'; }
+[A-Zpqrs][0-9]*         { return 'sentence_letter'; }
 
 [a-d][0-9]*             { return 'name'; }
 [etxyzw][0-9]*          { return 'variable'; }
@@ -109,11 +116,14 @@
 
 /* `exists x F(x) and A` is `(exists x F(x)) and A` */
 %left existential_quantifier universal_quantifier
+/* These are for the (horrible) Copi style (x) universal quantifiers. */
+%left  '(' variable ')'
+%left  '(' term_metavariable ')'
 
 /* `A and not A[A->B]` is `A and not (A[A->B])` */
 %left '[' ']'
 
-
+%nonassoc 'identity'
 
 /* This tells JISON where to start: */
 %start expressions
@@ -139,6 +149,8 @@ e
         { $$ = {type:"universal_quantifier", symbol:$1, location:@1, boundVariable:$2, left:$3, right:null}; }
     | '(' universal_quantifier quantifier_variable ')' e
         { $$ = {type:"universal_quantifier", symbol:$2, location:@2, boundVariable:$3, left:$5, right:null}; }
+    | '(' variable_or_metavariable ')' e
+        { $$ = {type:"universal_quantifier", symbol:'', location:@2, boundVariable:$2, left:$4, right:null}; }
     | e and e
         { $$ = {type:'and', symbol:$2, location:@2, left:$1, right:$3}; }
     | e or e
@@ -191,12 +203,17 @@ sentence_letter_or_expression_variable
         { $$ = {type:'sentence_letter', location:@1, letter:$1, left:null, right:null}; }
     ;
 
-quantifier_variable
+variable_or_metavariable
     : variable
         { $$ = {type:'variable', name:$1, location:@1}; }
     | term_metavariable
         { $$ = {type:'term_metavariable', name:$1, location:@1}; }
-    | '(' quantifier_variable ')'
+    ;
+
+quantifier_variable
+    : variable_or_metavariable
+        { $$ = $1; }
+    | '(' variable_or_metavariable ')'
         { $$ = $2; }
     ;
 
@@ -210,14 +227,14 @@ termlist
 term
     : name
         { $$ = {type:'name', name:$1, location:@1}; }
-    | variable
-        { $$ = {type:'variable', name:$1, location:@1}; }
-    | term_metavariable
-        { $$ = {type:'term_metavariable', name:$1, location:@1}; }
+    | variable_or_metavariable
+        { $$ = $1; }
     ;
-
+=
 
 /*  
+    TODO : substitutions should use their own symbol (-->?)
+  
     Substitutions that may appear after an expression
     (e.g. '(A and B)[A->(C and D)]).
     

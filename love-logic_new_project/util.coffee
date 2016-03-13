@@ -5,9 +5,9 @@ _ = require 'lodash'
 # Walk through `expression` depth-first (unless `o.topDown`) applying `fn` to mutate it.
 # This will visit termlists, terms, and bound variables.
 # It will also visit substitution lists, individual substitutions 
-# and their components (like `τ` and `α` in `φ[τ->α]`) and boxes (like `[a]φ`).
+# and their components (like `τ` and `α` in `φ[τ-->α]`) and boxes (like `[a]φ`).
 #
-# Note that `fn` can receive null when visiting substitutions like `ψ[α->null]`.
+# Note that `fn` can receive null when visiting substitutions like `ψ[α-->null]`.
 #
 # `fn` takes an expression, term, substitutions, termlist and returns.
 #

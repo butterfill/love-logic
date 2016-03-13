@@ -455,3 +455,19 @@ describe 'awFOL', ->
     it "recognises PROP->null", ->
       e = fol.parse("φ[φ->null]")
       expect(e.substitutions[0].to).to.equal(null)
+      
+      
+  describe "Copi syntax", ->
+    it "can do the existential quantifier", ->
+      e1 = fol.parse("(∃x)F(x)")
+      e2 = fol.parse("∃x F(x)")
+      assert.deepEqual util.delExtraneousProperties(e1), util.delExtraneousProperties(e2)
+
+    it "can do the universal quantifier", ->
+      e1 = fol.parse("(x)F(x)")
+      e2 = fol.parse("∀x F(x)")
+      assert.deepEqual util.delExtraneousProperties(e1), util.delExtraneousProperties(e2)
+    it "gets the scope of the universal quantifier right", ->
+      e1 = fol.parse("(x)F(x) and A")
+      e2 = fol.parse("∀x F(x) and A")
+      assert.deepEqual util.delExtraneousProperties(e1), util.delExtraneousProperties(e2)
