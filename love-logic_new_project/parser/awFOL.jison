@@ -48,7 +48,7 @@
 [A-Z][A-Za-z0-9]*/(\()  { this.begin('expectLeftBracket');
                           return 'predicate';               }    
 
-"-->"    { return 'substitution'; }
+"-->"    { return 'substitution_symbol'; }
 
 /*  Connectives.  
     (These must come after predicates as predicates may start with connectives, e.g. `Orange(a)`.)
@@ -230,11 +230,9 @@ term
     | variable_or_metavariable
         { $$ = $1; }
     ;
-=
+
 
 /*  
-    TODO : substitutions should use their own symbol (-->?)
-  
     Substitutions that may appear after an expression
     (e.g. '(A and B)[A->(C and D)]).
     
@@ -256,13 +254,13 @@ substitution_list
     ;
 
 substitution 
-    : term arrow term 
+    : term substitution_symbol term 
         { $$ = {type:'substitution', from:$1, to:$3, symbol:$2}; }
-    | term arrow null 
+    | term substitution_symbol null 
         { $$ = {type:'substitution', from:$1, to:null, symbol:$2}; }
-    | sentence_letter_or_expression_variable arrow e  
+    | sentence_letter_or_expression_variable substitution_symbol e  
         { $$ = {type:'substitution', from:$1, to:$3, symbol:$2}; }
-    | sentence_letter_or_expression_variable arrow null
+    | sentence_letter_or_expression_variable substitution_symbol null
         { $$ = {type:'substitution', from:$1, to:null, symbol:$2}; }
     ;
 

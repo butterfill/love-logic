@@ -15,11 +15,14 @@ match = require './match'
 substitute = require './substitute'
 normalForm = require './normal_form'
 evaluate = require('./evaluate')
+symbols = require('./symbols')
 
 parse = (text) ->
   e = awFOL.parse text
   return _decorate(e)
 exports.parse = parse
+
+exports.symbols = symbols
 
 # Add some useful functions to an expression and every part of it.
 _decorate = (expression) ->

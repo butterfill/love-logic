@@ -44,20 +44,23 @@ rules =
   identity :
     intro : rule.to('α=α')
     elim : 
-      left : rule.from('α=β').and('φ').to('φ[α->β]')
-      right : rule.from('α=β').and('φ').to('φ[β->α]')
+      left : rule.from('α=β').and('φ').to('φ[α-->β]')
+      right : rule.from('α=β').and('φ').to('φ[β-->α]')
         
   existential :
-    elim : rule.from('exists τ φ').and( rule.subproof('[α]φ[τ->α]', 'ψ') ).to('ψ[α->null]')
+    elim : rule.from('exists τ φ').and( rule.subproof('[α]φ[τ-->α]', 'ψ') ).to('ψ[α-->null]')
 
-    intro : rule.from('φ[τ->α]').to('exists τ φ')
+    intro : rule.from('φ[τ-->α]').to('exists τ φ')
 
   universal :
-    elim : rule.from('all τ φ').to('φ[τ->α]')
+    elim : rule.from('all τ φ').to('φ[τ-->α]')
     intro : 
       # This is the standard rule (not really `left`):
-      left : rule.from( rule.subproof('[α]', 'φ[τ->α]') ).to('all τ φ')
+      left : rule.from( rule.subproof('[α]', 'φ[τ-->α]') ).to('all τ φ')
       # This is what LPL calls `general conditional proof`: 
-      right : rule.from( rule.subproof('[α]φ[τ->α]', 'ψ[τ->α]') ).to('all τ (φ arrow ψ)')
+      # right : rule.from( rule.subproof('[α]φ[τ-->α]', 'ψ[τ-->α]') ).to('all τ (φ arrow ψ)')
+      # Why doesn’t this version work? It’s because matching [α]φ to [a] F(a)
+      # results in φ being [a] F(a)!
+      right : rule.from( rule.subproof('[α]φ', 'ψ') ).to('(all τ (φ arrow ψ))[α-->τ]')
 
 exports.rules = rules

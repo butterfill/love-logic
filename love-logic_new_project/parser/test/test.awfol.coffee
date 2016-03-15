@@ -356,27 +356,27 @@ describe 'awFOL', ->
       
 
       
-  describe "substitutions like φ[τ->α]", ->
+  describe "substitutions like φ[τ-->α]", ->
     it "recognises substitutions for terms", ->
       noSub = fol.parse("φ")
       expect(noSub.substitutions?).to.be.false
-      withSub = fol.parse("φ[τ->a]")
+      withSub = fol.parse("φ[τ-->a]")
       expect(withSub.substitutions?).to.be.true
     it "each substitution has type set to 'substitution'", ->
-      withSub = fol.parse("φ[τ->a]")
+      withSub = fol.parse("φ[τ-->a]")
       expect(withSub.substitutions[0].type).to.equal('substitution')
     it "each substitution has `.from` and `.to` properties", ->
-      withSub = fol.parse("φ[τ->a]")
+      withSub = fol.parse("φ[τ-->a]")
       expect(withSub.substitutions[0].from?).to.be.true
       expect(withSub.substitutions[0].to?).to.be.true
     it "recognises substitutions for expressions", ->
-      withSub = fol.parse("(A and φ)[φ->B and C]")
+      withSub = fol.parse("(A and φ)[φ-->B and C]")
       expect(withSub.substitutions?).to.be.true
     it "recognises substitutions for `sentence_letter`s", ->
-      withSub = fol.parse("(A and B)[A->B and C]")
+      withSub = fol.parse("(A and B)[A-->B and C]")
       expect(withSub.substitutions?).to.be.true
     it "recognises multiple substitutions (alternative comma notation)", ->
-      withSub = fol.parse("(φ and ψ)[φ->B and C,ψ->A]")
+      withSub = fol.parse("(φ and ψ)[φ-->B and C,ψ-->A]")
       expect(withSub.substitutions.length).to.equal(2)
       # console.log "\n\n\n.substitutions[0]: #{JSON.stringify withSub,null,4}"
       expect(withSub.substitutions[0].from.letter).to.equal('φ')
@@ -386,17 +386,17 @@ describe 'awFOL', ->
       expect(withSub.substitutions[1].to.type).to.equal('sentence_letter')
       
     it "treats ψ[sub1][sub1] and ψ[sub1,sub2]as equivalent", ->
-      toCheck = fol.parse "ψ[φ->B and C][ψ->A]"
+      toCheck = fol.parse "ψ[φ-->B and C][ψ-->A]"
       expect(toCheck.substitutions.length).to.equal(2)
-      expected = fol.parse "ψ[φ->B and C,ψ->A]" 
+      expected = fol.parse "ψ[φ-->B and C,ψ-->A]" 
       expect(expected.substitutions.length).to.equal(2)
       util.delExtraneousProperties toCheck
       util.delExtraneousProperties expected
       expect(toCheck).to.deep.equal(expected)
     it "treats ψ[sub1][sub1] (ψ[sub1])[sub2] as equivalent", ->
-      toCheck = fol.parse "ψ[φ->B and C][ψ->A]"
+      toCheck = fol.parse "ψ[φ-->B and C][ψ-->A]"
       expect(toCheck.substitutions.length).to.equal(2)
-      expected = fol.parse "(ψ[φ->B and C])[ψ->A]"
+      expected = fol.parse "(ψ[φ-->B and C])[ψ-->A]"
       expect(expected.substitutions.length).to.equal(2)
       util.delExtraneousProperties toCheck
       util.delExtraneousProperties expected
@@ -404,23 +404,23 @@ describe 'awFOL', ->
       
     it "recognises multiple substitutions", ->
       # This test also confirms that 
-      #       `(φ and ψ)[φ->B and C][ψ->A]`
+      #       `(φ and ψ)[φ-->B and C][ψ-->A]`
       # is interpreted as 
-      #       `(φ and ψ)([φ->B and C][ψ->A])`
+      #       `(φ and ψ)([φ-->B and C][ψ-->A])`
       # rather than as 
-      #       `((φ and ψ)[φ->B and C])[ψ->A]`
-      withSub = fol.parse("(φ and ψ)[φ->B and C][ψ->A]")
+      #       `((φ and ψ)[φ-->B and C])[ψ-->A]`
+      withSub = fol.parse("(φ and ψ)[φ-->B and C][ψ-->A]")
       expect(withSub.substitutions.length).to.equal(2)
 
     it "records what the substitution is (when substituting terms)", ->
-      withSub = fol.parse("φ[τ->a]")
+      withSub = fol.parse("φ[τ-->a]")
       theSub = withSub.substitutions[0]
       expect(theSub.from.type).to.equal('term_metavariable')
       expect(theSub.from.name).to.equal('τ')
       expect(theSub.to.type).to.equal('name')
       expect(theSub.to.name).to.equal('a')
     it "records what the substitution is (when substituting expressions)", ->
-      withSub = fol.parse("(A and φ)[φ->B and C]")
+      withSub = fol.parse("(A and φ)[φ-->B and C]")
       theSub = withSub.substitutions[0]
       expect(theSub.from.type).to.equal('expression_variable')
       expect(theSub.from.letter).to.equal('φ')
@@ -429,7 +429,7 @@ describe 'awFOL', ->
       # represents things:
       expect(util.expressionToString(theSub.to)).to.equal('B and C')
     it "treats substitutions as having high precedence", ->
-      expression = fol.parse("F(a)[a->α] arrow B[B->B and C]")
+      expression = fol.parse("F(a)[a-->α] arrow B[B-->B and C]")
       # console.log "expression: #{JSON.stringify expression,null,4}"
       # console.log "expression.substitutions : #{JSON.stringify expression.substitutions,null,4}"
       # console.log "expression.left.substitutions[0] #{JSON.stringify expression.left.substitutions[0],null,4}"
@@ -440,20 +440,20 @@ describe 'awFOL', ->
       expect(expression.right.substitutions[0].from.type).to.equal("sentence_letter")
 
     it "copes with nested substitutions", ->
-      expression = fol.parse("A[A->B[B->C]]")
+      expression = fol.parse("A[A-->B[B-->C]]")
       expect(expression.substitutions.length).to.equal(1)
       expect(expression.substitutions[0].to.substitutions.length).to.equal(1)
       
     it "doesn't overwrite substitutions when brackets are involved",->
-      expression = fol.parse "((A and D)[A->B])[B->C]"
+      expression = fol.parse "((A and D)[A-->B])[B-->C]"
       expect(expression.substitutions.length).to.equal(2)
 
-  describe "substitutions with null like φ[τ->null]", ->
+  describe "substitutions with null like φ[τ-->null]", ->
     it "recognises term->null", ->
-      e = fol.parse("φ[τ->null]")
+      e = fol.parse("φ[τ-->null]")
       expect(e.substitutions[0].to).to.equal(null)
     it "recognises PROP->null", ->
-      e = fol.parse("φ[φ->null]")
+      e = fol.parse("φ[φ-->null]")
       expect(e.substitutions[0].to).to.equal(null)
       
       

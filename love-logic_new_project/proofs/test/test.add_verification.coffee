@@ -1204,6 +1204,17 @@ describe "the verify module:", ->
       '''
       verify.to proof
       expect( proof.verify() ).to.be.true
+    it "allows conditional intro with complex predicates", ->
+      proof = _parse '''
+        | all x (F(x) → G(x))
+        |---
+        | | [a] 
+        | | ---
+        | | F(a) → G(a)      // all elim 1
+        | all x (F(x) → G(x))	// all intro 3-5
+      '''
+      verify.to proof
+      expect( proof.verify() ).to.be.true
       
     it "allows the general conditional intro from LPL", ->
       proof = _parse '''

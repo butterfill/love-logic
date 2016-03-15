@@ -142,8 +142,8 @@ describe 'substitute', ->
       result = substitute.replace expression, whatToReplace
       expect(result.letter).to.equal('B')
       
-    it "allows us to get from A[A->B] to B", ->
-      expression = fol.parse "A[A->B]"
+    it "allows us to get from A[A-->B] to B", ->
+      expression = fol.parse "A[A-->B]"
       whatToReplace =
         from : expression.substitutions[0].from
         to : expression.substitutions[0].to
@@ -152,24 +152,24 @@ describe 'substitute', ->
       result = substitute.replace expression, whatToReplace
       expect(result.letter).to.equal('B')
 
-    it "allows us to get from (A and B)[A->C] to A and C", ->
-      expression = fol.parse "(A and B)[A->C]"
+    it "allows us to get from (A and B)[A-->C] to A and C", ->
+      expression = fol.parse "(A and B)[A-->C]"
       whatToReplace =
         from : expression.substitutions[0].from
         to : expression.substitutions[0].to
       result = substitute.replace expression, whatToReplace
       expect(result.left.letter).to.equal('C')
 
-    it "allows us to get from (a=b)[a->c] to c=b", ->
-      expression = fol.parse "(a=b)[a->c]"
+    it "allows us to get from (a=b)[a-->c] to c=b", ->
+      expression = fol.parse "(a=b)[a-->c]"
       whatToReplace =
         from : expression.substitutions[0].from
         to : expression.substitutions[0].to
       result = substitute.replace expression, whatToReplace
       expect(result.termlist[0].name).to.equal('c')
 
-    it "allows us to get from (a=b)[a->τ] to τ=b", ->
-      expression = fol.parse "(a=b)[a->τ]"
+    it "allows us to get from (a=b)[a-->τ] to τ=b", ->
+      expression = fol.parse "(a=b)[a-->τ]"
       whatToReplace =
         from : expression.substitutions[0].from
         to : expression.substitutions[0].to
@@ -177,7 +177,7 @@ describe 'substitute', ->
       expect(result.termlist[0].name).to.equal('τ')
     
     it "doesn't mess with substitutions", ->
-      expression = fol.parse "(A and B)[C->D]"
+      expression = fol.parse "(A and B)[C-->D]"
       whatToReplace =
         from : fol.parse "A"
         to : fol.parse "B"
@@ -249,9 +249,9 @@ describe 'substitute', ->
       sub = 
         from : fol.parse 'not not φ'
         to : fol.parse 'φ'
-      expression = fol.parse 'A[A->not not B]'
+      expression = fol.parse 'A[A-->not not B]'
       result = substitute.doSubRecursive expression, sub
-      expectedResult = fol.parse 'A[A->B]'
+      expectedResult = fol.parse 'A[A-->B]'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
 
     it "does a double-negation substitution when the double neg is nested", ->
@@ -369,7 +369,7 @@ describe 'substitute', ->
     
 
 
-  describe "`.applySubstitutions` (as in `A[A->B]`)", ->
+  describe "`.applySubstitutions` (as in `A[A-->B]`)", ->
     it "works when there are no substitutions", ->
       expression = fol.parse "A and B"
       util.delExtraneousProperties expression
@@ -377,36 +377,36 @@ describe 'substitute', ->
       expect(result).to.deep.equal(expression)
     
     it "applies a simple substitution (to the main expression)", ->
-      expression = fol.parse "A[A->B]"
+      expression = fol.parse "A[A-->B]"
       result = substitute.applySubstitutions expression
       expect(result.letter).to.equal('B')
 
     it "applies a simple substitution (to a component expression)", ->
-      expression = fol.parse "(A and D)[A->B]"
+      expression = fol.parse "(A and D)[A-->B]"
       result = substitute.applySubstitutions expression
       expect(result.left.letter).to.equal('B')
 
     it "applies a substitution which is not at the root expression", ->
-      expression = fol.parse "(A[A->B] and D)"
+      expression = fol.parse "(A[A-->B] and D)"
       result = substitute.applySubstitutions expression
       expect(result.left.letter).to.equal('B')
 
     it "applies two substitutions in the right order", ->
       # NOTE: This may fail if there is a problem with the awFOL parser.
-      expression = fol.parse "((A and D)[A->B])[B->C]"
+      expression = fol.parse "((A and D)[A-->B])[B-->C]"
       console.log "expression = #{util.expressionToString(expression)}"
       result = substitute.applySubstitutions expression
       expect(result.left.letter).to.equal('C')
     
-    it "takes `(A[A->B] and C)[B->D]` to `D and C`", ->
-      expression = fol.parse "(A[A->B] and C)[B->D]"
+    it "takes `(A[A-->B] and C)[B-->D]` to `D and C`", ->
+      expression = fol.parse "(A[A-->B] and C)[B-->D]"
       result = substitute.applySubstitutions expression
       expect(result.type).to.equal('and')
       expect(result.left.letter).to.equal('D')
       expect(result.right.letter).to.equal('C')
 
     it "does not mutate its parameter", ->
-      expression = fol.parse "(A[A->B] and C)[B->D]"
+      expression = fol.parse "(A[A-->B] and C)[B-->D]"
       util.delExtraneousProperties expression
       pre = _.cloneDeep expression
       result = substitute.applySubstitutions expression
@@ -414,42 +414,42 @@ describe 'substitute', ->
       expect(pre).not.to.deep.equal(result) # Test the test.
       expect(pre).to.deep.equal(post)
     
-    describe "in the special case of `[α->null]` substitutions", ->
+    describe "in the special case of `[α-->null]` substitutions", ->
       it "is helped by `.replace` throwing a useful error", ->
         e = fol.parse "a=b"
         whatToReplace =
-          from : (fol.parse "A[a->null]").substitutions[0].from
-          to : (fol.parse "A[a->null]").substitutions[0].to
+          from : (fol.parse "A[a-->null]").substitutions[0].from
+          to : (fol.parse "A[a-->null]").substitutions[0].to
         expect( -> substitute.replace(e, whatToReplace) ).to.throw()
         try 
           substitute.replace(e, whatToReplace) 
         catch e 
           expect(e.message).to.equal("_internal: replace to null")
         
-      it "applying `[a->null]` to an expression not containing `a` makes no difference", ->
-        expression = fol.parse "b=c[a->null]"
+      it "applying `[a-->null]` to an expression not containing `a` makes no difference", ->
+        expression = fol.parse "b=c[a-->null]"
         util.delExtraneousProperties expression
         pre = _.cloneDeep expression
         result = substitute.applySubstitutions expression
         post = expression
         expect(pre).to.deep.equal(post)
         
-      it "applying `[a->null]` to `(b=c and A)` makes no difference", ->
-        expression = fol.parse "(b=c and A)[a->null]"
+      it "applying `[a-->null]` to `(b=c and A)` makes no difference", ->
+        expression = fol.parse "(b=c and A)[a-->null]"
         util.delExtraneousProperties expression
         pre = _.cloneDeep expression
         result = substitute.applySubstitutions expression
         post = expression
         expect(pre).to.deep.equal(post)
         
-      it "applying `[a->null]` to `(a=c and A)` gives you null", ->
-        expression = fol.parse "(a=c and A)[a->null]"
+      it "applying `[a-->null]` to `(a=c and A)` gives you null", ->
+        expression = fol.parse "(a=c and A)[a-->null]"
         util.delExtraneousProperties expression
         result = substitute.applySubstitutions expression
         expect(result).to.equal(null)
         
-      it "applying `[a->null]` to `a=c` gives you null", ->
-        expression = fol.parse "a=b[a->null]"
+      it "applying `[a-->null]` to `a=c` gives you null", ->
+        expression = fol.parse "a=b[a-->null]"
         util.delExtraneousProperties expression
         result = substitute.applySubstitutions expression
         expect(result).to.equal(null)

@@ -75,6 +75,11 @@ findWithoutApplyingSubs = (expression, pattern, _matches={}) ->
         # console.log "matched #{targetVar} : #{util.expressionToString targetValue}"
         _matches[targetVar] = targetValue
         if pattern.box?
+          # remove the box from the match
+          expressionMinusBox = util.cloneExpression expression
+          delete expressionMinusBox.box
+          _matches[targetVar] = expressionMinusBox
+          # check that the box parts match
           return false if not expression.box?
           return util.walkCompare(expression.box, pattern.box, comparator)
         return _matches

@@ -161,7 +161,7 @@ describe "`rule`", ->
   
   describe "`RequirementChecker`", ->
     it "collects the metavariables from subproofs", ->
-      req = rule.subproof('[α]φ[τ->α]', 'ψ')
+      req = rule.subproof('[α]φ[τ-->α]', 'ψ')
       line = { sentence : fol.parse 'not not A' }
       rc = new rule.RequirementChecker(req, [line])
       expect(rc.metaVariableNames.inSub.left.length).to.equal(1)
@@ -175,14 +175,14 @@ describe "`rule`", ->
       expect(rc.canCheckAlready()).to.be.true
       
     it "says no to `canCheckAlready` when necessary", ->
-      req = fol.parse 'ψ[α->null]' 
+      req = fol.parse 'ψ[α-->null]' 
       line = { sentence : fol.parse 'not not A' }
       rc = new rule.RequirementChecker(req, [line])
       console.log rc.metaVariableNames.inSub.left
       expect(rc.canCheckAlready()).to.be.false
       
     it "says yes to `canCheckAlready` when possible", ->
-      req = fol.parse 'φ[α->a]'
+      req = fol.parse 'φ[α-->a]'
       line = { sentence : fol.parse 'not not A' }
       matches = 
         α : (fol.parse 'F(b)').termlist[0]
@@ -190,7 +190,7 @@ describe "`rule`", ->
       expect(rc.canCheckAlready()).to.be.true
     
     it "says yes to `canCheckAlready` when possible for a subproof", ->
-      req = rule.subproof('[α]φ[τ->α]', 'ψ')
+      req = rule.subproof('[α]φ[τ-->α]', 'ψ')
       line = { sentence : fol.parse 'not not A' }
       matches = 
         τ : (fol.parse 'F(x)').termlist[0]
@@ -245,8 +245,8 @@ describe "`rule`", ->
       result = rc.check()
       expect(result).to.be.false
     
-    it "deals with a tricky case involving matches and substitutions (`[α]φ[τ->α]`)", ->
-      req = fol.parse '[α]φ[τ->α]'
+    it "deals with a tricky case involving matches and substitutions (`[α]φ[τ-->α]`)", ->
+      req = fol.parse '[α]φ[τ-->α]'
       proof = '''
         1. [a]F(a)
       ''' 
@@ -492,10 +492,10 @@ describe "`rule`", ->
         3. a=b	// = elim 1,2
       '''
       proof = _parse proof
-      eqElimLeft = rule.from('α=β').and('φ').to('φ[α->β]')
-      eqElimRight = rule.from('α=β').and('φ').to('φ[β->α]')
-      # eqElimLeft = rule.from('φ').and('α=β').to('φ[α->β]')
-      # eqElimRight = rule.from('φ').and('α=β').to('φ[β->α]')
+      eqElimLeft = rule.from('α=β').and('φ').to('φ[α-->β]')
+      eqElimRight = rule.from('α=β').and('φ').to('φ[β-->α]')
+      # eqElimLeft = rule.from('φ').and('α=β').to('φ[α-->β]')
+      # eqElimRight = rule.from('φ').and('α=β').to('φ[β-->α]')
       line = proof.getLine(3)
       result1 = eqElimLeft.check line
       result2 = eqElimRight.check line
@@ -510,8 +510,8 @@ describe "`rule`", ->
         3. a=b	// = elim 1,2
       '''
       proof = _parse proof
-      eqElimLeft = rule.from('α=β').and('φ').to('φ[α->β]')
-      eqElimRight = rule.from('α=β').and('φ').to('φ[β->α]')
+      eqElimLeft = rule.from('α=β').and('φ').to('φ[α-->β]')
+      eqElimRight = rule.from('α=β').and('φ').to('φ[β-->α]')
       line = proof.getLine(3)
       result1 = eqElimLeft.check line
       result2 = eqElimRight.check line
@@ -527,8 +527,8 @@ describe "`rule`", ->
         3. a=b	// = elim 1,2
       '''
       proof = _parse proof
-      eqElimLeft = rule.from('α=β').and('φ').to('φ[α->β]')
-      eqElimRight = rule.from('α=β').and('φ').to('φ[β->α]')
+      eqElimLeft = rule.from('α=β').and('φ').to('φ[α-->β]')
+      eqElimRight = rule.from('α=β').and('φ').to('φ[β-->α]')
       line = proof.getLine(3)
       result1 = eqElimLeft.check line
       result2 = eqElimRight.check line
@@ -543,8 +543,8 @@ describe "`rule`", ->
         3. a=b	// = elim 1,2
       '''
       proof = _parse proof
-      eqElimLeft = rule.from('α=β').and('φ').to('φ[α->β]')
-      eqElimRight = rule.from('α=β').and('φ').to('φ[β->α]')
+      eqElimLeft = rule.from('α=β').and('φ').to('φ[α-->β]')
+      eqElimRight = rule.from('α=β').and('φ').to('φ[β-->α]')
       line = proof.getLine(3)
       result1 = eqElimLeft.check line
       result2 = eqElimRight.check line
@@ -558,8 +558,8 @@ describe "`rule`", ->
         3. a=b	// = elim 1,2
       '''
       proof = _parse proof
-      eqElimLeft = rule.from('α=β').and('φ').to('φ[α->β]')
-      eqElimRight = rule.from('α=β').and('φ').to('φ[β->α]')
+      eqElimLeft = rule.from('α=β').and('φ').to('φ[α-->β]')
+      eqElimRight = rule.from('α=β').and('φ').to('φ[β-->α]')
       line = proof.getLine(3)
       result1 = eqElimLeft.check line
       result2 = eqElimRight.check line
@@ -574,8 +574,8 @@ describe "`rule`", ->
         3. a=b	// = elim 1,2
       '''
       proof = _parse proof
-      eqElimLeft = rule.from('α=β').and('φ').to('φ[α->β]')
-      eqElimRight = rule.from('α=β').and('φ').to('φ[β->α]')
+      eqElimLeft = rule.from('α=β').and('φ').to('φ[α-->β]')
+      eqElimRight = rule.from('α=β').and('φ').to('φ[β-->α]')
       line = proof.getLine(3)
       result1 = eqElimLeft.check line
       result2 = eqElimRight.check line

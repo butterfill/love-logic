@@ -76,7 +76,7 @@ exports.walkMutate = walkMutate
 # Walk through `expression` depth-first applying `fn` to mutate it.
 # This will visit termlists, terms, and bound variables.
 # It will also visit substitution lists, individual substitutions 
-# and their components (like `τ` and `α` in `φ[τ->α]`) and boxes (like `[a]φ`).
+# and their components (like `τ` and `α` in `φ[τ-->α]`) and boxes (like `[a]φ`).
 # The return value from `fn` is discarded, except for the final time it is called
 # on the whole expression.
 walk = (expression, fn, o) ->
@@ -96,10 +96,10 @@ exports.walk = walk
 # Stop as soon as `comparator` returns false.
 # This will visit termlists, terms, and bound variables.
 # It will also visit substitution lists, individual substitutions 
-# and their components (like `τ` and `α` in `φ[τ->α]`) and boxes (like `[a]φ`).
+# and their components (like `τ` and `α` in `φ[τ-->α]`) and boxes (like `[a]φ`).
 #
 # Note that `fn` can receive primitive values, and also null (when visiting 
-# substitutions like `ψ[α->null]`).
+# substitutions like `ψ[α-->null]`).
 walkCompare = (firstExp, otherExp, comparator, o={}) ->
 
   if comparator
@@ -304,7 +304,7 @@ expressionToString = (expression, o={}) ->
     if not e?.type?
       return '[undefined]' if e is undefined
     
-    if e?.type in ['variable','name','term_metavariable']
+    if e.type in ['variable','name','term_metavariable']
       return e.name unless e.substitutions
       return "{#{e.name}[#{e.substitutions}]}"
     
@@ -315,7 +315,7 @@ expressionToString = (expression, o={}) ->
       return (x.name for x in e)
     
     if e.type is 'substitution'
-      return "#{e.from}->#{e.to}"
+      return "#{e.from}-->#{e.to}"
     
     if e.box?
       aBox = e.box
@@ -330,33 +330,38 @@ expressionToString = (expression, o={}) ->
     if e.type is 'identity'
       symbol = (e.symbol or '=')
       [lhs,rhs] = e.termlist
-      middle = "#{lhs} #{symbol} #{rhs}"
+      middle = "#{lhs}#{symbol}#{rhs}"
     
     if e.type in ['sentence_letter','expression_variable']
       middle = e.letter
 
     if e.type is 'value'
-      middle = "#{((e.symbol if e.symbol?) or ('⊥' if e.value is "false" or e.value is false) or e.value)}"
+      middle = "#{((e.symbol if e.symbol?) or (o.symbols.false if e.value is "false" or e.value is false) or e.value)}"
     
     bracketsNeeded = e.right?
-    left_bracket = " "
-    right_bracket = " "
+    left_bracket = ""
+    right_bracket = ""
     if bracketsNeeded 
-      left_bracket = " (" 
-      right_bracket = " )" 
+      left_bracket = "(" 
+      right_bracket = ")" 
 
     # All of the following need the `symbol`, e.g. `and` or `arrow`
-    symbol = e.symbol or o.symbols[e.type] or e.type or ''
+    symbol = e.symbol or o.symbols[e.type] or ''
     if o.wrapWithDivs
       symbol = "<span class='_symbolWrap' data-symbolNum='#{symbolNum}'>#{symbol}</span>"
     
     if e.boundVariable?
+      # e is a quantifier phrase
       variableName = e.boundVariable
-      middle = "#{symbol} #{variableName} #{left_bracket}#{e.left}#{e.right or ''}#{right_bracket}"
+      if o.symbols.universal_quantifier is ''
+        # Copi style
+        middle = "(#{symbol}#{variableName})#{left_bracket}#{e.left}#{e.right or ''}#{right_bracket}"
+      else
+        middle = "#{symbol}#{variableName} #{left_bracket}#{e.left}#{e.right or ''}#{right_bracket}"
     
     if e.left? and not e.boundVariable?
       if not e.right?   # e.g. `not P`
-        middle = "#{left_bracket}#{symbol} #{e.left or ''}#{right_bracket}"
+        middle = "#{left_bracket}#{symbol}#{e.left or ''}#{right_bracket}"
       else 
         middle = "#{left_bracket}#{e.left or ''} #{symbol} #{e.right or ''}#{right_bracket}"
         
@@ -376,17 +381,22 @@ expressionToString = (expression, o={}) ->
     remove_extra_whitespace :
       from : /\s+/g
       to : ' '
-    remove_quantifier_space :
-      from : /([∀∃])\s+/g
-      to : "$1"
+    remove_space_between_quantifiers : 
+      from : /([∀∃].)\s+([∀∃].)/
+      to: '$1$2'
+    remove_space_between_quantifier_and_brackets : 
+      from : /([∀∃].)\s+(\()/
+      to: '$1$2'
     remove_outer_brackets :
       #   (^\s*\()    --- start of line, any amount of space, left bracket
       #   ([\s\S]*)   --- anything at all
       #   (\)\s*$)    --- right bracket, any amount of space, end of line
       from : /(^\s*\()([\s\S]*)(\)\s*$)/
       to : '$2'
-  for k, rplc of _cleanUp
-    expressionStr = expressionStr.replace(rplc.from, rplc.to)
+  unless o.symbols.universal_quantifier is ''
+    # no cleanup for Copi style (will break!)
+    for k, rplc of _cleanUp
+      expressionStr = expressionStr.replace(rplc.from, rplc.to)
   return expressionStr.trim()
   
 exports.expressionToString = expressionToString
@@ -533,7 +543,7 @@ listMetaVariableNames = (expression) ->
     inSub : 
       left : []
       right : []
-      
+
   walker = (expression) ->
     return expression if not expression?.type?
     return expression if expression.type isnt 'term_metavariable' and expression.type isnt 'expression_variable'

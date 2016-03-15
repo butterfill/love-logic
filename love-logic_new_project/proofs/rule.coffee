@@ -311,9 +311,8 @@ class RequirementChecker
       mustBeInMatches = @metaVariableNames.inSub.left
       for varName in mustBeInMatches
         if not (varName of @matches)
-          # console.log "... fail"
+          # console.log "... fail #{varName} not of @matches"
           return false 
-        whatItMatches = @matches[varName]
       return true
     
     # At this stage, there may be several lines or subproofs 
@@ -345,12 +344,14 @@ class RequirementChecker
       # If the candidate is a block, the requirement can’t be met
       return false unless candidate.type isnt 'block'
       newMatches = @_checkOneLine(@theRequirement, candidate, @matches)
+      # console.log @matches
+      # console.log "checked #{@theRequirement.toString({replaceSymbols:true})} against #{candidate.sentence.toString({replaceSymbols:true})}"
       return newMatches
     
     _checkOneLine : (aReq, aLine, priorMatches) ->
       reqClone = aReq.clone().applyMatches(priorMatches)
       
-      # Special case: there was a subsutition like `[a->null]` which
+      # Special case: there was a subsutition like `[a-->null]` which
       # results in `e` being null.  This indicates a requirement has 
       # not been met.
       testVerbotenName = reqClone.applySubstitutions()
@@ -366,6 +367,7 @@ class RequirementChecker
       if not reqClone.box? and aSentence.box?
         aSentence = aSentence.clone()
         delete aSentence.box
+      # console.log "#{reqClone.toString({replaceSymbols:true})}"
       newMatches = aSentence.findMatches reqClone, priorMatches
         
       # console.log "_checkOneLine sentence = #{aLine.sentence.toString()}"
@@ -467,11 +469,14 @@ class Pathfinder
     # `reqChecker.theRequirement.type` is 'subproof' or the type of the awFOL sentence (e.g. `not` or `or`)
     requirementConcernsCurrentLine = @line.number is reqChecker.candidateLinesOrSubproofs[0]?.number
     if requirementConcernsCurrentLine
-      @line.status.addMessage("You can only use #{@line.getRuleName()} on a line with the form ‘#{reqChecker.theRequirement.toString()}’.")
+      # TODO: replaceSymbols needs to take into account the user’s preferred symbols
+      @line.status.addMessage("You can only use #{@line.getRuleName()} on a line with the form ‘#{reqChecker.theRequirement.toString({replaceSymbols:true})}’.")
     else
       thingToCite = reqChecker.theRequirement.type
       thingToCite = 'line' unless thingToCite is 'subproof'
-      @line.status.addMessage("to apply #{@line.getRuleName()} you need to cite a #{thingToCite} with the form ‘#{reqChecker.theRequirement.toString()}’.")
+      # TODO: replaceSymbols needs to take into account the user’s preferred symbols
+      @line.status.addMessage("to apply #{@line.getRuleName()} you need to cite a #{thingToCite} with the form ‘#{reqChecker.theRequirement.toString({replaceSymbols:true})}’.")
+    # console.log @line.status.getMessage()
 
 
 
