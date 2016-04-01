@@ -39,10 +39,10 @@ describe "`fol`", ->
       text2 = 'C or D'
       e = fol.parse text
       expect(e.symbol).to.equal('and')
-      console.log util.expressionToString(e)
+      # console.log util.expressionToString(e)
       e2 = fol.parse text2
-      result = e.toString()
-      result2 = e2.toString()
+      result = e.toString({replaceSymbols:false})
+      result2 = e2.toString({replaceSymbols:false})
       expect(result).to.equal(text)
       expect(result2).to.equal(text2)
 

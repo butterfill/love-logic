@@ -4,6 +4,7 @@ symbols =
   default : 
     'not' : '¬'
     'false' : "⊥"
+    'contradiction' : "⊥" # for proof parser
     'identity' : "="
     'and' : "∧"
     'arrow' : "→"
@@ -12,11 +13,14 @@ symbols =
     'nor' :  "↓"
     'nand' : "↑"
     'universal_quantifier' : "∀"
+    'universal' : "∀" # for proof parser
     'existential_quantifier' : "∃" 
+    'existential' : "∃" # for proof parser
 
   copi : 
     'not' : '~'
     'false' : "⊥"
+    'contradiction' : "⊥"
     'identity' : "="
     'and' : "•"
     'arrow' : "⊃"

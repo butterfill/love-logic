@@ -23,6 +23,9 @@ _ = require 'lodash'
 util = require '../util'
 fol = require '../fol'
 
+parser = undefined 
+exports.setParser = (parser) ->
+  parser = parser
 
 # All ways of describing a `rule` use this class.
 class _From
@@ -142,7 +145,7 @@ _parseIfNecessaryAndDecorate = (requirement) ->
   return requirement if not requirement   # Using `.to` creates undefined requirements.
   return requirement if requirement.type is 'subproof'
   if _.isString requirement
-    requirement = fol.parse requirement
+    requirement = fol.parse requirement, parser
   fol._decorate requirement
   return requirement
 

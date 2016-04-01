@@ -8,21 +8,23 @@
 
 _ = require 'lodash'
 
-awFOL = require './parser/awFOL'
-
 util = require './util'
 match = require './match'
 substitute = require './substitute'
 normalForm = require './normal_form'
 evaluate = require('./evaluate')
 symbols = require('./symbols')
-
-parse = (text) ->
-  e = awFOL.parse text
+dialectManager = require('./dialect_manager/dialectManager')
+  
+parse = (text, parser) ->
+  parser ?= dialectManager.getCurrentParser()
+  e = parser.parse text
   return _decorate(e)
 exports.parse = parse
 
 exports.symbols = symbols
+
+
 
 # Add some useful functions to an expression and every part of it.
 _decorate = (expression) ->
@@ -43,6 +45,9 @@ _decorate = (expression) ->
       _decorate theClone
       return theClone
     e.toString = (o) ->
+      o ?= {}
+      unless o.replaceSymbols is false
+        o.symbols ?= dialectManager.getSymbols()
       return util.expressionToString e, o
     e.listMetaVariableNames = () ->
       return util.listMetaVariableNames e

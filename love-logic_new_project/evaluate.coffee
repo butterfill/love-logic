@@ -1,5 +1,6 @@
 _ = require 'lodash'
-fol = require './parser/awFOL'
+dialectManager = require('./dialect_manager/dialectManager')
+parser = dialectManager.getCurrentParser()
 
     
 # evaluates `sentenceText` (a sentence of FOL)
@@ -15,7 +16,7 @@ evaluate = (sentenceText, world) ->
 # the values assigned to variables (for evaluating quantifiers).
 Evaluator = (sentenceText, @world) ->
   if _.isString(sentenceText)
-    @sentence = fol.parse(sentenceText)
+    @sentence = parser.parse(sentenceText)
   else
     @sentence = sentenceText    
   # `varStack` is used in interpreting quantifier expressions.

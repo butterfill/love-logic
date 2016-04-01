@@ -1,6 +1,7 @@
+dialectManager = require('../dialect_manager/dialectManager')
 
 rule = require './rule'
-
+rule.setParser( dialectManager.getParser('awFOL') )
 rules = 
   _description : '''
     Rules of proof for classical first-order logic.  The rules assume that
@@ -58,9 +59,7 @@ rules =
       # This is the standard rule (not really `left`):
       left : rule.from( rule.subproof('[α]', 'φ[τ-->α]') ).to('all τ φ')
       # This is what LPL calls `general conditional proof`: 
-      # right : rule.from( rule.subproof('[α]φ[τ-->α]', 'ψ[τ-->α]') ).to('all τ (φ arrow ψ)')
-      # Why doesn’t this version work? It’s because matching [α]φ to [a] F(a)
-      # results in φ being [a] F(a)!
-      right : rule.from( rule.subproof('[α]φ', 'ψ') ).to('(all τ (φ arrow ψ))[α-->τ]')
+      right : rule.from( rule.subproof('[α]φ', 'ψ') ).to('all τ (φ arrow ψ)[α-->τ]')
 
 exports.rules = rules
+dialectManager.registerRuleSet(rules)

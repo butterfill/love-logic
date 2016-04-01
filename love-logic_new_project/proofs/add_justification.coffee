@@ -15,6 +15,7 @@
 _ = require 'lodash'
 
 jp = require './justification_parser'
+dialectManager = require('../dialect_manager/dialectManager')
 
 # We are going to apply the same `cleanNumber` function to line number references
 # that is used in parsing the line numbers at the start of lines of the proof.
@@ -160,7 +161,9 @@ exports._isPremise = _isPremise
 # `@` refers to the line.
 
 getRuleName = ->
-  connective = @justification.rule.connective
+  return "" unless @justification?.rule?
+  symbols = dialectManager.getSymbols()
+  connective = symbols[@justification.rule.connective] or @justification.rule.connective
   # `intronation` is 'elim' or 'intro'
   intronation = @justification.rule.variant.intronation or ''
   # `side` is 'left' or 'right'

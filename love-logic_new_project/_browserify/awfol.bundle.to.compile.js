@@ -335,12 +335,76 @@ global.proof = proof;
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../fol":6,"../proofs/proof":19}],5:[function(require,module,exports){
-var Evaluator, _, evaluate, fol;
+},{"../fol":7,"../proofs/proof":20}],5:[function(require,module,exports){
+var awFOL, currentParserName, currentRulesName, currentSymbols, parsers, ruleSets, symbols;
+
+symbols = require('../symbols');
+
+currentSymbols = symbols["default"];
+
+exports.setSymbols = function(name) {
+  return currentSymbols = symbols[name];
+};
+
+exports.getSymbols = function(name) {
+  return currentSymbols;
+};
+
+parsers = {
+  awFOL: awFOL = require('../parser/awFOL')
+};
+
+exports.registerParser = function(name, parser) {
+  return parsers[name] = parser;
+};
+
+currentParserName = 'awFOL';
+
+exports.getParser = function(name) {
+  return parsers[name];
+};
+
+exports.getCurrentParser = function() {
+  return parsers[currentParserName];
+};
+
+exports.getCurrentParserName = function() {
+  return currentParserName;
+};
+
+exports.setCurrentParser = function(name) {
+  return currentParserName = name;
+};
+
+ruleSets = {};
+
+exports.registerRuleSet = function(name, rules) {
+  return ruleSets[name] = rules;
+};
+
+currentRulesName = 'fitch';
+
+exports.getCurrentRules = function() {
+  return ruleSets[currentRulesName];
+};
+
+exports.getCurrentRulesName = function() {
+  return currentRulesName;
+};
+
+exports.setCurrentRules = function(name) {
+  return currentRulesName = name;
+};
+
+
+},{"../parser/awFOL":11,"../symbols":23}],6:[function(require,module,exports){
+var Evaluator, _, dialectManager, evaluate, parser;
 
 _ = require('lodash');
 
-fol = require('./parser/awFOL');
+dialectManager = require('./dialect_manager/dialectManager');
+
+parser = dialectManager.getCurrentParser();
 
 evaluate = function(sentenceText, world) {
   var e;
@@ -351,7 +415,7 @@ evaluate = function(sentenceText, world) {
 Evaluator = function(sentenceText, world1) {
   this.world = world1;
   if (_.isString(sentenceText)) {
-    this.sentence = fol.parse(sentenceText);
+    this.sentence = parser.parse(sentenceText);
   } else {
     this.sentence = sentenceText;
   }
@@ -463,12 +527,10 @@ Evaluator.prototype.instantiate_terms = function(termlist) {
 exports.evaluate = evaluate;
 
 
-},{"./parser/awFOL":10,"lodash":8}],6:[function(require,module,exports){
-var _, _decorate, awFOL, evaluate, match, normalForm, parse, substitute, symbols, util;
+},{"./dialect_manager/dialectManager":5,"lodash":9}],7:[function(require,module,exports){
+var _, _decorate, dialectManager, evaluate, match, normalForm, parse, substitute, symbols, util;
 
 _ = require('lodash');
-
-awFOL = require('./parser/awFOL');
 
 util = require('./util');
 
@@ -482,9 +544,14 @@ evaluate = require('./evaluate');
 
 symbols = require('./symbols');
 
-parse = function(text) {
+dialectManager = require('./dialect_manager/dialectManager');
+
+parse = function(text, parser) {
   var e;
-  e = awFOL.parse(text);
+  if (parser == null) {
+    parser = dialectManager.getCurrentParser();
+  }
+  e = parser.parse(text);
   return _decorate(e);
 };
 
@@ -518,6 +585,14 @@ _decorate = function(expression) {
       return theClone;
     };
     e.toString = function(o) {
+      if (o == null) {
+        o = {};
+      }
+      if (o.replaceSymbols !== false) {
+        if (o.symbols == null) {
+          o.symbols = dialectManager.getSymbols();
+        }
+      }
       return util.expressionToString(e, o);
     };
     e.listMetaVariableNames = function() {
@@ -645,7 +720,7 @@ _decorate = function(expression) {
 exports._decorate = _decorate;
 
 
-},{"./evaluate":5,"./match":7,"./normal_form":9,"./parser/awFOL":10,"./substitute":21,"./symbols":22,"./util":23,"lodash":8}],7:[function(require,module,exports){
+},{"./dialect_manager/dialectManager":5,"./evaluate":6,"./match":8,"./normal_form":10,"./substitute":22,"./symbols":23,"./util":24,"lodash":9}],8:[function(require,module,exports){
 var _, _addSubToEverySentence, _addSubToEveryTerm, _addSubToEveryX, _applyOneSubstitution, _applyOrSkipSubstitutions, _canApplySubAtInnermostPoint, _isTermSub, _moveAllSubsInwards, _pullSub, _removeInefficaciousSubs, _skipOneSubstitution, apply, doAfterApplyingSubstitutions, find, findWithoutApplyingSubs, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -974,7 +1049,7 @@ apply = function(pattern, matches, o) {
 exports.apply = apply;
 
 
-},{"./util":23,"lodash":8}],8:[function(require,module,exports){
+},{"./util":24,"lodash":9}],9:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -13329,7 +13404,7 @@ exports.apply = apply;
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 var _, _getVariableOrder, areExpressionsEquivalent, arePNFExpressionsEquivalent, arePrefixedQuantifiersEquivalent, attachExpressionToQuantifiers, convertToPNFsimplifyAndSort, eliminateRedundancyInPNF, getPrefixedQuantifiers, isPNF, isVariableFree, listJuncts, listQuants, match, prenexNormalForm, rebuildExpression, removeQuantifiers, removeQuantifiersThatBindNothing, renameVariables, sortIdentityStatements, sortJuncts, sortListOfJuncts, sortPNFExpression, substitute, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -13816,7 +13891,7 @@ removeQuantifiersThatBindNothing = function(expression) {
 exports.removeQuantifiersThatBindNothing = removeQuantifiersThatBindNothing;
 
 
-},{"./match":7,"./substitute":21,"./util":23,"lodash":8}],10:[function(require,module,exports){
+},{"./match":8,"./substitute":22,"./util":24,"lodash":9}],11:[function(require,module,exports){
 (function (process){
 /* parser generated by jison 0.4.17 */
 /*
@@ -14577,12 +14652,14 @@ if (typeof module !== 'undefined' && require.main === module) {
 }
 }
 }).call(this,require('_process'))
-},{"_process":3,"fs":1,"path":2}],11:[function(require,module,exports){
-var PREMISE_JUSTIFICATION, _, _FIND_JUSTIFICATION, _FIND_WHITESPACE_JUSTIFICATION, _isPremise, cleanNumber, findBlock, findLine, findLineOrBlock, getCitedBlocks, getCitedLines, getRuleName, jp, split, to;
+},{"_process":3,"fs":1,"path":2}],12:[function(require,module,exports){
+var PREMISE_JUSTIFICATION, _, _FIND_JUSTIFICATION, _FIND_WHITESPACE_JUSTIFICATION, _isPremise, cleanNumber, dialectManager, findBlock, findLine, findLineOrBlock, getCitedBlocks, getCitedLines, getRuleName, jp, split, to;
 
 _ = require('lodash');
 
 jp = require('./justification_parser');
+
+dialectManager = require('../dialect_manager/dialectManager');
 
 cleanNumber = require('./add_line_numbers').cleanNumber;
 
@@ -14766,8 +14843,12 @@ _isPremise = function(line) {
 exports._isPremise = _isPremise;
 
 getRuleName = function() {
-  var connective, intronation, side;
-  connective = this.justification.rule.connective;
+  var connective, intronation, ref, side, symbols;
+  if (((ref = this.justification) != null ? ref.rule : void 0) == null) {
+    return "";
+  }
+  symbols = dialectManager.getSymbols();
+  connective = symbols[this.justification.rule.connective] || this.justification.rule.connective;
   intronation = this.justification.rule.variant.intronation || '';
   side = this.justification.rule.variant.side || '';
   return (connective + " " + intronation + " " + side).trim();
@@ -14844,7 +14925,7 @@ getCitedBlocks = function() {
 };
 
 
-},{"./add_line_numbers":12,"./justification_parser":18,"lodash":8}],12:[function(require,module,exports){
+},{"../dialect_manager/dialectManager":5,"./add_line_numbers":13,"./justification_parser":19,"lodash":9}],13:[function(require,module,exports){
 var _, _DROP_TRAILING_DOTS_AND_BRACKET, _GET_NUMBER, cleanNumber, split, to,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -14942,7 +15023,7 @@ to = function(block) {
 exports.to = to;
 
 
-},{"lodash":8}],13:[function(require,module,exports){
+},{"lodash":9}],14:[function(require,module,exports){
 var fol, substitute, to, util;
 
 fol = require('../fol');
@@ -14980,7 +15061,7 @@ to = function(block) {
 exports.to = to;
 
 
-},{"../fol":6,"../substitute":21,"../util":23}],14:[function(require,module,exports){
+},{"../fol":7,"../substitute":22,"../util":24}],15:[function(require,module,exports){
 var LineStatus, fol, substitute, to, util;
 
 fol = require('../fol');
@@ -15093,7 +15174,7 @@ LineStatus = (function() {
 })();
 
 
-},{"../fol":6,"../substitute":21,"../util":23}],15:[function(require,module,exports){
+},{"../fol":7,"../substitute":22,"../util":24}],16:[function(require,module,exports){
 var _, _linesCitedAreOk, _parseProof, addJustification, addLineNumbers, addSentences, addStatus, blockParser, checkItAccordsWithTheRules, checkThisRule, theRules, to, verifyLine,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -15315,7 +15396,7 @@ checkThisRule = function(rule, line, result) {
 };
 
 
-},{"./add_justification":11,"./add_line_numbers":12,"./add_sentences":13,"./add_status":14,"./block_parser":16,"./fitch_rules":17,"lodash":8}],16:[function(require,module,exports){
+},{"./add_justification":12,"./add_line_numbers":13,"./add_sentences":14,"./add_status":15,"./block_parser":17,"./fitch_rules":18,"lodash":9}],17:[function(require,module,exports){
 var Block, _, _INDENTATION_AT_START_OF_LINE, _SPLIT_LINE_WHEN_INDENTATION_FIRST, _SPLIT_LINE_WHEN_NUMBER_FIRST, areLinesFormattedIndentationFirst, clean, extractIndentationAndContentFrom, isBlank, isDivider, parse, removeIndentationFrom, removeNumberFrom, split, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -15676,10 +15757,14 @@ Block = (function() {
 exports.Block = Block;
 
 
-},{"../util":23,"lodash":8}],17:[function(require,module,exports){
-var rule, rules;
+},{"../util":24,"lodash":9}],18:[function(require,module,exports){
+var dialectManager, rule, rules;
+
+dialectManager = require('../dialect_manager/dialectManager');
 
 rule = require('./rule');
+
+rule.setParser(dialectManager.getParser('awFOL'));
 
 rules = {
   _description: 'Rules of proof for classical first-order logic.  The rules assume that\nthere is no possible situation with an empty domain.',
@@ -15733,15 +15818,17 @@ rules = {
     elim: rule.from('all τ φ').to('φ[τ-->α]'),
     intro: {
       left: rule.from(rule.subproof('[α]', 'φ[τ-->α]')).to('all τ φ'),
-      right: rule.from(rule.subproof('[α]φ', 'ψ')).to('(all τ (φ arrow ψ))[α-->τ]')
+      right: rule.from(rule.subproof('[α]φ', 'ψ')).to('all τ (φ arrow ψ)[α-->τ]')
     }
   }
 };
 
 exports.rules = rules;
 
+dialectManager.registerRuleSet(rules);
 
-},{"./rule":20}],18:[function(require,module,exports){
+
+},{"../dialect_manager/dialectManager":5,"./rule":21}],19:[function(require,module,exports){
 (function (process){
 /* parser generated by jison 0.4.17 */
 /*
@@ -16478,8 +16565,10 @@ if (typeof module !== 'undefined' && require.main === module) {
 }
 }
 }).call(this,require('_process'))
-},{"_process":3,"fs":1,"path":2}],19:[function(require,module,exports){
-var addJustification, addLineNumbers, addSentences, addStatus, addVerification, blockParser, parse;
+},{"_process":3,"fs":1,"path":2}],20:[function(require,module,exports){
+var _, _decorate, addJustification, addLineNumbers, addSentences, addStatus, addVerification, blockParser, padRight, parse;
+
+_ = require('lodash');
 
 blockParser = require('./block_parser');
 
@@ -16492,6 +16581,118 @@ addSentences = require('./add_sentences');
 addStatus = require('./add_status');
 
 addVerification = require('./add_verification');
+
+padRight = function(n, len) {
+  if (!_.isString(n)) {
+    n = "" + n;
+  }
+  if (n.length >= len) {
+    return n;
+  }
+  return n + new Array(len - n.length + 1).join(' ');
+};
+
+_decorate = function(proof) {
+  return proof.toString = function(o) {
+    var i, indentationSentence, len1, line, maxSentenceLength, ref, txt, walker, x;
+    if (o == null) {
+      o = {};
+    }
+    walker = {
+      result: [],
+      lineNumber: 0,
+      addLineNumbers: true,
+      lookBackTwo: [],
+      getLineNumber: function(line) {
+        if ((line.number != null) || walker.addLineNumbers === false) {
+          walker.addLineNumbers = false;
+          return padRight(line.number, 3);
+        }
+        walker.lineNumber += 1;
+        return padRight(walker.lineNumber, 3);
+      },
+      visit: function(item) {
+        var block, justification, line, prevLine, ref, ref1, ref2, ref3, ref4;
+        if (item.type !== 'divider') {
+          if (((ref = walker.lookBackTwo[0]) != null ? ref.type : void 0) === 'block' && ((ref1 = walker.lookBackTwo[1]) != null ? ref1.type : void 0) === 'line') {
+            block = walker.lookBackTwo[0];
+            if (block.parent != null) {
+              prevLine = walker.lookBackTwo[1];
+              if (prevLine.parent === item.parent) {
+                walker.result.push({
+                  number: padRight((walker.getLineNumber(prevLine).trim()) + "y", 3),
+                  indentation: (prevLine.indentation.trim()) + "---",
+                  sentence: "",
+                  justification: ""
+                });
+              }
+            }
+          }
+        }
+        walker.lookBackTwo.push(item);
+        if (walker.lookBackTwo.length > 2) {
+          walker.lookBackTwo.shift();
+        }
+        if (item.type === 'blank_line') {
+          line = item;
+          walker.result.push({
+            number: "" + (walker.getLineNumber(line)),
+            indentation: "" + (line.indentation.trim()),
+            sentence: "",
+            justification: ""
+          });
+        }
+        if (item.type === 'divider') {
+          line = item;
+          walker.result.push({
+            number: "" + (walker.getLineNumber(line)),
+            indentation: (line.indentation.trim()) + "---",
+            sentence: "",
+            justification: ""
+          });
+        }
+        if (item.type === 'line') {
+          line = item;
+          if (line.getRuleName() === 'premise') {
+            justification = '';
+          } else {
+            if (line.justification != null) {
+              justification = (line.getRuleName()) + " " + (((ref2 = line.justification) != null ? (ref3 = ref2.numbers) != null ? ref3.join(', ') : void 0 : void 0) || '');
+            } else {
+              justification = ((ref4 = line.justificationText) != null ? ref4.trim() : void 0) || '';
+            }
+          }
+          walker.result.push({
+            number: "" + (walker.getLineNumber(line)),
+            indentation: "" + line.indentation,
+            sentence: "" + line.sentence,
+            justification: justification
+          });
+        }
+        return void 0;
+      }
+    };
+    proof.walk(walker);
+    txt = "";
+    maxSentenceLength = _.max((function() {
+      var i, len1, ref, ref1, ref2, results;
+      ref = walker.result;
+      results = [];
+      for (i = 0, len1 = ref.length; i < len1; i++) {
+        x = ref[i];
+        results.push(((ref1 = x.sentence) != null ? ref1.length : void 0) + ((ref2 = x.indentation) != null ? ref2.length : void 0));
+      }
+      return results;
+    })());
+    ref = walker.result;
+    for (i = 0, len1 = ref.length; i < len1; i++) {
+      line = ref[i];
+      indentationSentence = padRight(line.indentation + " " + line.sentence, maxSentenceLength + 1);
+      txt += line.number + " " + indentationSentence + "   " + line.justification + "\n";
+    }
+    return txt.trim();
+  };
+};
 
 parse = function(proofText) {
   var block, e, proof;
@@ -16526,14 +16727,15 @@ parse = function(proofText) {
     proof.walk(walker);
     return errorMessages.join('\n');
   };
+  _decorate(proof);
   return proof;
 };
 
 exports.parse = parse;
 
 
-},{"./add_justification":11,"./add_line_numbers":12,"./add_sentences":13,"./add_status":14,"./add_verification":15,"./block_parser":16}],20:[function(require,module,exports){
-var LineChecker, Pathfinder, RequirementChecker, _, _From, _notImplementedYet, _parseIfNecessaryAndDecorate, _permutations, combinations, fol, from, numberToWords, permutations, premise, subproof, to, truthtable, util,
+},{"./add_justification":12,"./add_line_numbers":13,"./add_sentences":14,"./add_status":15,"./add_verification":16,"./block_parser":17,"lodash":9}],21:[function(require,module,exports){
+var LineChecker, Pathfinder, RequirementChecker, _, _From, _notImplementedYet, _parseIfNecessaryAndDecorate, _permutations, combinations, fol, from, numberToWords, parser, permutations, premise, subproof, to, truthtable, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 _ = require('lodash');
@@ -16541,6 +16743,12 @@ _ = require('lodash');
 util = require('../util');
 
 fol = require('../fol');
+
+parser = void 0;
+
+exports.setParser = function(parser) {
+  return parser = parser;
+};
 
 _From = (function() {
   function _From(requirement) {
@@ -16669,7 +16877,7 @@ _parseIfNecessaryAndDecorate = function(requirement) {
     return requirement;
   }
   if (_.isString(requirement)) {
-    requirement = fol.parse(requirement);
+    requirement = fol.parse(requirement, parser);
   }
   fol._decorate(requirement);
   return requirement;
@@ -17108,14 +17316,16 @@ exports.Pathfinder = Pathfinder;
 exports.LineChecker = LineChecker;
 
 
-},{"../fol":6,"../util":23,"lodash":8}],21:[function(require,module,exports){
-var _, _subsForPNF, _subs_eliminate_redundancy, applySubstitutions, doSub, doSubRecursive, fol, from, k, match, replace, subsForPNF, subs_eliminate_redundancy, theSub, to, util, v;
+},{"../fol":7,"../util":24,"lodash":9}],22:[function(require,module,exports){
+var _, _subsForPNF, _subs_eliminate_redundancy, applySubstitutions, awFOL, dialectManager, doSub, doSubRecursive, from, k, match, replace, subsForPNF, subs_eliminate_redundancy, theSub, to, util, v;
 
 _ = require('lodash');
 
 util = require('./util');
 
-fol = require('./parser/awFOL');
+dialectManager = require('./dialect_manager/dialectManager');
+
+awFOL = dialectManager.getParser('awFOL');
 
 match = require('./match');
 
@@ -17194,9 +17404,9 @@ subsForPNF = {};
 
 for (k in _subsForPNF) {
   v = _subsForPNF[k];
-  from = fol.parse(v.from);
+  from = awFOL.parse(v.from);
   util.delExtraneousProperties(from);
-  to = fol.parse(v.to);
+  to = awFOL.parse(v.to);
   util.delExtraneousProperties(to);
   theSub = {
     from: from,
@@ -17290,9 +17500,9 @@ subs_eliminate_redundancy = {};
 
 for (k in _subs_eliminate_redundancy) {
   v = _subs_eliminate_redundancy[k];
-  from = fol.parse(v.from);
+  from = awFOL.parse(v.from);
   util.delExtraneousProperties(from);
-  to = fol.parse(v.to);
+  to = awFOL.parse(v.to);
   util.delExtraneousProperties(to);
   theSub = {
     from: from,
@@ -17403,7 +17613,7 @@ applySubstitutions = function(expression) {
 exports.applySubstitutions = applySubstitutions;
 
 
-},{"./match":7,"./parser/awFOL":10,"./util":23,"lodash":8}],22:[function(require,module,exports){
+},{"./dialect_manager/dialectManager":5,"./match":8,"./util":24,"lodash":9}],23:[function(require,module,exports){
 var _, symbols;
 
 _ = require('lodash');
@@ -17412,6 +17622,7 @@ symbols = {
   "default": {
     'not': '¬',
     'false': "⊥",
+    'contradiction': "⊥",
     'identity': "=",
     'and': "∧",
     'arrow': "→",
@@ -17420,11 +17631,14 @@ symbols = {
     'nor': "↓",
     'nand': "↑",
     'universal_quantifier': "∀",
-    'existential_quantifier': "∃"
+    'universal': "∀",
+    'existential_quantifier': "∃",
+    'existential': "∃"
   },
   copi: {
     'not': '~',
     'false': "⊥",
+    'contradiction': "⊥",
     'identity': "=",
     'and': "•",
     'arrow': "⊃",
@@ -17440,7 +17654,7 @@ symbols = {
 module.exports = symbols;
 
 
-},{"lodash":8}],23:[function(require,module,exports){
+},{"lodash":9}],24:[function(require,module,exports){
 var SYMBOLS, _, _delExtraneousProperties, _typeComparator, areIdenticalExpressions, atomicExpressionComparator, atomicSentenceTypes, cloneExpression, delExtraneousProperties, exhaust, expressionContainsSubstitutions, expressionHasSub, expressionToString, expressionTypes, find, listMetaVariableNames, listOfAtomicExpressionsComparator, listTerms, matchesToString, max, termComparator, termTypes, walk, walkCompare, walkMutate, walkMutateFindOne,
   hasProp = {}.hasOwnProperty;
 
@@ -17751,7 +17965,9 @@ expressionToString = function(expression, o) {
   if (o == null) {
     o = {};
   }
-  if (o.symbols == null) {
+  if (o.symbols != null) {
+    o.replaceSymbols = true;
+  } else {
     o.symbols = SYMBOLS;
   }
   ref = [_.isBoolean, _.isNumber, _.isString, _.isArray];
@@ -18158,4 +18374,4 @@ expressionHasSub = function(expression, sub) {
 exports.expressionHasSub = expressionHasSub;
 
 
-},{"lodash":8}]},{},[4]);
+},{"lodash":9}]},{},[4]);

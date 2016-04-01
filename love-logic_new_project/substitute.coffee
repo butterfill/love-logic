@@ -4,14 +4,15 @@
 # apply substitutions to formulae like
 # ```
 #      sub =
-#        from : fol.parse 'not not φ'
-#        to : fol.parse 'φ'
+#        from : awFOL.parse 'not not φ'
+#        to : awFOL.parse 'φ'
 #  ```
 
 _ = require 'lodash'
 
 util = require './util'
-fol = require './parser/awFOL'
+dialectManager = require('./dialect_manager/dialectManager')
+awFOL = dialectManager.getParser('awFOL')
 match = require './match'
 
 _subsForPNF = 
@@ -74,9 +75,9 @@ _subsForPNF =
 # as the module inits?
 subsForPNF = {}
 for k,v of _subsForPNF
-  from = fol.parse v.from
+  from = awFOL.parse v.from
   util.delExtraneousProperties from
-  to = fol.parse v.to
+  to = awFOL.parse v.to
   util.delExtraneousProperties to
   theSub = {from:from, to:to}
   subsForPNF[k] = theSub
@@ -169,9 +170,9 @@ _subs_eliminate_redundancy =
     
 subs_eliminate_redundancy = {}
 for k,v of _subs_eliminate_redundancy
-  from = fol.parse v.from
+  from = awFOL.parse v.from
   util.delExtraneousProperties from
-  to = fol.parse v.to
+  to = awFOL.parse v.to
   util.delExtraneousProperties to
   theSub = {from:from, to:to}
   subs_eliminate_redundancy[k] = theSub
@@ -202,7 +203,7 @@ exports.doSubRecursive = doSubRecursive
 
 # Replaces all instances of `whatToReplace.from` with `whatToReplace.to` in `expression`.
 # E.g.
-#    the expression `fol.parse "Loves(x,b)"` 
+#    the expression `awFOL.parse "Loves(x,b)"` 
 #    would be turned into `Loves(a,b)` with whatToReplace = {from:VARIABLE_X, to:NAME_A}
 #
 # Note: This will not take into account whether or not a variable is bound

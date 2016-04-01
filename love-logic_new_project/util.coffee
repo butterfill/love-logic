@@ -277,9 +277,12 @@ SYMBOLS =
 exports.SYMBOLS = SYMBOLS
 
 # Create a string representation of a fol expression.
-# It uses the symbols that were specified when the expression was parsed (where these exist) unless param `o.replaceSymbols` is true.
+# It uses the symbols that were specified when the expression was parsed (where these exist) unless param `o.replaceSymbols` is true or `o.symbols` is specified.
 expressionToString = (expression, o={}) ->
-  o.symbols ?= SYMBOLS
+  if o.symbols?
+    o.replaceSymbols = true
+  else 
+    o.symbols = SYMBOLS
   
   # Help with debug 
   for test in [_.isBoolean, _.isNumber, _.isString, _.isArray]
