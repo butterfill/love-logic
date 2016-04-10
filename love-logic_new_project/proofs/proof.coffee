@@ -49,12 +49,15 @@ _decorate = (proof) ->
       result : []
       lineNumber : 0
       addLineNumbers : true
+      needLineNumbers : false
       lookBackTwo : []
-      getLineNumber : (line) ->
+      getAndIncLineNumber : (line) ->
+        walker.lineNumber += 1
         if line.number? or walker.addLineNumbers is false
+          theNum = parseInt(line.number.replace?('x','') or line.number)
+          walker.needLineNumbers = true unless theNum is walker.lineNumber
           walker.addLineNumbers = false 
           return padRight(line.number,3)
-        walker.lineNumber += 1
         return padRight(walker.lineNumber,3)
         
       visit : (item) ->
@@ -66,7 +69,7 @@ _decorate = (proof) ->
               prevLine = walker.lookBackTwo[1]
               if prevLine.parent is item.parent
                 walker.result.push 
-                  number:padRight("#{walker.getLineNumber(prevLine).trim()}y",3)
+                  number:padRight("#{walker.getAndIncLineNumber(prevLine).trim()}y",3)
                   indentation: "#{prevLine.indentation.trim()}---"
                   sentence : ""
                   justification: ""
@@ -76,14 +79,14 @@ _decorate = (proof) ->
         if item.type is 'blank_line'
           line = item
           walker.result.push 
-            number:"#{walker.getLineNumber(line)}"
+            number:"#{walker.getAndIncLineNumber(line)}"
             indentation: "#{line.indentation.trim()}"
             sentence : ""
             justification: ""
         if item.type is 'divider'
           line = item
           walker.result.push 
-            number:"#{walker.getLineNumber(line)}"
+            number:"#{walker.getAndIncLineNumber(line)}"
             indentation: "#{line.indentation.trim()}---"
             sentence : ""
             justification: ""
@@ -98,7 +101,7 @@ _decorate = (proof) ->
               # There was an error parsing the justification
               justification = line.justificationText?.trim() or ''
           walker.result.push 
-            number:"#{walker.getLineNumber(line)}"
+            number:"#{walker.getAndIncLineNumber(line)}"
             indentation: "#{line.indentation}"
             sentence : "#{line.sentence}"
             justification: justification
@@ -108,7 +111,9 @@ _decorate = (proof) ->
     maxSentenceLength = _.max( ((x.sentence?.length + x.indentation?.length) for x in walker.result)  )
     for line in walker.result
       indentationSentence = padRight("#{line.indentation} #{line.sentence}",maxSentenceLength+1)
-      txt += "#{line.number} #{indentationSentence}   #{line.justification}\n"
+      if walker.needLineNumbers
+        txt += "#{line.number} "
+      txt += "#{indentationSentence}   #{line.justification}\n"
     return txt.trim()
     
 

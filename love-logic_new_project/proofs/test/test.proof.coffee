@@ -102,4 +102,28 @@ describe "proof", ->
       theProof = proof.parse proofText
       result = theProof.verify()
       expect(result).to.be.true
+      
+  describe ".toString", ->
+    it "adds line numbers where necessary", ->
+      proofText = '''
+        | A
+        | ---
+        | | B
+        | | B				// reit 3
+      '''
+      theProof = proof.parse proofText
+      console.log theProof.toString()
+      expect(theProof.toString()[0]).to.equal('1')
+    it "adds does not add line numbers where unnecessary", ->
+      proofText = '''
+        | A
+        | ---
+        | | B
+        | | ---
+        | | B				// reit 3
+      '''
+      theProof = proof.parse proofText
+      console.log theProof.toString()
+      expect(theProof.toString()[0]).not.to.equal('1')
+      
     

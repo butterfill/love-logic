@@ -16602,13 +16602,19 @@ _decorate = function(proof) {
       result: [],
       lineNumber: 0,
       addLineNumbers: true,
+      needLineNumbers: false,
       lookBackTwo: [],
-      getLineNumber: function(line) {
+      getAndIncLineNumber: function(line) {
+        var base, theNum;
+        walker.lineNumber += 1;
         if ((line.number != null) || walker.addLineNumbers === false) {
+          theNum = parseInt((typeof (base = line.number).replace === "function" ? base.replace('x', '') : void 0) || line.number);
+          if (theNum !== walker.lineNumber) {
+            walker.needLineNumbers = true;
+          }
           walker.addLineNumbers = false;
           return padRight(line.number, 3);
         }
-        walker.lineNumber += 1;
         return padRight(walker.lineNumber, 3);
       },
       visit: function(item) {
@@ -16620,7 +16626,7 @@ _decorate = function(proof) {
               prevLine = walker.lookBackTwo[1];
               if (prevLine.parent === item.parent) {
                 walker.result.push({
-                  number: padRight((walker.getLineNumber(prevLine).trim()) + "y", 3),
+                  number: padRight((walker.getAndIncLineNumber(prevLine).trim()) + "y", 3),
                   indentation: (prevLine.indentation.trim()) + "---",
                   sentence: "",
                   justification: ""
@@ -16636,7 +16642,7 @@ _decorate = function(proof) {
         if (item.type === 'blank_line') {
           line = item;
           walker.result.push({
-            number: "" + (walker.getLineNumber(line)),
+            number: "" + (walker.getAndIncLineNumber(line)),
             indentation: "" + (line.indentation.trim()),
             sentence: "",
             justification: ""
@@ -16645,7 +16651,7 @@ _decorate = function(proof) {
         if (item.type === 'divider') {
           line = item;
           walker.result.push({
-            number: "" + (walker.getLineNumber(line)),
+            number: "" + (walker.getAndIncLineNumber(line)),
             indentation: (line.indentation.trim()) + "---",
             sentence: "",
             justification: ""
@@ -16663,7 +16669,7 @@ _decorate = function(proof) {
             }
           }
           walker.result.push({
-            number: "" + (walker.getLineNumber(line)),
+            number: "" + (walker.getAndIncLineNumber(line)),
             indentation: "" + line.indentation,
             sentence: "" + line.sentence,
             justification: justification
@@ -16688,7 +16694,10 @@ _decorate = function(proof) {
     for (i = 0, len1 = ref.length; i < len1; i++) {
       line = ref[i];
       indentationSentence = padRight(line.indentation + " " + line.sentence, maxSentenceLength + 1);
-      txt += line.number + " " + indentationSentence + "   " + line.justification + "\n";
+      if (walker.needLineNumbers) {
+        txt += line.number + " ";
+      }
+      txt += indentationSentence + "   " + line.justification + "\n";
     }
     return txt.trim();
   };
