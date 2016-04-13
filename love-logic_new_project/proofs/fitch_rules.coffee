@@ -19,7 +19,7 @@ rules =
     intro : rule.from('φ').and('ψ').to('φ and ψ')
 
   'or' :
-    elim  : rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ') ).to('χ' )
+    elim  : rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ')).to('χ' )
     intro : 
       left  : rule.from('φ').to('φ or ψ')
       right : rule.from('φ').to('ψ or φ')
@@ -62,4 +62,4 @@ rules =
       right : rule.from( rule.subproof('[α]φ', 'ψ') ).to('all τ (φ arrow ψ)[α-->τ]')
 
 exports.rules = rules
-dialectManager.registerRuleSet(rules)
+dialectManager.registerRuleSet('fitch', rules)

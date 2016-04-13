@@ -17,6 +17,10 @@
 # and blocks exist and can be cited from the line they are cited from.  
 # (It makes sense to do this here rather than in `rule` because the
 # check doesn't depend on which rule is used.)
+#
+# Note that all sets of rules of proofs must register themselves by
+# being imported either here or before they are first used
+#
  
 _ = require 'lodash'
 
@@ -27,7 +31,11 @@ addJustification = require './add_justification'
 addSentences = require './add_sentences'
 addStatus = require './add_status'
 
-theRules = (require './fitch_rules').rules
+# theRules = (require './fitch_rules').rules
+# IMPORT TO MAKE SURE THAT THE RULES ARE REGISTERED
+require './fitch_rules'
+require './teller_rules'
+dialectManager = require('../dialect_manager/dialectManager')
 
 # This is only used for testing (so that `verifyLine` can take text).
 _parseProof = (proofText) ->
@@ -117,7 +125,7 @@ verifyLine = (lineOrLineNumber, proofText) ->
     theLine.status.verified = false
     return false
   
-  result = checkItAccordsWithTheRules theLine, result
+  result = checkItAccordsWithTheRules theLine
   return result
 
 exports._line = verifyLine   #for testing only
@@ -155,7 +163,33 @@ _linesCitedAreOk = (line) ->
 exports._linesCitedAreOk = _linesCitedAreOk
 
 
-checkItAccordsWithTheRules = (line, result) ->
+checkLineAccordsWithOneOfTheseRules = (line, rules) ->
+  errorMessages = []
+  for aRule in rules
+    res = aRule.check(line)
+    if res is true
+      line.status.verified = true
+      return true
+    # The rule does not match.  Remove any error message
+    # in case a later rule does match.
+    msg = line.status.popMessage()
+    errorMessages.push(msg) if msg?
+    
+  # None of the rules matched.
+  line.status.verified = false
+  # Put the error messages back.
+  if errorMessages.length is 1
+    line.status.addMessage(errorMessages[0])
+  if errorMessages.length > 1
+    msg = "This rule has multiple forms and none of them matched.  "
+    for m, idx in errorMessages
+      msg += "(#{idx}) #{m}  "
+    line.status.addMessage msg
+  return false
+    
+
+
+checkItAccordsWithTheRules = (line) ->
   # `connective` is 'and', 'reit' or 'premise' or ...
   connective = line.justification.rule.connective
   # `intronation` is 'elim' or 'intro'
@@ -163,9 +197,11 @@ checkItAccordsWithTheRules = (line, result) ->
   # `side` is 'left' or 'right'
   side = line.justification.rule.variant.side
 
+  theRules = dialectManager.getCurrentRules()
+  # console.log "using #{dialectManager.getCurrentRulesName()}"
   ruleMap = theRules[connective]
 
-  if not ruleMap
+  if not ruleMap?
     line.status.addMessage ("the rule you specified, `#{connective} #{intronation or ''} #{side or ''}` does not exist (or, if it does, you are not allowed to use it in this proof).".replace /\s\s+/g,'')
     line.status.verified = false 
     return false
@@ -175,7 +211,10 @@ checkItAccordsWithTheRules = (line, result) ->
     if ruleMap.type is 'rule'
       # Yes, the rule specified is complete.
       aRule = ruleMap
-      return checkThisRule(aRule, line, result)
+      return checkLineAccordsWithOneOfTheseRules(line, [aRule])
+    if _.isArray(ruleMap)
+      rules = ruleMap
+      return checkLineAccordsWithOneOfTheseRules(line, rules)
     # The rule specified is incomplete.
     line.status.addMessage "you only partially specified the rule: `#{connective}` needs something extra (intro? elim?)."
     line.status.verified = false 
@@ -184,7 +223,7 @@ checkItAccordsWithTheRules = (line, result) ->
   # From here on, we know that `intronation` is specified.
   
   ruleMap = ruleMap[intronation]
-  if not ruleMap
+  if not ruleMap?
     line.status.addMessage "you specified the rule #{connective} *#{intronation}* but there is no ‘#{intronation}’ version of the rule for #{connective} (or, if there is, you are not allowed to use it in this proof)."
     line.status.verified = false
     return false
@@ -194,33 +233,24 @@ checkItAccordsWithTheRules = (line, result) ->
     # doesn't involve left or right either.  
     if ruleMap.type is 'rule'
       aRule = ruleMap
-      return checkThisRule(aRule, line, result)
-    
-    # We are in the tricky case where there are left and right rules.
+      return checkLineAccordsWithOneOfTheseRules(line, [aRule])
+    if _.isArray(ruleMap)
+      rules = ruleMap
+      return checkLineAccordsWithOneOfTheseRules(line, rules)
+      
+    # There are left and right rules.
     # In this case, at least one of the 'left' and 'right'
     # requirements must be met.
-    # We first check left and, if that fails, check right.
-    # We also want to provide a disjunctive message if neither left nor right
-    # requirements are met.
-    if ruleMap.left?
-      result = checkThisRule(ruleMap.left, line, result)
-      # Meeting the `left` requirement is sufficient when no `side is specified.
-      return result if result is true
-    if not ruleMap.right?
-      return result
-      
-    # Remove any error message resulting from having tried the `left` variant of the rule.
-    leftMessage = line.status.popMessage()
-    result = checkThisRule(ruleMap.right, line, result)
-    if result is false 
-      rightMessage = line.status.popMessage()
-      if leftMessage? and rightMessage?
-        line.status.addMessage "Either #{leftMessage}, or else #{rightMessage}."
-      else 
-        # Just put the one message we got (if any) back again
-        line.status.addMessage(leftMessage or rightMessage or '')
-        
-    return result
+    rules = []
+    if ruleMap.left?.type is 'rule'
+      rules.push(ruleMap.left)
+    if _.isArray(ruleMap.left)
+      (rules.push(r) for r in ruleMap.left)
+    if ruleMap.right?.type is 'rule'
+      rules.push(ruleMap.right)
+    if _.isArray(ruleMap.right)
+      (rules.push(r) for r in ruleMap.right)
+    return checkLineAccordsWithOneOfTheseRules(line, rules)
   
   # From here on, we know that `side` is specified.
   
@@ -230,16 +260,8 @@ checkItAccordsWithTheRules = (line, result) ->
     line.status.verified = false
     return false
   
-  return checkThisRule(ruleMap[side], line, result)  
-
-# TODO: remove this --- can just call rule.check directly.  
-checkThisRule = (rule, line, result) ->
-  outcome = rule.check(line)
-  if outcome is true
-    line.status.verified = true
-    return true
-  else
-    line.status.verified = false
-    return false
-      
+  rules = ruleMap[side]
+  unless _.isArray(rules)
+    rules = [rules]
+  return checkLineAccordsWithOneOfTheseRules(line, rules)
 

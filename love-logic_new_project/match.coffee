@@ -64,15 +64,18 @@ findWithoutApplyingSubs = (expression, pattern, _matches={}) ->
     return undefined unless pattern?.type?
     
     # Check whether `pattern` is an expression_variable; and, if so, test for a match.
-    if pattern.type in ['expression_variable', 'term_metavariable']
+    if pattern.type in ['expression_variable', 'term_metavariable', 'term_metavariable_hat']
       targetVar = pattern.letter if pattern.type is 'expression_variable' # eg φ
-      targetVar = pattern.name if pattern.type is 'term_metavariable' # eg τ2
+      targetVar = pattern.name if pattern.type in ['term_metavariable', 'term_metavariable_hat'] # eg τ2
       targetValue = expression
       if targetVar of _matches
         return util.areIdenticalExpressions(targetValue, _matches[targetVar])
       else
         _matches = _.clone _matches
         # console.log "matched #{targetVar} : #{util.expressionToString targetValue}"
+        if pattern.type is 'term_metavariable_hat'
+          # a `term_metavariable_hat` can only match a `name_hat`
+          return false unless targetValue.type is 'name_hat'
         _matches[targetVar] = targetValue
         if pattern.box?
           # remove the box from the match
@@ -312,11 +315,11 @@ _removeInefficaciousSubs = (e) ->
 apply = (pattern, matches, o={}) ->
   walker = (pattern) ->
     # Screen out everything but the variables we might replace
-    return pattern unless pattern?.type? and pattern.type in ['expression_variable', 'term_metavariable']
+    return pattern unless pattern?.type? and pattern.type in ['expression_variable', 'term_metavariable', 'term_metavariable_hat']
 
     # Work out what we are potentially replacing.
     targetVar = pattern.letter if pattern.type is 'expression_variable' # eg φ
-    targetVar = pattern.name if pattern.type is 'term_metavariable' # eg τ2
+    targetVar = pattern.name if pattern.type in ['term_metavariable', 'term_metavariable_hat'] # eg τ2
 
     # Do nothing if the variable to be replaced is not in matches
     return pattern unless targetVar of matches

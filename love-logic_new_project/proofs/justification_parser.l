@@ -63,9 +63,9 @@
       return 'number'; }
 
 
-"elimination"|"eliminate"|"elim"    
+"elimination"|"eliminate"|"elim"|"e"    
     { return 'elim'; }
-"introduction"|"introduce"|"intro"  
+"introduction"|"introduce"|"intro"|"i"  
     { return 'intro'; }
 
 "⊥"|"_|_"|"contradiction"|"contra"|"false"
@@ -80,7 +80,7 @@
     { yytext = 'identity';
       return 'connective'; }
 
-"and"|"conjunction"|"∧"|"•"  
+"and"|"conjunction"|"∧"|"•"|"&"  
     { yytext = 'and';
       return 'connective'; }
 
@@ -92,17 +92,31 @@
     { yytext = 'arrow';
       return 'connective'; }
 
-"not"|"¬"|"˜"|"!"|"negation"
+"not"|"¬"|"˜"|"~"|"!"|"negation"
     { yytext = 'not';
       return 'connective'; }
 
-"reit"|"reiteration"
+"reit"|"reiteration"|"r"
     { yytext = 'reit';
       return 'reit'; }
 
-"premise"|"assumption"
+"premise"|"assumption"|"p"
     { yytext = 'premise';
       return 'premise'; }
+
+"weakening"|"w"                     { yytext = 'weakening';return 'bare_rule'; }
+"argument by cases"|"cases"|"ac"    { yytext = 'cases';return 'bare_rule'; }
+"denying the consequent"|"dc"       { yytext = 'DC';return 'bare_rule'; }
+"denying the consequent"|"dc"       { yytext = 'DC';return 'bare_rule'; }
+"reductio"|"rd"|"reductio ad absurdum" { yytext = 'reductio';return 'bare_rule'; }
+"dm"|"de morgan"|"deMorgan"         { yytext = 'DM';return 'bare_rule'; }
+"contraposition"|"cp"               { yytext = 'contraposition';return 'bare_rule'; }
+"c"|"conditional"                   { yytext = 'C';return 'bare_rule'; }
+"cd"|"contradiction"                { yytext = 'CD';return 'bare_rule'; }
+"not all"|"not-all"|"~∀"            { yytext = 'not-all';return 'bare_rule'; }
+"all not"|"all-not"|"∀~"            { yytext = 'all-not';return 'bare_rule'; }
+"exists not"|"exists-not"|"∃~"     { yytext = 'exists-not';return 'bare_rule'; }
+"not exists"|"not-exists"|"~∃"     { yytext = 'not-exists';return 'bare_rule'; }
 
 
 "all"|"∀"|"every"|"universal"

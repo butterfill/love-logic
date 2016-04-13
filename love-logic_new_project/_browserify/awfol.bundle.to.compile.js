@@ -15825,7 +15825,7 @@ rules = {
 
 exports.rules = rules;
 
-dialectManager.registerRuleSet(rules);
+dialectManager.registerRuleSet('fitch', rules);
 
 
 },{"../dialect_manager/dialectManager":5,"./rule":21}],19:[function(require,module,exports){
@@ -16534,7 +16534,7 @@ case 23:console.log(yy_.yytext);
 break;
 }
 },
-rules: [/^(?:([0-9][^,\s]*)(\s+and\s+)(?=[0-9]))/i,/^(?:([0-9][^,\s]*)\s+to\s+([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*?)\s*(?:-+)\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*)(?:(\s*,)*))/i,/^(?:elimination|eliminate|elim)/i,/^(?:introduction|introduce|intro)/i,/^(?:⊥|_\|_|contradiction|contra|false)/i,/^(?:or|∨|\+|ǀǀ|\|)/i,/^(?:=|identity)/i,/^(?:and|conjunction|∧|•)/i,/^(?:double_arrow|↔|≡|⇔|<->)/i,/^(?:arrow|->|⇒|→|⊃)/i,/^(?:not|¬|˜|!|negation)/i,/^(?:reit|reiteration)/i,/^(?:premise|assumption)/i,/^(?:all|∀|every|universal)/i,/^(?:some|exists|∃|existential)/i,/^(?:left)/i,/^(?:right)/i,/^(?:[\s,]+)/i,/^(?:$)/i,/^(?:\w+)/i,/^(?:.)/i,/^(?:.)/i],
+rules: [/^(?:([0-9][^,\s]*)(\s+and\s+)(?=[0-9]))/i,/^(?:([0-9][^,\s]*)\s+to\s+([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*?)\s*(?:-+)\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*)(?:(\s*,)*))/i,/^(?:elimination|eliminate|elim|e)/i,/^(?:introduction|introduce|intro|i)/i,/^(?:⊥|_\|_|contradiction|contra|false)/i,/^(?:or|∨|\+|ǀǀ|\|)/i,/^(?:=|identity)/i,/^(?:and|conjunction|∧|•|&)/i,/^(?:double_arrow|↔|≡|⇔|<->)/i,/^(?:arrow|->|⇒|→|⊃)/i,/^(?:not|¬|˜|!|negation)/i,/^(?:reit|reiteration|r)/i,/^(?:premise|assumption|p)/i,/^(?:all|∀|every|universal)/i,/^(?:some|exists|∃|existential)/i,/^(?:left)/i,/^(?:right)/i,/^(?:[\s,]+)/i,/^(?:$)/i,/^(?:\w+)/i,/^(?:.)/i,/^(?:.)/i],
 conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23],"inclusive":true}}
 });
 return lexer;
@@ -17656,7 +17656,25 @@ symbols = {
     'nor': "↓",
     'nand': "↑",
     'universal_quantifier': "",
-    'existential_quantifier': "∃"
+    'universal': "all",
+    'existential_quantifier': "∃",
+    'existential': "∃"
+  },
+  teller: {
+    'not': '~',
+    'false': "⊥",
+    'contradiction': "⊥",
+    'identity': "=",
+    'and': "&",
+    'arrow': "⊃",
+    'double_arrow': "≡",
+    'or': "∨",
+    'nor': "↓",
+    'nand': "↑",
+    'universal_quantifier': "∀",
+    'universal': "∀",
+    'existential_quantifier': "∃",
+    'existential': "∃"
   }
 };
 

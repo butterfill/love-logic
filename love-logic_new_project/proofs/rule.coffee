@@ -23,9 +23,12 @@ _ = require 'lodash'
 util = require '../util'
 fol = require '../fol'
 
+# Rules can be written using any parser.
+# (Note that the parser in which the rules are written doesn’t have to be
+# the parser in which proofs are written).
 parser = undefined 
-exports.setParser = (parser) ->
-  parser = parser
+exports.setParser = (aParser) ->
+  parser = aParser
 
 # All ways of describing a `rule` use this class.
 class _From
@@ -83,11 +86,21 @@ subproof = (startReq, endReq) ->
     listMetaVariableNames : () ->
       result = @startReq.listMetaVariableNames()
       result = _.defaults( result, @endReq.listMetaVariableNames() )
+      if @containsReq?
+        for item in @containsReq
+          result = _.defaults( result, item.listMetaVariableNames() )
       return result
     
     toString : () ->
-      return "#{startReq.toString()} ⊢ #{endReq.toString()}"
-    
+      res = "#{startReq.toString()} ⊢ #{endReq.toString()}"
+      if @containsReq?
+        res += ", where this subproof contains #{(x.toString() for x in @containsReq).join(' and ')}"
+      return res
+    # add a requirement that the subproof must contain everything in
+    # the list `mustBeInSubproofList`
+    contains : (mustBeInSubproofList) ->
+      @containsReq = (_parseIfNecessaryAndDecorate(x) for x in mustBeInSubproofList)
+      return @
   }
 exports.subproof = subproof
 
@@ -341,7 +354,12 @@ class RequirementChecker
         newMatches = @_checkOneLine @theRequirement.startReq, candidate.getFirstLine(), @matches
         return false if newMatches is false
         moreNewMatches = @_checkOneLine @theRequirement.endReq, candidate.getLastLine(), newMatches
-        return moreNewMatches
+        return false if moreNewMatches is false
+        if @theRequirement.containsReq?
+          evenMoreNewMatches = @_checkSubproofContainsLines @theRequirement.containsReq, candidate, moreNewMatches
+          return evenMoreNewMatches
+        else
+          return moreNewMatches
       
       # @theRequirement just concerns a line, not a subproof.
       # If the candidate is a block, the requirement can’t be met
@@ -405,6 +423,49 @@ class RequirementChecker
       
       return newMatches
 
+    # Deals with the `.subproof(...).contains(['φ','not φ'])` thing: 
+    # ensures that the requirements in `.contains` are fulfilled by 
+    # lines in the subproof.
+    _checkSubproofContainsLines : (theReqs, aProof, priorMatches) ->
+      linesOfProof = []
+      for item in aProof.content
+        if item.type is 'line'
+          unless item.isPremise()  # we aren’t allowed to match premises
+            linesOfProof.push(item) 
+      
+      # Do any of theLines meet aReq?
+      doesReqMatchAnyLines = (aReq, theLines, priorMatches) ->
+        for line in theLines
+          sentence = line.sentence
+          test = sentence.findMatches(aReq, priorMatches)
+          # test = @_checkOneLine(aReq, line, priorMatches)
+          console.log "tested req #{aReq.toString()} against #{line.sentence}, res is #{test}, newMatches contains entries for #{(x.toString() for x in _.keys(test)).join(', ')} with newMatches.ψ = #{fol._decorate(test.ψ).toString() if test.ψ}"
+          return test unless test is false
+        # We didn’t find any matches.
+        return false
+
+      # Are all of theReqs met in theLines?
+      allReqsAreMet = (theReqs, theLines, priorMatches) ->
+        newMatches = priorMatches
+        for aReq in theReqs
+          test = doesReqMatchAnyLines(aReq, theLines, newMatches)
+          return false if test is false
+          newMatches = test
+        return newMatches
+      
+      # consider all permutations of `theReqs`
+      theReqsPerms = _permutations(theReqs)
+      # take a permutation
+      # for each req in turn:
+      # get the sentences from aProof
+      # see if req matches any sentence
+      # abort if it doesn’t
+      # update the matches if it does
+      for reqs in theReqsPerms
+        test = allReqsAreMet(reqs, linesOfProof, priorMatches)
+        return test if test isnt false
+      return false
+            
       
 # Some requirements can sometimes be met in multiple ways (by matching 
 # different lines), as for example in the rule for contradiction 

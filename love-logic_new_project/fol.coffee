@@ -24,7 +24,10 @@ exports.parse = parse
 
 exports.symbols = symbols
 
-
+# Use `fol.setDialect` to determine how sentences will be 
+# parsed and toStrung, and which rules of proof the proof checker will use.
+exports.setDialect = (name) ->
+  dialectManager.set(name)
 
 # Add some useful functions to an expression and every part of it.
 _decorate = (expression) ->
@@ -54,7 +57,6 @@ _decorate = (expression) ->
       
     e.findMatches = (pattern, _matches, o) ->
       result = match.find e, pattern, _matches, o
-      _decorate(result)
       return result
     e.applyMatches = (matches) ->
       result =  match.apply e, matches

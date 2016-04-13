@@ -1,6 +1,6 @@
 _ = require 'lodash'
 
-
+dialectManager = require('./dialect_manager/dialectManager')
 
 # Walk through `expression` depth-first (unless `o.topDown`) applying `fn` to mutate it.
 # This will visit termlists, terms, and bound variables.
@@ -262,27 +262,13 @@ cloneExpression = (expression) ->
 
 exports.cloneExpression = cloneExpression
 
-SYMBOLS =
-  'not' : '¬'
-  'false' : "⊥"
-  'identity' : "="
-  'and' : "∧"
-  'arrow' : "→"
-  'double_arrow' : "↔"
-  'or' : "∨"
-  'nor' :  "↓"
-  'nand' : "↑"
-  'universal_quantifier' : "∀"
-  'existential_quantifier' : "∃" 
-exports.SYMBOLS = SYMBOLS
-
 # Create a string representation of a fol expression.
 # It uses the symbols that were specified when the expression was parsed (where these exist) unless param `o.replaceSymbols` is true or `o.symbols` is specified.
 expressionToString = (expression, o={}) ->
   if o.symbols?
     o.replaceSymbols = true
   else 
-    o.symbols = SYMBOLS
+    o.symbols = dialectManager.getSymbols()
   
   # Help with debug 
   for test in [_.isBoolean, _.isNumber, _.isString, _.isArray]
@@ -302,12 +288,16 @@ expressionToString = (expression, o={}) ->
         return "#{e}"
 
     if _.isArray(e)
-      return e.join(',')
+      if o.symbols.predicationBracketsAndCommas is false
+        return e.join('')
+      else
+        return e.join(',')
+      
 
     if not e?.type?
       return '[undefined]' if e is undefined
     
-    if e.type in ['variable','name','term_metavariable']
+    if e.type in ['variable','name','name_hat','term_metavariable','term_metavariable_hat']
       return e.name unless e.substitutions
       return "{#{e.name}[#{e.substitutions}]}"
     
@@ -328,7 +318,12 @@ expressionToString = (expression, o={}) ->
     
     if e.termlist? 
       symbol = e.name or e.symbol or o.symbols[e.type] or e.type
-      middle = "#{symbol}(#{e.termlist.join(',')})"
+      if o.symbols.singleLetterPredicates is true and e.type is 'predicate'
+        symbol = symbol[0]
+      if o.symbols.predicationBracketsAndCommas is false
+        middle = "#{symbol}#{e.termlist.join('')}"
+      else
+        middle = "#{symbol}(#{e.termlist.join(',')})"
   
     if e.type is 'identity'
       symbol = (e.symbol or '=')
@@ -356,7 +351,7 @@ expressionToString = (expression, o={}) ->
     if e.boundVariable?
       # e is a quantifier phrase
       variableName = e.boundVariable
-      if o.symbols.universal_quantifier is ''
+      if o.symbols.universal_quantifier is '' or o.symbols.quantifiersInBrackets is true
         # Copi style
         middle = "(#{symbol}#{variableName})#{left_bracket}#{e.left}#{e.right or ''}#{right_bracket}"
       else
@@ -396,7 +391,7 @@ expressionToString = (expression, o={}) ->
       #   (\)\s*$)    --- right bracket, any amount of space, end of line
       from : /(^\s*\()([\s\S]*)(\)\s*$)/
       to : '$2'
-  unless o.symbols.universal_quantifier is ''
+  unless (o.symbols.universal_quantifier is '' or o.symbols.quantifiersInBrackets is true) and expression.boundVariable?
     # no cleanup for Copi style (will break!)
     for k, rplc of _cleanUp
       expressionStr = expressionStr.replace(rplc.from, rplc.to)

@@ -1,11 +1,13 @@
 _ = require 'lodash'
 
 chai = require('chai')
+assert = chai.assert
 expect = chai.expect
 match = require '../match'
 fol = require '../parser/awFOL'
+tellerFOL = require '../parser/tellerFOL'
 util = require '../util'
-
+dialectManager = require '../dialect_manager/dialectManager'
 
 # some handy FOL objects (defining these presupposes that some of the tests below work ...)
 PROP_A = fol.parse "A"
@@ -225,6 +227,16 @@ describe "match (module)", ->
       expect(matches).not.to.be.false
       expect(util.areIdenticalExpressions(matches.φ, expectedMatch)).to.be.true
 
+    it "should find match 'not not φ' with φ='A' in 'not not A' when dialect is teller", ->
+      dialectManager.set('teller')
+      pattern = fol.parse 'not not φ'
+      expression = fol.parse 'not not A'
+      matches = match.find expression, pattern
+      expectedMatch = PROP_A
+      expect(matches).not.to.be.false
+      expect(util.areIdenticalExpressions(matches.φ, expectedMatch)).to.be.true
+      dialectManager.set('default')
+
     it "should find match 'not not φ' with φ='A and B' in 'not not (A and B)'", ->
       pattern = fol.parse 'not not φ'
       expression = fol.parse 'not not (A and B)'
@@ -357,10 +369,38 @@ describe "match (module)", ->
       pattern = fol.parse '[α]φ'
       expression = fol.parse '[a]F(a)'
       matches = match.find expression, pattern
-      console.log matches
+      # console.log matches
       # The worry is that φ will be [a]F(a) not F(s)
       expect(matches.φ.box?).to.be.false
 
+    it "should match α=α against a^=a^", ->
+      pattern = tellerFOL.parse 'α=α'
+      expression = tellerFOL.parse 'a^=a^'
+      matches = match.find expression, pattern
+      expect(matches).not.to.be.false
+      assert.equal matches.α.name, 'a^'
+      
+    it "should match (all τ) φ against (∀x)Fx, and then φ[τ-->α^] and against Fa^", ->
+      pattern1 = tellerFOL.parse '(all τ) φ'
+      expression1 = tellerFOL.parse '(∀x)Fx'
+      matches1 = match.find expression1, pattern1
+      assert.equal matches1.φ.name, 'F'
+      assert.equal matches1.τ.name, 'x'
+      pattern2pre = tellerFOL.parse 'φ[τ-->α^]'
+      pattern2 = match.apply pattern2pre, matches1
+      expression2 = tellerFOL.parse 'Fa^'
+      matches2 = match.find expression2, pattern2
+      expect(matches2).not.to.be.false
+    
+    it "should NOT match (all τ) φ against (∀x)Fx, and then φ[τ-->α^] and against Fa (note the missing hat)", ->
+      pattern1 = tellerFOL.parse '(all τ) φ'
+      expression1 = tellerFOL.parse '(∀x)Fx'
+      matches1 = match.find expression1, pattern1
+      pattern2pre = tellerFOL.parse 'φ[τ-->α^]'
+      pattern2 = match.apply pattern2pre, matches1
+      expression2 = tellerFOL.parse 'Fa'
+      matches2 = match.find expression2, pattern2
+      expect(matches2).to.be.false
     
   describe '`.find` with boxes', ->
     it "matches a pattern to [a] (empty expression)", ->
@@ -968,6 +1008,14 @@ describe "match (module)", ->
         α : fol.parse('F(a)').termlist[0] #i.e. {type='name', name='a', ...}
       result = match.apply pattern, matches
       expectedResult = fol.parse 'Loves(a,b) and not a=b'
+      expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
+    
+    it "correctly applies a match a `term_metavariable_hat` to a pattern", ->
+      pattern = tellerFOL.parse 'Lα^b and not α^=b'
+      matches = 
+        'α^' : tellerFOL.parse('Fa^').termlist[0] #i.e. {type='name', name='a^', ...}
+      result = match.apply pattern, matches
+      expectedResult = tellerFOL.parse 'La^b and not a^=b'
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
     
     it "does not mutate its parameters", ->

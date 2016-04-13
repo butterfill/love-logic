@@ -51,6 +51,8 @@ to = (block) ->
       line.findLineOrBlock = findLineOrBlock
       line.getCitedLines = getCitedLines
       line.getCitedBlocks = getCitedBlocks
+      line.isPremise = () ->
+        return line.justification.rule.connective is PREMISE_JUSTIFICATION.rule.connective
       
       return undefined  # Keep walking.
   block.walk walker

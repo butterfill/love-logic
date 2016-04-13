@@ -53,7 +53,7 @@ rule_name
             }; }
 
     /* reit and premise are special cases : they can't take a variant */
-    | (reit|premise)
+    | (reit|premise|bare_rule)
       { $$= {type: 'rule', connective:$1, variant:{type:'variant', intronation:null, side: null }}; }
 
     ;

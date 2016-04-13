@@ -71,85 +71,122 @@
     recoverable: (boolean: TRUE when the parser has a error recovery rule available for this particular error)
   }
 */
-var justification_parser = (function(){
-var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,5],$V1=[1,10],$V2=[1,11],$V3=[1,12],$V4=[1,13],$V5=[1,9],$V6=[1,14],$V7=[1,15],$V8=[1,16],$V9=[5,18],$Va=[5,8,14,15,16,17,19,20,21],$Vb=[5,8,16,17,18],$Vc=[5,8,14,15,18];
+var tellerFOL = (function(){
+var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,4],$V1=[1,5],$V2=[1,6],$V3=[1,7],$V4=[1,9],$V5=[1,12],$V6=[1,13],$V7=[1,18],$V8=[1,19],$V9=[1,14],$Va=[1,15],$Vb=[1,17],$Vc=[1,21],$Vd=[1,22],$Ve=[1,23],$Vf=[1,24],$Vg=[1,25],$Vh=[1,26],$Vi=[1,27],$Vj=[1,30],$Vk=[5,10,12,13,14,15,16,17,26,27,38],$Vl=[1,37],$Vm=[5,10,12,13,14,15,16,17,26,27,38,39],$Vn=[5,10,12,13,14,15,16,17,25,26,27,32,33,34,35,36,38,39],$Vo=[5,10,12,13,14,15,16,17,27,38],$Vp=[5,10,27,38],$Vq=[27,38];
 var parser = {trace: function trace() { },
 yy: {},
-symbols_: {"error":2,"justification":3,"j":4,"EOF":5,"rule_name":6,"numberlist":7,"connective":8,"intronation":9,"rule_name_option0":10,"rule_name_option1":11,"side":12,"rule_name_group0":13,"elim":14,"intro":15,"left":16,"right":17,"number":18,"reit":19,"premise":20,"bare_rule":21,"$accept":0,"$end":1},
-terminals_: {2:"error",5:"EOF",8:"connective",14:"elim",15:"intro",16:"left",17:"right",18:"number",19:"reit",20:"premise",21:"bare_rule"},
-productions_: [0,[3,2],[4,1],[4,2],[4,2],[6,3],[6,3],[6,3],[6,3],[6,3],[6,3],[6,1],[9,1],[9,1],[12,1],[12,1],[7,1],[7,2],[10,0],[10,1],[11,0],[11,1],[13,1],[13,1],[13,1]],
+symbols_: {"error":2,"expressions":3,"e":4,"EOF":5,"box":6,"(":7,"existential_quantifier":8,"quantifier_variable":9,")":10,"universal_quantifier":11,"and":12,"or":13,"nand":14,"nor":15,"arrow":16,"double_arrow":17,"not":18,"true":19,"false":20,"sentence_letter_or_expression_variable":21,"predicate":22,"termlist":23,"term":24,"identity":25,"[":26,"]":27,"substitution_list":28,"expression_variable":29,"sentence_letter":30,"variable_or_metavariable":31,"variable":32,"term_metavariable":33,"name":34,"name_hat":35,"term_metavariable_hat":36,"substitution":37,",":38,"substitution_symbol":39,"null":40,"$accept":0,"$end":1},
+terminals_: {2:"error",5:"EOF",7:"(",8:"existential_quantifier",10:")",11:"universal_quantifier",12:"and",13:"or",14:"nand",15:"nor",16:"arrow",17:"double_arrow",18:"not",19:"true",20:"false",22:"predicate",25:"identity",26:"[",27:"]",29:"expression_variable",30:"sentence_letter",32:"variable",33:"term_metavariable",34:"name",35:"name_hat",36:"term_metavariable_hat",38:",",39:"substitution_symbol",40:"null"},
+productions_: [0,[3,2],[3,2],[3,3],[4,5],[4,5],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,2],[4,1],[4,1],[4,1],[4,2],[4,3],[4,3],[4,3],[4,4],[21,1],[21,1],[31,1],[31,1],[9,1],[23,1],[23,2],[24,1],[24,1],[24,1],[24,1],[28,1],[28,3],[37,3],[37,3],[37,3],[37,3],[6,3]],
 performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate /* action[1] */, $$ /* vstack */, _$ /* lstack */) {
 /* this == yyval */
 
 var $0 = $$.length - 1;
 switch (yystate) {
-case 1:
+case 1: case 2:
  return $$[$0-1]; 
 break;
-case 2:
- this.$ = {type: 'justification', rule:$$[$0], location:_$[$0]}; 
-break;
 case 3:
- this.$ = {type: 'justification', rule:$$[$0-1], location:_$[$0-1], numbers:$$[$0] }; 
+ $$[$0-1].box = $$[$0-2]; return $$[$0-1]; 
 break;
 case 4:
- this.$ = {type: 'justification', rule:$$[$0], location:_$[$0], numbers:$$[$0-1]}; 
+ this.$ = {type:"existential_quantifier", symbol:$$[$0-3], location:_$[$0-3], boundVariable:$$[$0-2], left:$$[$0], right:null}; 
 break;
 case 5:
- this.$= { type: 'rule', connective:$$[$0-2], 
-              variant:{type:'variant', intronation:$$[$0-1], side:$$[$0] }
-            }; 
+ this.$ = {type:"universal_quantifier", symbol:$$[$0-3], location:_$[$0-3], boundVariable:$$[$0-2], left:$$[$0], right:null}; 
 break;
 case 6:
- this.$= { type: 'rule', connective:$$[$0-1], 
-              variant:{type:'variant', intronation:$$[$0-2], side:$$[$0] }
-            }; 
+ this.$ = {type:'and', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
 break;
 case 7:
- this.$= { type: 'rule', connective:$$[$0-1], 
-              variant:{type:'variant', intronation:$$[$0], side:$$[$0-2] }
-            }; 
+ this.$ = {type:'or', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
 break;
 case 8:
- this.$= { type: 'rule', connective:$$[$0-2], 
-              variant:{type:'variant', intronation:$$[$0], side:$$[$0-1] }
-            }; 
+ this.$ = {type:'nand', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
 break;
 case 9:
- this.$= { type: 'rule', connective:$$[$0], 
-              variant:{type:'variant', intronation:$$[$0-1], side:$$[$0-2] }
-            }; 
+ this.$ = {type:'nor', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
 break;
 case 10:
- this.$= { type: 'rule', connective:$$[$0], 
-              variant:{type:'variant', intronation:$$[$0-2], side:$$[$0-1] }
-            }; 
+ this.$ = {type:'arrow', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
 break;
 case 11:
- this.$= {type: 'rule', connective:$$[$0], variant:{type:'variant', intronation:null, side: null }}; 
+ this.$ = {type:'double_arrow', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
 break;
 case 12:
- this.$='elim'; 
+ this.$ = {type:'not', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0], right:null}; 
 break;
 case 13:
- this.$='intro'; 
+ this.$ = {type:'value', symbol:$$[$0], location:_$[$0], value:true, left:null, right:null}; 
 break;
 case 14:
- this.$='left'; 
+ this.$ = {type:'value', symbol:$$[$0], location:_$[$0], value:false, left:null, right:null}; 
 break;
-case 15:
- this.$='right'; 
+case 15: case 25: case 30:
+ this.$ = $$[$0]; 
 break;
 case 16:
- this.$ = [$$[$0]]; 
+ this.$ = { type:'predicate', name:$$[$0-1], location:_$[$0-1], termlist:$$[$0] } ; 
 break;
 case 17:
- this.$ = [$$[$0-1]].concat($$[$0]); 
+ this.$ = {type:'identity', symbol:$$[$0-1], termlist:[$$[$0-2], $$[$0]] }; 
+break;
+case 18: case 19:
+ this.$ = $$[$0-1]; 
+break;
+case 20:
+
+         if( $$[$0-3].substitutions && $$[$0-3].substitutions.length ) {
+           $$[$0-3].substitutions = $$[$0-3].substitutions.concat($$[$0-1]);
+         } else {
+           $$[$0-3].substitutions = $$[$0-1];
+         }
+         this.$ = $$[$0-3]; 
+      
+break;
+case 21:
+ this.$ = {type:'expression_variable', location:_$[$0], letter:$$[$0], left:null, right:null}; 
+break;
+case 22:
+ this.$ = {type:'sentence_letter', location:_$[$0], letter:$$[$0], left:null, right:null}; 
+break;
+case 23:
+ this.$ = {type:'variable', name:$$[$0], location:_$[$0]}; 
+break;
+case 24:
+ this.$ = {type:'term_metavariable', name:$$[$0], location:_$[$0]}; 
+break;
+case 26: case 32:
+ this.$ = [$$[$0]] 
+break;
+case 27:
+ this.$ = [$$[$0-1]].concat($$[$0]) 
+break;
+case 28:
+ this.$ = {type:'name', name:$$[$0], location:_$[$0]}; 
+break;
+case 29:
+ this.$ = {type:'name_hat', name:$$[$0], location:_$[$0]}; 
+break;
+case 31:
+ this.$ = {type:'term_metavariable_hat', name:$$[$0], location:_$[$0]}; 
+break;
+case 33:
+ this.$ = [$$[$0-2]].concat($$[$0]) 
+break;
+case 34: case 36:
+ this.$ = {type:'substitution', from:$$[$0-2], to:$$[$0], symbol:$$[$0-1]}; 
+break;
+case 35: case 37:
+ this.$ = {type:'substitution', from:$$[$0-2], to:null, symbol:$$[$0-1]}; 
+break;
+case 38:
+ this.$ = {type:'box', term:$$[$0-1]}; 
 break;
 }
 },
-table: [{3:1,4:2,6:3,7:4,8:$V0,9:6,12:7,13:8,14:$V1,15:$V2,16:$V3,17:$V4,18:$V5,19:$V6,20:$V7,21:$V8},{1:[3]},{5:[1,17]},{5:[2,2],7:18,18:$V5},{6:19,8:$V0,9:6,12:7,13:8,14:$V1,15:$V2,16:$V3,17:$V4,19:$V6,20:$V7,21:$V8},{9:20,12:21,14:$V1,15:$V2,16:$V3,17:$V4},{8:[1,22],12:23,16:$V3,17:$V4},{8:[1,24],9:25,14:$V1,15:$V2},o($V9,[2,11]),o($Va,[2,16],{7:26,18:$V5}),o($Vb,[2,12]),o($Vb,[2,13]),o($Vc,[2,14]),o($Vc,[2,15]),o($V9,[2,22]),o($V9,[2,23]),o($V9,[2,24]),{1:[2,1]},{5:[2,3]},{5:[2,4]},o($V9,[2,18],{10:27,12:28,16:$V3,17:$V4}),{9:29,14:$V1,15:$V2},o($V9,[2,20],{11:30,12:31,16:$V3,17:$V4}),{8:[1,32]},{9:33,14:$V1,15:$V2},{8:[1,34]},o($Va,[2,17]),o($V9,[2,5]),o($V9,[2,19]),o($V9,[2,8]),o($V9,[2,6]),o($V9,[2,21]),o($V9,[2,10]),o($V9,[2,7]),o($V9,[2,9])],
-defaultActions: {17:[2,1],18:[2,3],19:[2,4]},
+table: [{3:1,4:2,6:3,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:[1,11],29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{1:[3]},{5:[1,20],12:$Vc,13:$Vd,14:$Ve,15:$Vf,16:$Vg,17:$Vh,26:$Vi},{4:29,5:[1,28],7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:33,7:$V0,8:[1,31],11:[1,32],18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:34,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},o($Vk,[2,13]),o($Vk,[2,14]),o($Vk,[2,15]),{23:35,24:36,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{25:$Vl},{4:38,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:39,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},o($Vm,[2,21]),o($Vm,[2,22]),o($Vn,[2,28]),o($Vn,[2,29]),o($Vn,[2,30]),o($Vn,[2,31]),o($Vn,[2,23]),o($Vn,[2,24]),{1:[2,1]},{4:40,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:41,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:42,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:43,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:44,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:45,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{21:49,24:48,28:46,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb,37:47},{1:[2,2]},{5:[1,50],12:$Vc,13:$Vd,14:$Ve,15:$Vf,16:$Vg,17:$Vh,26:$Vi},{4:38,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{9:51,31:52,32:$V7,33:$V8},{9:53,31:52,32:$V7,33:$V8},{10:[1,54],12:$Vc,13:$Vd,14:$Ve,15:$Vf,16:$Vg,17:$Vh,26:$Vi},o($Vo,[2,12],{26:$Vi}),o($Vk,[2,16]),o($Vk,[2,26],{31:16,24:36,23:55,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb}),{24:56,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{12:$Vc,13:$Vd,14:$Ve,15:$Vf,16:$Vg,17:$Vh,26:$Vi,27:[1,57]},{25:$Vl,27:[1,58]},o($Vo,[2,6],{26:$Vi}),o($Vo,[2,7],{26:$Vi}),o($Vo,[2,8],{26:$Vi}),o($Vo,[2,9],{26:$Vi}),o($Vp,[2,10],{12:$Vc,13:$Vd,14:$Ve,15:$Vf,26:$Vi}),o($Vp,[2,11],{12:$Vc,13:$Vd,14:$Ve,15:$Vf,26:$Vi}),{27:[1,59]},{27:[2,32],38:[1,60]},{39:[1,61]},{39:[1,62]},{1:[2,3]},{10:[1,63]},{10:[2,25]},{10:[1,64]},o($Vk,[2,18]),o($Vk,[2,27]),o($Vk,[2,17]),o($Vk,[2,19]),o([5,7,18,19,20,22,26,29,30,32,33,34,35,36],[2,38]),o($Vk,[2,20]),{21:49,24:48,28:65,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb,37:47},{24:66,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb,40:[1,67]},{4:68,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb,40:[1,69]},{4:70,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:71,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{27:[2,33]},o($Vq,[2,34]),o($Vq,[2,35]),o($Vq,[2,36],{12:$Vc,13:$Vd,14:$Ve,15:$Vf,16:$Vg,17:$Vh,26:$Vi}),o($Vq,[2,37]),o($Vo,[2,4],{26:$Vi}),o($Vo,[2,5],{26:$Vi})],
+defaultActions: {20:[2,1],28:[2,2],50:[2,3],52:[2,25],65:[2,33]},
 parseError: function parseError(str, hash) {
     if (hash.recoverable) {
         this.trace(str);
@@ -624,112 +661,74 @@ pushState:function pushState(condition) {
 stateStackSize:function stateStackSize() {
         return this.conditionStack.length;
     },
-options: {"flex":true,"case-insensitive":true},
+options: {},
 performAction: function anonymous(yy,yy_,$avoiding_name_collisions,YY_START) {
 var YYSTATE=YY_START;
 switch($avoiding_name_collisions) {
-case 0: yy_.yytext = yy.lexer.matches[1];  return 18; 
+case 0: /* skip whitespace */             
 break;
-case 1: yy_.yytext = yy.lexer.matches[1]+"-"+yy.lexer.matches[2];  
-      return 18; 
-    
+case 1: return 7; 
 break;
-case 2: yy_.yytext = yy.lexer.matches[1]+"-"+yy.lexer.matches[2];  
-      return 18; 
-    
+case 2: return 10; 
 break;
-case 3: yy_.yytext = yy.lexer.matches[1];
-      return 18; 
+case 3: return 26; 
 break;
-case 4: return 14; 
+case 4: return 27; 
 break;
-case 5: return 15; 
+case 5: return 38; 
 break;
-case 6: yy_.yytext = 'contradiction';
-      return 8; 
+case 6: return 22;               
 break;
-case 7: yy_.yytext = 'or';
-      return 8; 
+case 7: return 39; 
 break;
-case 8: yy_.yytext = 'identity';
-      return 8; 
+case 8: return 19; 
 break;
-case 9: yy_.yytext = 'and';
-      return 8; 
+case 9: return 20; 
 break;
-case 10: yy_.yytext = 'double_arrow';
-      return 8; 
+case 10: return 25; 
 break;
-case 11: yy_.yytext = 'arrow';
-      return 8; 
+case 11: return 12; 
 break;
-case 12: yy_.yytext = 'not';
-      return 8; 
+case 12: return 16; 
 break;
-case 13: yy_.yytext = 'reit';
-      return 19; 
+case 13: return 17; 
 break;
-case 14: yy_.yytext = 'premise';
-      return 20; 
+case 14: return 13; 
 break;
-case 15: yy_.yytext = 'weakening';return 21; 
+case 15: return 18; 
 break;
-case 16: yy_.yytext = 'cases';return 21; 
+case 16: return 15; 
 break;
-case 17: yy_.yytext = 'DC';return 21; 
+case 17: return 14; 
 break;
-case 18: yy_.yytext = 'DC';return 21; 
+case 18: return 11; 
 break;
-case 19: yy_.yytext = 'reductio';return 21; 
+case 19: return 8; 
 break;
-case 20: yy_.yytext = 'DM';return 21; 
+case 20: return 30; 
 break;
-case 21: yy_.yytext = 'contraposition';return 21; 
+case 21: return 40; 
 break;
-case 22: yy_.yytext = 'C';return 21; 
+case 22: return 35; 
 break;
-case 23: yy_.yytext = 'CD';return 21; 
+case 23: return 34; 
 break;
-case 24: yy_.yytext = 'not-all';return 21; 
+case 24: return 32; 
 break;
-case 25: yy_.yytext = 'all-not';return 21; 
+case 25: return 29; 
 break;
-case 26: yy_.yytext = 'exists-not';return 21; 
+case 26: return 36; 
 break;
-case 27: yy_.yytext = 'not-exists';return 21; 
+case 27: return 33; 
 break;
-case 28: yy_.yytext = 'universal';
-      return 8; 
+case 28: return 5; 
 break;
-case 29: yy_.yytext = 'existential';
-      return 8; 
-break;
-case 30: return 16; 
-break;
-case 31: return 17; 
-break;
-case 32: /*  Skip whitespace and commas. 
-      */ 
-    
-break;
-case 33: return 5; 
-break;
-case 34: 
-      /*  I would love to `return 'waffle';` and treat
-          waffle as a category because I want to allow 
-          some of the connectives to appear in waffle, e.g. 'not'.
-          But attempts to do this proved too tricky for me so far.
-      */ 
-    
-break;
-case 35: /* Ignore everything else */ 
-break;
-case 36:console.log(yy_.yytext);
+case 29: return 'invalid_character'; 
 break;
 }
 },
-rules: [/^(?:([0-9][^,\s]*)(\s+and\s+)(?=[0-9]))/i,/^(?:([0-9][^,\s]*)\s+to\s+([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*?)\s*(?:-+)\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*)(?:(\s*,)*))/i,/^(?:elimination|eliminate|elim|e)/i,/^(?:introduction|introduce|intro|i)/i,/^(?:⊥|_\|_|contradiction|contra|false)/i,/^(?:or|∨|\+|ǀǀ|\|)/i,/^(?:=|identity)/i,/^(?:and|conjunction|∧|•|&)/i,/^(?:double_arrow|↔|≡|⇔|<->)/i,/^(?:arrow|->|⇒|→|⊃)/i,/^(?:not|¬|˜|~|!|negation)/i,/^(?:reit|reiteration|r)/i,/^(?:premise|assumption|p)/i,/^(?:weakening|w)/i,/^(?:argument by cases|cases|ac)/i,/^(?:denying the consequent|dc)/i,/^(?:denying the consequent|dc)/i,/^(?:reductio|rd|reductio ad absurdum)/i,/^(?:dm|de morgan|deMorgan)/i,/^(?:contraposition|cp)/i,/^(?:c|conditional)/i,/^(?:cd|contradiction)/i,/^(?:not all|not-all|~∀)/i,/^(?:all not|all-not|∀~)/i,/^(?:exists not|exists-not|∃~)/i,/^(?:not exists|not-exists|~∃)/i,/^(?:all|∀|every|universal)/i,/^(?:some|exists|∃|existential)/i,/^(?:left)/i,/^(?:right)/i,/^(?:[\s,]+)/i,/^(?:$)/i,/^(?:\w+)/i,/^(?:.)/i,/^(?:.)/i],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36],"inclusive":true}}
+rules: [/^(?:\s+)/,/^(?:\()/,/^(?:\))/,/^(?:\[)/,/^(?:\])/,/^(?:,)/,/^(?:[A-Z](?=([a-zαβγτ]+)))/,/^(?:-->)/,/^(?:true\b)/,/^(?:false|⊥|_\|_|contradiction|contra\b)/,/^(?:=)/,/^(?:and|&|∧|•)/,/^(?:arrow|->|⇒|→|⊃)/,/^(?:↔|≡|⇔|double_arrow|<->)/,/^(?:or|∨|\+|ǀǀ|\|)/,/^(?:not|¬|~|˜|!)/,/^(?:nor|↓)/,/^(?:nand|↑)/,/^(?:all|∀|every\b)/,/^(?:some|exists|∃)/,/^(?:[A-Z][0-9]*)/,/^(?:[nN][uU][lL][lL])/,/^(?:[a-r][0-9]*\^)/,/^(?:[a-r][0-9]*)/,/^(?:[xyzw][0-9]*)/,/^(?:[φψχ][0-9]*)/,/^(?:[αβγτ][0-9]*\^)/,/^(?:[αβγτ][0-9]*)/,/^(?:$)/,/^(?:.)/],
+conditions: {"expectLeftBracket":{"rules":[],"inclusive":false},"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29],"inclusive":true}}
 });
 return lexer;
 })();
@@ -743,9 +742,9 @@ return new Parser;
 
 
 if (typeof require !== 'undefined' && typeof exports !== 'undefined') {
-exports.parser = justification_parser;
-exports.Parser = justification_parser.Parser;
-exports.parse = function () { return justification_parser.parse.apply(justification_parser, arguments); };
+exports.parser = tellerFOL;
+exports.Parser = tellerFOL.Parser;
+exports.parse = function () { return tellerFOL.parse.apply(tellerFOL, arguments); };
 exports.main = function commonjsMain(args) {
     if (!args[1]) {
         console.log('Usage: '+args[0]+' FILE');

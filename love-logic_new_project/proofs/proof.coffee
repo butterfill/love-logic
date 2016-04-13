@@ -111,7 +111,7 @@ _decorate = (proof) ->
     maxSentenceLength = _.max( ((x.sentence?.length + x.indentation?.length) for x in walker.result)  )
     for line in walker.result
       indentationSentence = padRight("#{line.indentation} #{line.sentence}",maxSentenceLength+1)
-      if walker.needLineNumbers
+      if walker.needLineNumbers or o.numberLines is true
         txt += "#{line.number} "
       txt += "#{indentationSentence}   #{line.justification}\n"
     return txt.trim()

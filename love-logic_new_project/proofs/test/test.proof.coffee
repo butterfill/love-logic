@@ -2,6 +2,7 @@ chai = require 'chai'
 expect = chai.expect
 _ = require 'lodash'
 
+dialectManager = require('../../dialect_manager/dialectManager')
 proof = require '../proof'
 
 describe "proof", ->
@@ -78,6 +79,7 @@ describe "proof", ->
       theProof = proof.parse text
       result = theProof.verify()
       expect(result).to.be.true
+
     
     it "allows blank lines without messing up justification", ->
       proofText = '''
