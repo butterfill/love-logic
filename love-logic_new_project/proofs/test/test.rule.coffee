@@ -31,16 +31,6 @@ describe "`rule`", ->
       result = rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ')).to('χ')
       expect(typeof result.check).to.equal('function')
 
-    it "keeps track of requirements (including those added with .to and .and)", ->
-      result = rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ')).to('χ')
-      # This is a fragile test that depends on inner workings.
-      expect result._requirements?
-        .to.be.true
-      expect result._requirements.from.length
-        .to.equal 3
-      expect result._requirements.from[0].type
-        .to.equal 'or'
-
     it "returns something with .type 'rule'", ->
       result = rule.from('not not φ').to('φ')
       expect(result.type).to.equal 'rule'
@@ -160,13 +150,6 @@ describe "`rule`", ->
   
   
   describe "`RequirementChecker`", ->
-    it "collects the metavariables from subproofs", ->
-      req = rule.subproof('[α]φ[τ-->α]', 'ψ')
-      line = { sentence : fol.parse 'not not A' }
-      rc = new rule.RequirementChecker(req, [line])
-      expect(rc.metaVariableNames.inSub.left.length).to.equal(1)
-      expect(rc.metaVariableNames.inSub.left[0]).to.equal('τ')
-      expect(rc.canCheckAlready()).to.be.false
     
     it "has a `canCheckAlready` method", ->
       req = fol.parse 'not not φ'
@@ -187,15 +170,6 @@ describe "`rule`", ->
       matches = 
         α : (fol.parse 'F(b)').termlist[0]
       rc = new rule.RequirementChecker(req, [line], matches)
-      expect(rc.canCheckAlready()).to.be.true
-    
-    it "says yes to `canCheckAlready` when possible for a subproof", ->
-      req = rule.subproof('[α]φ[τ-->α]', 'ψ')
-      line = { sentence : fol.parse 'not not A' }
-      matches = 
-        τ : (fol.parse 'F(x)').termlist[0]
-      rc = new rule.RequirementChecker(req, [line])
-      rc.setMatches(matches)
       expect(rc.canCheckAlready()).to.be.true
     
     it "can save and restore matches", ->
@@ -360,6 +334,13 @@ describe "`rule`", ->
       line = proof.getLine 1
       result = rule.to('α=α').check(line)
       expect(result).not.to.be.true
+    it "generates an error message when mistakes are made with rules with no from (as in = intro)", ->
+      proof = '''
+        1. a=b        // = intro
+      '''
+      proof = _parse proof
+      line = proof.getLine 1
+      result = rule.to('α=α').check(line)
       expect(line.status.getMessage().length > 0).to.be.true
 
     it "allows correct use of and intro for A and A citing the same line twice", ->
@@ -568,23 +549,25 @@ describe "`rule`", ->
       expect(result).to.be.true
       
     it "can do =elim where all the statements involve identity (c=a, c=b, reversed premise order version)", ->
-      proof = '''
+      proofTxt = '''
         1. c=b
         2. c=a
         3. a=b	// = elim 1,2
       '''
-      proof = _parse proof
+      proof = _parse proofTxt
       eqElimLeft = rule.from('α=β').and('φ').to('φ[α-->β]')
       eqElimRight = rule.from('α=β').and('φ').to('φ[β-->α]')
       line = proof.getLine(3)
       result1 = eqElimLeft.check line
       result2 = eqElimRight.check line
       result = result1 is true or result2 is true
-      console.log line.status.getMessage() if result isnt true
+      if result isnt true
+        console.log proofTxt
+        console.log line.status.getMessage() 
       expect(result).to.be.true
       
       
-  describe "_permutations", ->
+  describe "`_permutations`", ->
     it "can permute a single element list", ->
       result = rule._permutations [1]
       expect(result).to.deep.equal([[1]])

@@ -59,6 +59,28 @@ symbols =
     'all-not' : '∀~'
     'exists-not' : '∃~'
     'not-exists' : '~∃'
+    
+  forallx : 
+    'not' : '¬'
+    'false' : "⊥"
+    'contradiction' : "⊥" # for proof parser
+    'identity' : "="
+    'and' : "&"
+    'arrow' : "→"
+    'double_arrow' : "↔"
+    'or' : "∨"
+    'nor' :  "↓"
+    'nand' : "↑"
+    'universal_quantifier' : "∀"
+    'universal' : "∀" # for proof parser
+    'existential_quantifier' : "∃" 
+    'existential' : "∃" # for proof parser
+    quantifiersInBrackets : false
+    predicationBracketsAndCommas : false
+    # TODO: predicates can have number subscripts 
+    # (requires updates to parser and toString):
+    singleLetterPredicates : true
+
 
 module.exports = symbols
 

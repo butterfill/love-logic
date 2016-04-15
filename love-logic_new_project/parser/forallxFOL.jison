@@ -1,17 +1,15 @@
 /*  Defines a JISON lexer and parser for the first-order language
-    in Paul Teller’s A Modern Formal Logic Primer (1998).
+    in Magnus’ forallx (2014).
     The parser returns objects like {type:"and", left:[Object], right:[Object], location:{...}, symbol:'&'}.
     where `location` is the parser's object describing the location of the symbol parsed.
     and `symbol` is the symbol from the input.
     
-    Differences from Teller:
-      - this parser allows predicates like `F2x` (the name can match [A-Z][0-9]*)
-      
+    Features not implemented:
+      - forallx does not allow sentences like all x Fa (x must occur free, p. 69)
+          
     Note that this parser must create objects compatible with those
     created by the awFOL parse.
  
-    Tested against JISON version 0.4.15.
-    
     Note that the JISON lexer does not return the longest match; instead
     it matches the first rule it can.
 */
@@ -85,9 +83,9 @@ some|exists|"∃" { return 'existential_quantifier'; }
 /* null is permitted only in substitutions like `φ[α->null]` and `φ[ψ->null]` */
 [nN][uU][lL][lL]        { return 'null'; }
 
-[a-r][0-9]*\^          { return 'name_hat'; }
-[a-r][0-9]*             { return 'name'; }
-[xyzw][0-9]*           { return 'variable'; }
+[a-w][0-9]*\^          { return 'name_hat'; }
+[a-w][0-9]*             { return 'name'; }
+[xyz][0-9]*           { return 'variable'; }
 
 /*  Variables for terms and expressions. */
 [φψχ][0-9]*           { return 'expression_variable'; }
@@ -142,10 +140,10 @@ expressions
     ;
 
 e
-    : '(' existential_quantifier quantifier_variable ')' e
-        { $$ = {type:"existential_quantifier", symbol:$2, location:@2, boundVariable:$3, left:$5, right:null}; }
-    | '(' universal_quantifier quantifier_variable ')' e
-        { $$ = {type:"universal_quantifier", symbol:$2, location:@2, boundVariable:$3, left:$5, right:null}; }
+    : existential_quantifier quantifier_variable e
+        { $$ = {type:"existential_quantifier", symbol:$1, location:@1, boundVariable:$2, left:$3, right:null}; }
+    | universal_quantifier quantifier_variable e
+        { $$ = {type:"universal_quantifier", symbol:$1, location:@1, boundVariable:$2, left:$3, right:null}; }
     | e and e
         { $$ = {type:'and', symbol:$2, location:@2, left:$1, right:$3}; }
     | e or e

@@ -35,6 +35,7 @@ addStatus = require './add_status'
 # IMPORT TO MAKE SURE THAT THE RULES ARE REGISTERED
 require './fitch_rules'
 require './teller_rules'
+require './forallx_rules'
 dialectManager = require('../dialect_manager/dialectManager')
 
 # This is only used for testing (so that `verifyLine` can take text).

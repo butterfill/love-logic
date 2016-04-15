@@ -319,7 +319,11 @@ expressionToString = (expression, o={}) ->
     if e.termlist? 
       symbol = e.name or e.symbol or o.symbols[e.type] or e.type
       if o.symbols.singleLetterPredicates is true and e.type is 'predicate'
-        symbol = symbol[0]
+        # `symbol` is the name of the predicate.
+        # Replace the name with just the first letter unless the name
+        # is of the form /[A-Z][0-9]*/:
+        unless symbol.replace(/[A-Z][0-9]*/, '') is ''
+          symbol = symbol[0]
       if o.symbols.predicationBracketsAndCommas is false
         middle = "#{symbol}#{e.termlist.join('')}"
       else

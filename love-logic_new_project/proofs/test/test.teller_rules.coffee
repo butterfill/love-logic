@@ -16,12 +16,10 @@ popRulesAndParser = () ->
   dialectManager.setCurrentRules(oldRules.pop())
   dialectManager.setCurrentParser(oldParser.pop())
   dialectManager.setSymbols(oldSymbols.pop())
-setTellerRulesAndParser = () ->
+setRulesAndParser = () ->
   dialectManager.set('teller')
    
 testProof = (proofText, expected) ->
-  pushRulesAndParser()
-  setTellerRulesAndParser()
   theProof = proof.parse proofText
   console.log theProof if _.isString(theProof)
   newPrfTxt = theProof.toString({numberLines:true})
@@ -34,9 +32,14 @@ testProof = (proofText, expected) ->
     expect(result).to.be.true
   else
     expect(result).to.be.false
-  popRulesAndParser()
   
 describe "teller_rules", ->
+  before () ->
+    pushRulesAndParser()
+    setRulesAndParser()
+  after () ->
+    popRulesAndParser()
+  
   it "verifies a simple proof with teller_rules", ->
     text = '''
       | A                   premise

@@ -12,10 +12,14 @@ dialects =
     rules : 'teller'
   copi :
     symbols : 'copi'
-    # TODO : parser doesn’t exist yet; using teller is an approximation!
-    parser : 'teller'
-    # TODO : rules don’t exist yet!
-    rules : 'teller'
+    parser : 'copi'
+    # TODO : copi rules don’t exist yet!
+    rules : 'copi'
+  forallx :
+    symbols : 'forallx'
+    parser : 'forallx'
+    rules : 'forallx'
+    
 
 exports.set = (name) ->
   d = dialects[name]
@@ -30,14 +34,18 @@ currentSymbolsName = 'default'
 setSymbols = (name) ->
   currentSymbolsName = name
 exports.setSymbols = setSymbols
-exports.getSymbols = () ->
-  return symbols[currentSymbolsName]
+exports.getSymbols = (name) ->
+  unless name?
+    return symbols[currentSymbolsName]
+  return symbols[name]
 exports.getSymbolsName = () ->
   return currentSymbolsName
 
 parsers = 
   awFOL : require '../parser/awFOL'
+  copi : require '../parser/copiFOL'
   teller : require '../parser/tellerFOL'
+  forallx : require '../parser/forallxFOL'
 currentParserName = undefined
 exports.registerParser = (name, parser) ->
   parsers[name] = parser

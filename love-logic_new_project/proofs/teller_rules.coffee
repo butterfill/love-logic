@@ -1,5 +1,8 @@
 dialectManager = require('../dialect_manager/dialectManager')
 
+# Rules of proof for natural deduction as presented in 
+# Paul Teller’s A Modern Formal Logic Primer (1998).
+
 rule = require './rule'
 # We need `tellerFOL` because the hat notation (used for all intro)
 # isn’t part of `awFOL`.
@@ -38,7 +41,7 @@ rules =
     elim : rule.from('not not φ').to('φ')
     intro : [
       rule.from( rule.subproof('φ','ψ and not ψ') ).to('not φ')
-      rule.from( rule.subproof('φ', 'φ2').contains(['ψ', 'not ψ']) ).to('not φ')
+      rule.from( rule.subproof('φ', 'φ2').contains('ψ', 'not ψ') ).to('not φ')
     ]
 
   # contradiction :
@@ -91,7 +94,7 @@ rules =
   ]
   reductio : [
     rule.from( rule.subproof('not φ','ψ and not ψ') ).to('φ')
-    rule.from( rule.subproof('not φ', 'φ2').contains(['ψ', 'not ψ']) ).to('φ')
+    rule.from( rule.subproof('not φ', 'φ2').contains('ψ', 'not ψ') ).to('φ')
   ]
   DM : [
     rule.from('not (φ or ψ)').to('not φ and not ψ')

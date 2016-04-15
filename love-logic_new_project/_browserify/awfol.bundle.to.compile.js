@@ -335,32 +335,82 @@ global.proof = proof;
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../fol":7,"../proofs/proof":20}],5:[function(require,module,exports){
-var awFOL, currentParserName, currentRulesName, currentSymbols, parsers, ruleSets, symbols;
+},{"../fol":7,"../proofs/proof":24}],5:[function(require,module,exports){
+var currentParserName, currentRulesName, currentSymbolsName, dialects, parsers, ruleSets, setCurrentParser, setCurrentRules, setSymbols, symbols;
 
 symbols = require('../symbols');
 
-currentSymbols = symbols["default"];
-
-exports.setSymbols = function(name) {
-  return currentSymbols = symbols[name];
+dialects = {
+  "default": {
+    symbols: 'default',
+    parser: 'awFOL',
+    rules: 'fitch'
+  },
+  teller: {
+    symbols: 'teller',
+    parser: 'teller',
+    rules: 'teller'
+  },
+  copi: {
+    symbols: 'copi',
+    parser: 'copi',
+    rules: 'copi'
+  },
+  forallx: {
+    symbols: 'forallx',
+    parser: 'forallx',
+    rules: 'forallx'
+  }
 };
 
+exports.set = function(name) {
+  var d;
+  d = dialects[name];
+  setSymbols(d.symbols);
+  setCurrentParser(d.parser);
+  return setCurrentRules(d.rules);
+};
+
+exports.listDialects = function() {
+  return _.keys(dialects);
+};
+
+currentSymbolsName = 'default';
+
+setSymbols = function(name) {
+  return currentSymbolsName = name;
+};
+
+exports.setSymbols = setSymbols;
+
 exports.getSymbols = function(name) {
-  return currentSymbols;
+  if (name == null) {
+    return symbols[currentSymbolsName];
+  }
+  return symbols[name];
+};
+
+exports.getSymbolsName = function() {
+  return currentSymbolsName;
 };
 
 parsers = {
-  awFOL: awFOL = require('../parser/awFOL')
+  awFOL: require('../parser/awFOL'),
+  copi: require('../parser/copiFOL'),
+  teller: require('../parser/tellerFOL'),
+  forallx: require('../parser/forallxFOL')
 };
+
+currentParserName = void 0;
 
 exports.registerParser = function(name, parser) {
   return parsers[name] = parser;
 };
 
-currentParserName = 'awFOL';
-
 exports.getParser = function(name) {
+  if (!(name in parsers)) {
+    throw new Error("unknown parser " + name);
+  }
   return parsers[name];
 };
 
@@ -372,9 +422,16 @@ exports.getCurrentParserName = function() {
   return currentParserName;
 };
 
-exports.setCurrentParser = function(name) {
+setCurrentParser = function(name) {
+  if (!(name in parsers)) {
+    throw new Error("unknown parser ‘" + name + "’");
+  }
   return currentParserName = name;
 };
+
+exports.setCurrentParser = setCurrentParser;
+
+setCurrentParser('awFOL');
 
 ruleSets = {};
 
@@ -392,12 +449,14 @@ exports.getCurrentRulesName = function() {
   return currentRulesName;
 };
 
-exports.setCurrentRules = function(name) {
+setCurrentRules = function(name) {
   return currentRulesName = name;
 };
 
+exports.setCurrentRules = setCurrentRules;
 
-},{"../parser/awFOL":11,"../symbols":23}],6:[function(require,module,exports){
+
+},{"../parser/awFOL":11,"../parser/copiFOL":12,"../parser/forallxFOL":13,"../parser/tellerFOL":14,"../symbols":28}],6:[function(require,module,exports){
 var Evaluator, _, dialectManager, evaluate, parser;
 
 _ = require('lodash');
@@ -559,6 +618,10 @@ exports.parse = parse;
 
 exports.symbols = symbols;
 
+exports.setDialect = function(name) {
+  return dialectManager.set(name);
+};
+
 _decorate = function(expression) {
   var walker;
   walker = function(e) {
@@ -601,7 +664,6 @@ _decorate = function(expression) {
     e.findMatches = function(pattern, _matches, o) {
       var result;
       result = match.find(e, pattern, _matches, o);
-      _decorate(result);
       return result;
     };
     e.applyMatches = function(matches) {
@@ -720,7 +782,7 @@ _decorate = function(expression) {
 exports._decorate = _decorate;
 
 
-},{"./dialect_manager/dialectManager":5,"./evaluate":6,"./match":8,"./normal_form":10,"./substitute":22,"./symbols":23,"./util":24,"lodash":9}],8:[function(require,module,exports){
+},{"./dialect_manager/dialectManager":5,"./evaluate":6,"./match":8,"./normal_form":10,"./substitute":27,"./symbols":28,"./util":29,"lodash":9}],8:[function(require,module,exports){
 var _, _addSubToEverySentence, _addSubToEveryTerm, _addSubToEveryX, _applyOneSubstitution, _applyOrSkipSubstitutions, _canApplySubAtInnermostPoint, _isTermSub, _moveAllSubsInwards, _pullSub, _removeInefficaciousSubs, _skipOneSubstitution, apply, doAfterApplyingSubstitutions, find, findWithoutApplyingSubs, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -759,15 +821,15 @@ findWithoutApplyingSubs = function(expression, pattern, _matches) {
     _matches = {};
   }
   comparator = function(expression, pattern) {
-    var expressionMinusBox, ref, targetValue, targetVar;
+    var expressionMinusBox, ref, ref1, targetValue, targetVar;
     if ((pattern != null ? pattern.type : void 0) == null) {
       return void 0;
     }
-    if ((ref = pattern.type) === 'expression_variable' || ref === 'term_metavariable') {
+    if ((ref = pattern.type) === 'expression_variable' || ref === 'term_metavariable' || ref === 'term_metavariable_hat') {
       if (pattern.type === 'expression_variable') {
         targetVar = pattern.letter;
       }
-      if (pattern.type === 'term_metavariable') {
+      if ((ref1 = pattern.type) === 'term_metavariable' || ref1 === 'term_metavariable_hat') {
         targetVar = pattern.name;
       }
       targetValue = expression;
@@ -775,6 +837,11 @@ findWithoutApplyingSubs = function(expression, pattern, _matches) {
         return util.areIdenticalExpressions(targetValue, _matches[targetVar]);
       } else {
         _matches = _.clone(_matches);
+        if (pattern.type === 'term_metavariable_hat') {
+          if (targetValue.type !== 'name_hat') {
+            return false;
+          }
+        }
         _matches[targetVar] = targetValue;
         if (pattern.box != null) {
           expressionMinusBox = util.cloneExpression(expression);
@@ -1017,14 +1084,14 @@ apply = function(pattern, matches, o) {
     o = {};
   }
   walker = function(pattern) {
-    var ref, targetVar, toReplace;
-    if (!(((pattern != null ? pattern.type : void 0) != null) && ((ref = pattern.type) === 'expression_variable' || ref === 'term_metavariable'))) {
+    var ref, ref1, targetVar, toReplace;
+    if (!(((pattern != null ? pattern.type : void 0) != null) && ((ref = pattern.type) === 'expression_variable' || ref === 'term_metavariable' || ref === 'term_metavariable_hat'))) {
       return pattern;
     }
     if (pattern.type === 'expression_variable') {
       targetVar = pattern.letter;
     }
-    if (pattern.type === 'term_metavariable') {
+    if ((ref1 = pattern.type) === 'term_metavariable' || ref1 === 'term_metavariable_hat') {
       targetVar = pattern.name;
     }
     if (!(targetVar in matches)) {
@@ -1049,7 +1116,7 @@ apply = function(pattern, matches, o) {
 exports.apply = apply;
 
 
-},{"./util":24,"lodash":9}],9:[function(require,module,exports){
+},{"./util":29,"lodash":9}],9:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -13891,7 +13958,7 @@ removeQuantifiersThatBindNothing = function(expression) {
 exports.removeQuantifiersThatBindNothing = removeQuantifiersThatBindNothing;
 
 
-},{"./match":8,"./substitute":22,"./util":24,"lodash":9}],11:[function(require,module,exports){
+},{"./match":8,"./substitute":27,"./util":29,"lodash":9}],11:[function(require,module,exports){
 (function (process){
 /* parser generated by jison 0.4.17 */
 /*
@@ -14653,6 +14720,2295 @@ if (typeof module !== 'undefined' && require.main === module) {
 }
 }).call(this,require('_process'))
 },{"_process":3,"fs":1,"path":2}],12:[function(require,module,exports){
+(function (process){
+/* parser generated by jison 0.4.17 */
+/*
+  Returns a Parser object of the following structure:
+
+  Parser: {
+    yy: {}
+  }
+
+  Parser.prototype: {
+    yy: {},
+    trace: function(),
+    symbols_: {associative list: name ==> number},
+    terminals_: {associative list: number ==> name},
+    productions_: [...],
+    performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate, $$, _$),
+    table: [...],
+    defaultActions: {...},
+    parseError: function(str, hash),
+    parse: function(input),
+
+    lexer: {
+        EOF: 1,
+        parseError: function(str, hash),
+        setInput: function(input),
+        input: function(),
+        unput: function(str),
+        more: function(),
+        less: function(n),
+        pastInput: function(),
+        upcomingInput: function(),
+        showPosition: function(),
+        test_match: function(regex_match_array, rule_index),
+        next: function(),
+        lex: function(),
+        begin: function(condition),
+        popState: function(),
+        _currentRules: function(),
+        topState: function(),
+        pushState: function(condition),
+
+        options: {
+            ranges: boolean           (optional: true ==> token location info will include a .range[] member)
+            flex: boolean             (optional: true ==> flex-like lexing behaviour where the rules are tested exhaustively to find the longest match)
+            backtrack_lexer: boolean  (optional: true ==> lexer regexes are tested in order and for each matching regex the action code is invoked; the lexer terminates the scan when a token is returned by the action code)
+        },
+
+        performAction: function(yy, yy_, $avoiding_name_collisions, YY_START),
+        rules: [...],
+        conditions: {associative list: name ==> set},
+    }
+  }
+
+
+  token location info (@$, _$, etc.): {
+    first_line: n,
+    last_line: n,
+    first_column: n,
+    last_column: n,
+    range: [start_number, end_number]       (where the numbers are indexes into the input string, regular zero-based)
+  }
+
+
+  the parseError function receives a 'hash' object with these members for lexer and parser errors: {
+    text:        (matched text)
+    token:       (the produced terminal token, if any)
+    line:        (yylineno)
+  }
+  while parser (grammar) errors will also provide these members, i.e. parser errors deliver a superset of attributes: {
+    loc:         (yylloc)
+    expected:    (string describing the set of expected tokens)
+    recoverable: (boolean: TRUE when the parser has a error recovery rule available for this particular error)
+  }
+*/
+var copiFOL = (function(){
+var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,4],$V1=[1,5],$V2=[1,6],$V3=[1,7],$V4=[1,9],$V5=[1,12],$V6=[1,13],$V7=[1,18],$V8=[1,19],$V9=[1,14],$Va=[1,15],$Vb=[1,17],$Vc=[1,21],$Vd=[1,22],$Ve=[1,23],$Vf=[1,24],$Vg=[1,25],$Vh=[1,26],$Vi=[1,27],$Vj=[1,30],$Vk=[5,10,13,14,15,16,17,18,27,28,38],$Vl=[1,38],$Vm=[5,10,13,14,15,16,17,18,27,28,38,39],$Vn=[5,10,13,14,15,16,17,18,26,27,28,32,33,34,35,36,38,39],$Vo=[2,31],$Vp=[5,10,13,14,15,16,17,18,28,38],$Vq=[5,10,28,38],$Vr=[28,38];
+var parser = {trace: function trace() { },
+yy: {},
+symbols_: {"error":2,"expressions":3,"e":4,"EOF":5,"box":6,"(":7,"existential_quantifier":8,"quantifier_variable":9,")":10,"universal_quantifier":11,"variable_or_metavariable":12,"and":13,"or":14,"nand":15,"nor":16,"arrow":17,"double_arrow":18,"not":19,"true":20,"false":21,"sentence_letter_or_expression_variable":22,"predicate":23,"termlist":24,"term":25,"identity":26,"[":27,"]":28,"substitution_list":29,"expression_variable":30,"sentence_letter":31,"variable":32,"term_metavariable":33,"name":34,"name_hat":35,"term_metavariable_hat":36,"substitution":37,",":38,"substitution_symbol":39,"null":40,"$accept":0,"$end":1},
+terminals_: {2:"error",5:"EOF",7:"(",8:"existential_quantifier",10:")",11:"universal_quantifier",13:"and",14:"or",15:"nand",16:"nor",17:"arrow",18:"double_arrow",19:"not",20:"true",21:"false",23:"predicate",26:"identity",27:"[",28:"]",30:"expression_variable",31:"sentence_letter",32:"variable",33:"term_metavariable",34:"name",35:"name_hat",36:"term_metavariable_hat",38:",",39:"substitution_symbol",40:"null"},
+productions_: [0,[3,2],[3,2],[3,3],[4,5],[4,5],[4,4],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,2],[4,1],[4,1],[4,1],[4,2],[4,3],[4,3],[4,3],[4,4],[22,1],[22,1],[12,1],[12,1],[9,1],[24,1],[24,2],[25,1],[25,1],[25,1],[25,1],[29,1],[29,3],[37,3],[37,3],[37,3],[37,3],[6,3]],
+performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate /* action[1] */, $$ /* vstack */, _$ /* lstack */) {
+/* this == yyval */
+
+var $0 = $$.length - 1;
+switch (yystate) {
+case 1: case 2:
+ return $$[$0-1]; 
+break;
+case 3:
+ $$[$0-1].box = $$[$0-2]; return $$[$0-1]; 
+break;
+case 4:
+ this.$ = {type:"existential_quantifier", symbol:$$[$0-3], location:_$[$0-3], boundVariable:$$[$0-2], left:$$[$0], right:null}; 
+break;
+case 5:
+ this.$ = {type:"universal_quantifier", symbol:$$[$0-3], location:_$[$0-3], boundVariable:$$[$0-2], left:$$[$0], right:null}; 
+break;
+case 6:
+ this.$ = {type:"universal_quantifier", symbol:'', location:_$[$0-2], boundVariable:$$[$0-2], left:$$[$0], right:null}; 
+break;
+case 7:
+ this.$ = {type:'and', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 8:
+ this.$ = {type:'or', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 9:
+ this.$ = {type:'nand', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 10:
+ this.$ = {type:'nor', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 11:
+ this.$ = {type:'arrow', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 12:
+ this.$ = {type:'double_arrow', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 13:
+ this.$ = {type:'not', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0], right:null}; 
+break;
+case 14:
+ this.$ = {type:'value', symbol:$$[$0], location:_$[$0], value:true, left:null, right:null}; 
+break;
+case 15:
+ this.$ = {type:'value', symbol:$$[$0], location:_$[$0], value:false, left:null, right:null}; 
+break;
+case 16: case 26: case 31:
+ this.$ = $$[$0]; 
+break;
+case 17:
+ this.$ = { type:'predicate', name:$$[$0-1], location:_$[$0-1], termlist:$$[$0] } ; 
+break;
+case 18:
+ this.$ = {type:'identity', symbol:$$[$0-1], termlist:[$$[$0-2], $$[$0]] }; 
+break;
+case 19: case 20:
+ this.$ = $$[$0-1]; 
+break;
+case 21:
+
+         if( $$[$0-3].substitutions && $$[$0-3].substitutions.length ) {
+           $$[$0-3].substitutions = $$[$0-3].substitutions.concat($$[$0-1]);
+         } else {
+           $$[$0-3].substitutions = $$[$0-1];
+         }
+         this.$ = $$[$0-3]; 
+      
+break;
+case 22:
+ this.$ = {type:'expression_variable', location:_$[$0], letter:$$[$0], left:null, right:null}; 
+break;
+case 23:
+ this.$ = {type:'sentence_letter', location:_$[$0], letter:$$[$0], left:null, right:null}; 
+break;
+case 24:
+ this.$ = {type:'variable', name:$$[$0], location:_$[$0]}; 
+break;
+case 25:
+ this.$ = {type:'term_metavariable', name:$$[$0], location:_$[$0]}; 
+break;
+case 27: case 33:
+ this.$ = [$$[$0]] 
+break;
+case 28:
+ this.$ = [$$[$0-1]].concat($$[$0]) 
+break;
+case 29:
+ this.$ = {type:'name', name:$$[$0], location:_$[$0]}; 
+break;
+case 30:
+ this.$ = {type:'name_hat', name:$$[$0], location:_$[$0]}; 
+break;
+case 32:
+ this.$ = {type:'term_metavariable_hat', name:$$[$0], location:_$[$0]}; 
+break;
+case 34:
+ this.$ = [$$[$0-2]].concat($$[$0]) 
+break;
+case 35: case 37:
+ this.$ = {type:'substitution', from:$$[$0-2], to:$$[$0], symbol:$$[$0-1]}; 
+break;
+case 36: case 38:
+ this.$ = {type:'substitution', from:$$[$0-2], to:null, symbol:$$[$0-1]}; 
+break;
+case 39:
+ this.$ = {type:'box', term:$$[$0-1]}; 
+break;
+}
+},
+table: [{3:1,4:2,6:3,7:$V0,12:16,19:$V1,20:$V2,21:$V3,22:8,23:$V4,25:10,27:[1,11],30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{1:[3]},{5:[1,20],13:$Vc,14:$Vd,15:$Ve,16:$Vf,17:$Vg,18:$Vh,27:$Vi},{4:29,5:[1,28],7:$V0,12:16,19:$V1,20:$V2,21:$V3,22:8,23:$V4,25:10,27:$Vj,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:34,7:$V0,8:[1,31],11:[1,32],12:33,19:$V1,20:$V2,21:$V3,22:8,23:$V4,25:10,27:$Vj,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:35,7:$V0,12:16,19:$V1,20:$V2,21:$V3,22:8,23:$V4,25:10,27:$Vj,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},o($Vk,[2,14]),o($Vk,[2,15]),o($Vk,[2,16]),{12:16,24:36,25:37,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{26:$Vl},{4:39,7:$V0,12:16,19:$V1,20:$V2,21:$V3,22:8,23:$V4,25:40,27:$Vj,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},o($Vm,[2,22]),o($Vm,[2,23]),o($Vn,[2,29]),o($Vn,[2,30]),o($Vn,$Vo),o($Vn,[2,32]),o($Vn,[2,24]),o($Vn,[2,25]),{1:[2,1]},{4:41,7:$V0,12:16,19:$V1,20:$V2,21:$V3,22:8,23:$V4,25:10,27:$Vj,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:42,7:$V0,12:16,19:$V1,20:$V2,21:$V3,22:8,23:$V4,25:10,27:$Vj,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:43,7:$V0,12:16,19:$V1,20:$V2,21:$V3,22:8,23:$V4,25:10,27:$Vj,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:44,7:$V0,12:16,19:$V1,20:$V2,21:$V3,22:8,23:$V4,25:10,27:$Vj,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:45,7:$V0,12:16,19:$V1,20:$V2,21:$V3,22:8,23:$V4,25:10,27:$Vj,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:46,7:$V0,12:16,19:$V1,20:$V2,21:$V3,22:8,23:$V4,25:10,27:$Vj,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{12:16,22:50,25:49,29:47,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb,37:48},{1:[2,2]},{5:[1,51],13:$Vc,14:$Vd,15:$Ve,16:$Vf,17:$Vg,18:$Vh,27:$Vi},{4:39,7:$V0,12:16,19:$V1,20:$V2,21:$V3,22:8,23:$V4,25:10,27:$Vj,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{9:52,12:53,32:$V7,33:$V8},{9:54,12:53,32:$V7,33:$V8},{10:[1,55],26:$Vo},{10:[1,56],13:$Vc,14:$Vd,15:$Ve,16:$Vf,17:$Vg,18:$Vh,27:$Vi},o($Vp,[2,13],{27:$Vi}),o($Vk,[2,17]),o($Vk,[2,27],{12:16,25:37,24:57,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb}),{12:16,25:58,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{13:$Vc,14:$Vd,15:$Ve,16:$Vf,17:$Vg,18:$Vh,27:$Vi,28:[1,59]},{26:$Vl,28:[1,60]},o($Vp,[2,7],{27:$Vi}),o($Vp,[2,8],{27:$Vi}),o($Vp,[2,9],{27:$Vi}),o($Vp,[2,10],{27:$Vi}),o($Vq,[2,11],{13:$Vc,14:$Vd,15:$Ve,16:$Vf,27:$Vi}),o($Vq,[2,12],{13:$Vc,14:$Vd,15:$Ve,16:$Vf,27:$Vi}),{28:[1,61]},{28:[2,33],38:[1,62]},{39:[1,63]},{39:[1,64]},{1:[2,3]},{10:[1,65]},{10:[2,26]},{10:[1,66]},{4:67,7:$V0,12:16,19:$V1,20:$V2,21:$V3,22:8,23:$V4,25:10,27:$Vj,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},o($Vk,[2,19]),o($Vk,[2,28]),o($Vk,[2,18]),o($Vk,[2,20]),o([5,7,19,20,21,23,27,30,31,32,33,34,35,36],[2,39]),o($Vk,[2,21]),{12:16,22:50,25:49,29:68,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb,37:48},{12:16,25:69,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb,40:[1,70]},{4:71,7:$V0,12:16,19:$V1,20:$V2,21:$V3,22:8,23:$V4,25:10,27:$Vj,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb,40:[1,72]},{4:73,7:$V0,12:16,19:$V1,20:$V2,21:$V3,22:8,23:$V4,25:10,27:$Vj,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:74,7:$V0,12:16,19:$V1,20:$V2,21:$V3,22:8,23:$V4,25:10,27:$Vj,30:$V5,31:$V6,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},o($Vp,[2,6],{27:$Vi}),{28:[2,34]},o($Vr,[2,35]),o($Vr,[2,36]),o($Vr,[2,37],{13:$Vc,14:$Vd,15:$Ve,16:$Vf,17:$Vg,18:$Vh,27:$Vi}),o($Vr,[2,38]),o($Vp,[2,4],{27:$Vi}),o($Vp,[2,5],{27:$Vi})],
+defaultActions: {20:[2,1],28:[2,2],51:[2,3],53:[2,26],68:[2,34]},
+parseError: function parseError(str, hash) {
+    if (hash.recoverable) {
+        this.trace(str);
+    } else {
+        function _parseError (msg, hash) {
+            this.message = msg;
+            this.hash = hash;
+        }
+        _parseError.prototype = Error;
+
+        throw new _parseError(str, hash);
+    }
+},
+parse: function parse(input) {
+    var self = this, stack = [0], tstack = [], vstack = [null], lstack = [], table = this.table, yytext = '', yylineno = 0, yyleng = 0, recovering = 0, TERROR = 2, EOF = 1;
+    var args = lstack.slice.call(arguments, 1);
+    var lexer = Object.create(this.lexer);
+    var sharedState = { yy: {} };
+    for (var k in this.yy) {
+        if (Object.prototype.hasOwnProperty.call(this.yy, k)) {
+            sharedState.yy[k] = this.yy[k];
+        }
+    }
+    lexer.setInput(input, sharedState.yy);
+    sharedState.yy.lexer = lexer;
+    sharedState.yy.parser = this;
+    if (typeof lexer.yylloc == 'undefined') {
+        lexer.yylloc = {};
+    }
+    var yyloc = lexer.yylloc;
+    lstack.push(yyloc);
+    var ranges = lexer.options && lexer.options.ranges;
+    if (typeof sharedState.yy.parseError === 'function') {
+        this.parseError = sharedState.yy.parseError;
+    } else {
+        this.parseError = Object.getPrototypeOf(this).parseError;
+    }
+    function popStack(n) {
+        stack.length = stack.length - 2 * n;
+        vstack.length = vstack.length - n;
+        lstack.length = lstack.length - n;
+    }
+    _token_stack:
+        var lex = function () {
+            var token;
+            token = lexer.lex() || EOF;
+            if (typeof token !== 'number') {
+                token = self.symbols_[token] || token;
+            }
+            return token;
+        };
+    var symbol, preErrorSymbol, state, action, a, r, yyval = {}, p, len, newState, expected;
+    while (true) {
+        state = stack[stack.length - 1];
+        if (this.defaultActions[state]) {
+            action = this.defaultActions[state];
+        } else {
+            if (symbol === null || typeof symbol == 'undefined') {
+                symbol = lex();
+            }
+            action = table[state] && table[state][symbol];
+        }
+                    if (typeof action === 'undefined' || !action.length || !action[0]) {
+                var errStr = '';
+                expected = [];
+                for (p in table[state]) {
+                    if (this.terminals_[p] && p > TERROR) {
+                        expected.push('\'' + this.terminals_[p] + '\'');
+                    }
+                }
+                if (lexer.showPosition) {
+                    errStr = 'Parse error on line ' + (yylineno + 1) + ':\n' + lexer.showPosition() + '\nExpecting ' + expected.join(', ') + ', got \'' + (this.terminals_[symbol] || symbol) + '\'';
+                } else {
+                    errStr = 'Parse error on line ' + (yylineno + 1) + ': Unexpected ' + (symbol == EOF ? 'end of input' : '\'' + (this.terminals_[symbol] || symbol) + '\'');
+                }
+                this.parseError(errStr, {
+                    text: lexer.match,
+                    token: this.terminals_[symbol] || symbol,
+                    line: lexer.yylineno,
+                    loc: yyloc,
+                    expected: expected
+                });
+            }
+        if (action[0] instanceof Array && action.length > 1) {
+            throw new Error('Parse Error: multiple actions possible at state: ' + state + ', token: ' + symbol);
+        }
+        switch (action[0]) {
+        case 1:
+            stack.push(symbol);
+            vstack.push(lexer.yytext);
+            lstack.push(lexer.yylloc);
+            stack.push(action[1]);
+            symbol = null;
+            if (!preErrorSymbol) {
+                yyleng = lexer.yyleng;
+                yytext = lexer.yytext;
+                yylineno = lexer.yylineno;
+                yyloc = lexer.yylloc;
+                if (recovering > 0) {
+                    recovering--;
+                }
+            } else {
+                symbol = preErrorSymbol;
+                preErrorSymbol = null;
+            }
+            break;
+        case 2:
+            len = this.productions_[action[1]][1];
+            yyval.$ = vstack[vstack.length - len];
+            yyval._$ = {
+                first_line: lstack[lstack.length - (len || 1)].first_line,
+                last_line: lstack[lstack.length - 1].last_line,
+                first_column: lstack[lstack.length - (len || 1)].first_column,
+                last_column: lstack[lstack.length - 1].last_column
+            };
+            if (ranges) {
+                yyval._$.range = [
+                    lstack[lstack.length - (len || 1)].range[0],
+                    lstack[lstack.length - 1].range[1]
+                ];
+            }
+            r = this.performAction.apply(yyval, [
+                yytext,
+                yyleng,
+                yylineno,
+                sharedState.yy,
+                action[1],
+                vstack,
+                lstack
+            ].concat(args));
+            if (typeof r !== 'undefined') {
+                return r;
+            }
+            if (len) {
+                stack = stack.slice(0, -1 * len * 2);
+                vstack = vstack.slice(0, -1 * len);
+                lstack = lstack.slice(0, -1 * len);
+            }
+            stack.push(this.productions_[action[1]][0]);
+            vstack.push(yyval.$);
+            lstack.push(yyval._$);
+            newState = table[stack[stack.length - 2]][stack[stack.length - 1]];
+            stack.push(newState);
+            break;
+        case 3:
+            return true;
+        }
+    }
+    return true;
+}};
+/* generated by jison-lex 0.3.4 */
+var lexer = (function(){
+var lexer = ({
+
+EOF:1,
+
+parseError:function parseError(str, hash) {
+        if (this.yy.parser) {
+            this.yy.parser.parseError(str, hash);
+        } else {
+            throw new Error(str);
+        }
+    },
+
+// resets the lexer, sets new input
+setInput:function (input, yy) {
+        this.yy = yy || this.yy || {};
+        this._input = input;
+        this._more = this._backtrack = this.done = false;
+        this.yylineno = this.yyleng = 0;
+        this.yytext = this.matched = this.match = '';
+        this.conditionStack = ['INITIAL'];
+        this.yylloc = {
+            first_line: 1,
+            first_column: 0,
+            last_line: 1,
+            last_column: 0
+        };
+        if (this.options.ranges) {
+            this.yylloc.range = [0,0];
+        }
+        this.offset = 0;
+        return this;
+    },
+
+// consumes and returns one char from the input
+input:function () {
+        var ch = this._input[0];
+        this.yytext += ch;
+        this.yyleng++;
+        this.offset++;
+        this.match += ch;
+        this.matched += ch;
+        var lines = ch.match(/(?:\r\n?|\n).*/g);
+        if (lines) {
+            this.yylineno++;
+            this.yylloc.last_line++;
+        } else {
+            this.yylloc.last_column++;
+        }
+        if (this.options.ranges) {
+            this.yylloc.range[1]++;
+        }
+
+        this._input = this._input.slice(1);
+        return ch;
+    },
+
+// unshifts one char (or a string) into the input
+unput:function (ch) {
+        var len = ch.length;
+        var lines = ch.split(/(?:\r\n?|\n)/g);
+
+        this._input = ch + this._input;
+        this.yytext = this.yytext.substr(0, this.yytext.length - len);
+        //this.yyleng -= len;
+        this.offset -= len;
+        var oldLines = this.match.split(/(?:\r\n?|\n)/g);
+        this.match = this.match.substr(0, this.match.length - 1);
+        this.matched = this.matched.substr(0, this.matched.length - 1);
+
+        if (lines.length - 1) {
+            this.yylineno -= lines.length - 1;
+        }
+        var r = this.yylloc.range;
+
+        this.yylloc = {
+            first_line: this.yylloc.first_line,
+            last_line: this.yylineno + 1,
+            first_column: this.yylloc.first_column,
+            last_column: lines ?
+                (lines.length === oldLines.length ? this.yylloc.first_column : 0)
+                 + oldLines[oldLines.length - lines.length].length - lines[0].length :
+              this.yylloc.first_column - len
+        };
+
+        if (this.options.ranges) {
+            this.yylloc.range = [r[0], r[0] + this.yyleng - len];
+        }
+        this.yyleng = this.yytext.length;
+        return this;
+    },
+
+// When called from action, caches matched text and appends it on next action
+more:function () {
+        this._more = true;
+        return this;
+    },
+
+// When called from action, signals the lexer that this rule fails to match the input, so the next matching rule (regex) should be tested instead.
+reject:function () {
+        if (this.options.backtrack_lexer) {
+            this._backtrack = true;
+        } else {
+            return this.parseError('Lexical error on line ' + (this.yylineno + 1) + '. You can only invoke reject() in the lexer when the lexer is of the backtracking persuasion (options.backtrack_lexer = true).\n' + this.showPosition(), {
+                text: "",
+                token: null,
+                line: this.yylineno
+            });
+
+        }
+        return this;
+    },
+
+// retain first n characters of the match
+less:function (n) {
+        this.unput(this.match.slice(n));
+    },
+
+// displays already matched input, i.e. for error messages
+pastInput:function () {
+        var past = this.matched.substr(0, this.matched.length - this.match.length);
+        return (past.length > 20 ? '...':'') + past.substr(-20).replace(/\n/g, "");
+    },
+
+// displays upcoming input, i.e. for error messages
+upcomingInput:function () {
+        var next = this.match;
+        if (next.length < 20) {
+            next += this._input.substr(0, 20-next.length);
+        }
+        return (next.substr(0,20) + (next.length > 20 ? '...' : '')).replace(/\n/g, "");
+    },
+
+// displays the character position where the lexing error occurred, i.e. for error messages
+showPosition:function () {
+        var pre = this.pastInput();
+        var c = new Array(pre.length + 1).join("-");
+        return pre + this.upcomingInput() + "\n" + c + "^";
+    },
+
+// test the lexed token: return FALSE when not a match, otherwise return token
+test_match:function (match, indexed_rule) {
+        var token,
+            lines,
+            backup;
+
+        if (this.options.backtrack_lexer) {
+            // save context
+            backup = {
+                yylineno: this.yylineno,
+                yylloc: {
+                    first_line: this.yylloc.first_line,
+                    last_line: this.last_line,
+                    first_column: this.yylloc.first_column,
+                    last_column: this.yylloc.last_column
+                },
+                yytext: this.yytext,
+                match: this.match,
+                matches: this.matches,
+                matched: this.matched,
+                yyleng: this.yyleng,
+                offset: this.offset,
+                _more: this._more,
+                _input: this._input,
+                yy: this.yy,
+                conditionStack: this.conditionStack.slice(0),
+                done: this.done
+            };
+            if (this.options.ranges) {
+                backup.yylloc.range = this.yylloc.range.slice(0);
+            }
+        }
+
+        lines = match[0].match(/(?:\r\n?|\n).*/g);
+        if (lines) {
+            this.yylineno += lines.length;
+        }
+        this.yylloc = {
+            first_line: this.yylloc.last_line,
+            last_line: this.yylineno + 1,
+            first_column: this.yylloc.last_column,
+            last_column: lines ?
+                         lines[lines.length - 1].length - lines[lines.length - 1].match(/\r?\n?/)[0].length :
+                         this.yylloc.last_column + match[0].length
+        };
+        this.yytext += match[0];
+        this.match += match[0];
+        this.matches = match;
+        this.yyleng = this.yytext.length;
+        if (this.options.ranges) {
+            this.yylloc.range = [this.offset, this.offset += this.yyleng];
+        }
+        this._more = false;
+        this._backtrack = false;
+        this._input = this._input.slice(match[0].length);
+        this.matched += match[0];
+        token = this.performAction.call(this, this.yy, this, indexed_rule, this.conditionStack[this.conditionStack.length - 1]);
+        if (this.done && this._input) {
+            this.done = false;
+        }
+        if (token) {
+            return token;
+        } else if (this._backtrack) {
+            // recover context
+            for (var k in backup) {
+                this[k] = backup[k];
+            }
+            return false; // rule action called reject() implying the next rule should be tested instead.
+        }
+        return false;
+    },
+
+// return next match in input
+next:function () {
+        if (this.done) {
+            return this.EOF;
+        }
+        if (!this._input) {
+            this.done = true;
+        }
+
+        var token,
+            match,
+            tempMatch,
+            index;
+        if (!this._more) {
+            this.yytext = '';
+            this.match = '';
+        }
+        var rules = this._currentRules();
+        for (var i = 0; i < rules.length; i++) {
+            tempMatch = this._input.match(this.rules[rules[i]]);
+            if (tempMatch && (!match || tempMatch[0].length > match[0].length)) {
+                match = tempMatch;
+                index = i;
+                if (this.options.backtrack_lexer) {
+                    token = this.test_match(tempMatch, rules[i]);
+                    if (token !== false) {
+                        return token;
+                    } else if (this._backtrack) {
+                        match = false;
+                        continue; // rule action called reject() implying a rule MISmatch.
+                    } else {
+                        // else: this is a lexer rule which consumes input without producing a token (e.g. whitespace)
+                        return false;
+                    }
+                } else if (!this.options.flex) {
+                    break;
+                }
+            }
+        }
+        if (match) {
+            token = this.test_match(match, rules[index]);
+            if (token !== false) {
+                return token;
+            }
+            // else: this is a lexer rule which consumes input without producing a token (e.g. whitespace)
+            return false;
+        }
+        if (this._input === "") {
+            return this.EOF;
+        } else {
+            return this.parseError('Lexical error on line ' + (this.yylineno + 1) + '. Unrecognized text.\n' + this.showPosition(), {
+                text: "",
+                token: null,
+                line: this.yylineno
+            });
+        }
+    },
+
+// return next match that has a token
+lex:function lex() {
+        var r = this.next();
+        if (r) {
+            return r;
+        } else {
+            return this.lex();
+        }
+    },
+
+// activates a new lexer condition state (pushes the new lexer condition state onto the condition stack)
+begin:function begin(condition) {
+        this.conditionStack.push(condition);
+    },
+
+// pop the previously active lexer condition state off the condition stack
+popState:function popState() {
+        var n = this.conditionStack.length - 1;
+        if (n > 0) {
+            return this.conditionStack.pop();
+        } else {
+            return this.conditionStack[0];
+        }
+    },
+
+// produce the lexer rule set which is active for the currently active lexer condition state
+_currentRules:function _currentRules() {
+        if (this.conditionStack.length && this.conditionStack[this.conditionStack.length - 1]) {
+            return this.conditions[this.conditionStack[this.conditionStack.length - 1]].rules;
+        } else {
+            return this.conditions["INITIAL"].rules;
+        }
+    },
+
+// return the currently active lexer condition state; when an index argument is provided it produces the N-th previous condition state, if available
+topState:function topState(n) {
+        n = this.conditionStack.length - 1 - Math.abs(n || 0);
+        if (n >= 0) {
+            return this.conditionStack[n];
+        } else {
+            return "INITIAL";
+        }
+    },
+
+// alias for begin(condition)
+pushState:function pushState(condition) {
+        this.begin(condition);
+    },
+
+// return the number of states currently on the stack
+stateStackSize:function stateStackSize() {
+        return this.conditionStack.length;
+    },
+options: {},
+performAction: function anonymous(yy,yy_,$avoiding_name_collisions,YY_START) {
+var YYSTATE=YY_START;
+switch($avoiding_name_collisions) {
+case 0: /* skip whitespace */             
+break;
+case 1: return 7; 
+break;
+case 2: return 10; 
+break;
+case 3: return 27; 
+break;
+case 4: return 28; 
+break;
+case 5: return 38; 
+break;
+case 6: return 23;               
+break;
+case 7: return 39; 
+break;
+case 8: return 20; 
+break;
+case 9: return 21; 
+break;
+case 10: return 26; 
+break;
+case 11: return 13; 
+break;
+case 12: return 17; 
+break;
+case 13: return 18; 
+break;
+case 14: return 14; 
+break;
+case 15: return 19; 
+break;
+case 16: return 16; 
+break;
+case 17: return 15; 
+break;
+case 18: return 11; 
+break;
+case 19: return 8; 
+break;
+case 20: return 31; 
+break;
+case 21: return 40; 
+break;
+case 22: return 35; 
+break;
+case 23: return 34; 
+break;
+case 24: return 32; 
+break;
+case 25: return 30; 
+break;
+case 26: return 36; 
+break;
+case 27: return 33; 
+break;
+case 28: return 5; 
+break;
+case 29: return 'invalid_character'; 
+break;
+}
+},
+rules: [/^(?:\s+)/,/^(?:\()/,/^(?:\))/,/^(?:\[)/,/^(?:\])/,/^(?:,)/,/^(?:[A-Z][0-9]*(?=([a-zαβγτ]+)))/,/^(?:-->)/,/^(?:true\b)/,/^(?:false|⊥|_\|_|contradiction|contra\b)/,/^(?:=)/,/^(?:and|&|∧|•)/,/^(?:arrow|->|⇒|→|⊃)/,/^(?:↔|≡|⇔|double_arrow|<->)/,/^(?:or|∨|\+|ǀǀ|\|)/,/^(?:not|¬|~|˜|!)/,/^(?:nor|↓)/,/^(?:nand|↑)/,/^(?:all|∀|every\b)/,/^(?:some|exists|∃)/,/^(?:[A-Z][0-9]*)/,/^(?:[nN][uU][lL][lL])/,/^(?:[a-r][0-9]*\^)/,/^(?:[a-r][0-9]*)/,/^(?:[xyzw][0-9]*)/,/^(?:[φψχ][0-9]*)/,/^(?:[αβγτ][0-9]*\^)/,/^(?:[αβγτ][0-9]*)/,/^(?:$)/,/^(?:.)/],
+conditions: {"expectLeftBracket":{"rules":[],"inclusive":false},"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29],"inclusive":true}}
+});
+return lexer;
+})();
+parser.lexer = lexer;
+function Parser () {
+  this.yy = {};
+}
+Parser.prototype = parser;parser.Parser = Parser;
+return new Parser;
+})();
+
+
+if (typeof require !== 'undefined' && typeof exports !== 'undefined') {
+exports.parser = copiFOL;
+exports.Parser = copiFOL.Parser;
+exports.parse = function () { return copiFOL.parse.apply(copiFOL, arguments); };
+exports.main = function commonjsMain(args) {
+    if (!args[1]) {
+        console.log('Usage: '+args[0]+' FILE');
+        process.exit(1);
+    }
+    var source = require('fs').readFileSync(require('path').normalize(args[1]), "utf8");
+    return exports.parser.parse(source);
+};
+if (typeof module !== 'undefined' && require.main === module) {
+  exports.main(process.argv.slice(1));
+}
+}
+}).call(this,require('_process'))
+},{"_process":3,"fs":1,"path":2}],13:[function(require,module,exports){
+(function (process){
+/* parser generated by jison 0.4.17 */
+/*
+  Returns a Parser object of the following structure:
+
+  Parser: {
+    yy: {}
+  }
+
+  Parser.prototype: {
+    yy: {},
+    trace: function(),
+    symbols_: {associative list: name ==> number},
+    terminals_: {associative list: number ==> name},
+    productions_: [...],
+    performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate, $$, _$),
+    table: [...],
+    defaultActions: {...},
+    parseError: function(str, hash),
+    parse: function(input),
+
+    lexer: {
+        EOF: 1,
+        parseError: function(str, hash),
+        setInput: function(input),
+        input: function(),
+        unput: function(str),
+        more: function(),
+        less: function(n),
+        pastInput: function(),
+        upcomingInput: function(),
+        showPosition: function(),
+        test_match: function(regex_match_array, rule_index),
+        next: function(),
+        lex: function(),
+        begin: function(condition),
+        popState: function(),
+        _currentRules: function(),
+        topState: function(),
+        pushState: function(condition),
+
+        options: {
+            ranges: boolean           (optional: true ==> token location info will include a .range[] member)
+            flex: boolean             (optional: true ==> flex-like lexing behaviour where the rules are tested exhaustively to find the longest match)
+            backtrack_lexer: boolean  (optional: true ==> lexer regexes are tested in order and for each matching regex the action code is invoked; the lexer terminates the scan when a token is returned by the action code)
+        },
+
+        performAction: function(yy, yy_, $avoiding_name_collisions, YY_START),
+        rules: [...],
+        conditions: {associative list: name ==> set},
+    }
+  }
+
+
+  token location info (@$, _$, etc.): {
+    first_line: n,
+    last_line: n,
+    first_column: n,
+    last_column: n,
+    range: [start_number, end_number]       (where the numbers are indexes into the input string, regular zero-based)
+  }
+
+
+  the parseError function receives a 'hash' object with these members for lexer and parser errors: {
+    text:        (matched text)
+    token:       (the produced terminal token, if any)
+    line:        (yylineno)
+  }
+  while parser (grammar) errors will also provide these members, i.e. parser errors deliver a superset of attributes: {
+    loc:         (yylloc)
+    expected:    (string describing the set of expected tokens)
+    recoverable: (boolean: TRUE when the parser has a error recovery rule available for this particular error)
+  }
+*/
+var forallxFOL = (function(){
+var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,4],$V1=[1,5],$V2=[1,6],$V3=[1,7],$V4=[1,8],$V5=[1,10],$V6=[1,12],$V7=[1,14],$V8=[1,15],$V9=[1,20],$Va=[1,21],$Vb=[1,16],$Vc=[1,17],$Vd=[1,19],$Ve=[1,23],$Vf=[1,24],$Vg=[1,25],$Vh=[1,26],$Vi=[1,27],$Vj=[1,28],$Vk=[1,29],$Vl=[1,32],$Vm=[5,10,11,12,13,14,15,25,26,27,38],$Vn=[1,39],$Vo=[5,10,11,12,13,14,15,25,26,27,38,39],$Vp=[5,10,11,12,13,14,15,23,25,26,27,32,33,34,35,36,38,39],$Vq=[5,7,9,10,11,12,13,14,15,16,17,18,20,23,24,25,26,27,29,30,32,33,34,35,36,38,39],$Vr=[5,10,11,12,13,14,15,25,27,38],$Vs=[5,25,27,38],$Vt=[27,38];
+var parser = {trace: function trace() { },
+yy: {},
+symbols_: {"error":2,"expressions":3,"e":4,"EOF":5,"box":6,"existential_quantifier":7,"quantifier_variable":8,"universal_quantifier":9,"and":10,"or":11,"nand":12,"nor":13,"arrow":14,"double_arrow":15,"not":16,"true":17,"false":18,"sentence_letter_or_expression_variable":19,"predicate":20,"termlist":21,"term":22,"identity":23,"(":24,")":25,"[":26,"]":27,"substitution_list":28,"expression_variable":29,"sentence_letter":30,"variable_or_metavariable":31,"variable":32,"term_metavariable":33,"name":34,"name_hat":35,"term_metavariable_hat":36,"substitution":37,",":38,"substitution_symbol":39,"null":40,"$accept":0,"$end":1},
+terminals_: {2:"error",5:"EOF",7:"existential_quantifier",9:"universal_quantifier",10:"and",11:"or",12:"nand",13:"nor",14:"arrow",15:"double_arrow",16:"not",17:"true",18:"false",20:"predicate",23:"identity",24:"(",25:")",26:"[",27:"]",29:"expression_variable",30:"sentence_letter",32:"variable",33:"term_metavariable",34:"name",35:"name_hat",36:"term_metavariable_hat",38:",",39:"substitution_symbol",40:"null"},
+productions_: [0,[3,2],[3,2],[3,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,2],[4,1],[4,1],[4,1],[4,2],[4,3],[4,3],[4,3],[4,4],[19,1],[19,1],[31,1],[31,1],[8,1],[21,1],[21,2],[22,1],[22,1],[22,1],[22,1],[28,1],[28,3],[37,3],[37,3],[37,3],[37,3],[6,3]],
+performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate /* action[1] */, $$ /* vstack */, _$ /* lstack */) {
+/* this == yyval */
+
+var $0 = $$.length - 1;
+switch (yystate) {
+case 1: case 2:
+ return $$[$0-1]; 
+break;
+case 3:
+ $$[$0-1].box = $$[$0-2]; return $$[$0-1]; 
+break;
+case 4:
+ this.$ = {type:"existential_quantifier", symbol:$$[$0-2], location:_$[$0-2], boundVariable:$$[$0-1], left:$$[$0], right:null}; 
+break;
+case 5:
+ this.$ = {type:"universal_quantifier", symbol:$$[$0-2], location:_$[$0-2], boundVariable:$$[$0-1], left:$$[$0], right:null}; 
+break;
+case 6:
+ this.$ = {type:'and', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 7:
+ this.$ = {type:'or', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 8:
+ this.$ = {type:'nand', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 9:
+ this.$ = {type:'nor', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 10:
+ this.$ = {type:'arrow', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 11:
+ this.$ = {type:'double_arrow', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 12:
+ this.$ = {type:'not', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0], right:null}; 
+break;
+case 13:
+ this.$ = {type:'value', symbol:$$[$0], location:_$[$0], value:true, left:null, right:null}; 
+break;
+case 14:
+ this.$ = {type:'value', symbol:$$[$0], location:_$[$0], value:false, left:null, right:null}; 
+break;
+case 15: case 25: case 30:
+ this.$ = $$[$0]; 
+break;
+case 16:
+ this.$ = { type:'predicate', name:$$[$0-1], location:_$[$0-1], termlist:$$[$0] } ; 
+break;
+case 17:
+ this.$ = {type:'identity', symbol:$$[$0-1], termlist:[$$[$0-2], $$[$0]] }; 
+break;
+case 18: case 19:
+ this.$ = $$[$0-1]; 
+break;
+case 20:
+
+         if( $$[$0-3].substitutions && $$[$0-3].substitutions.length ) {
+           $$[$0-3].substitutions = $$[$0-3].substitutions.concat($$[$0-1]);
+         } else {
+           $$[$0-3].substitutions = $$[$0-1];
+         }
+         this.$ = $$[$0-3]; 
+      
+break;
+case 21:
+ this.$ = {type:'expression_variable', location:_$[$0], letter:$$[$0], left:null, right:null}; 
+break;
+case 22:
+ this.$ = {type:'sentence_letter', location:_$[$0], letter:$$[$0], left:null, right:null}; 
+break;
+case 23:
+ this.$ = {type:'variable', name:$$[$0], location:_$[$0]}; 
+break;
+case 24:
+ this.$ = {type:'term_metavariable', name:$$[$0], location:_$[$0]}; 
+break;
+case 26: case 32:
+ this.$ = [$$[$0]] 
+break;
+case 27:
+ this.$ = [$$[$0-1]].concat($$[$0]) 
+break;
+case 28:
+ this.$ = {type:'name', name:$$[$0], location:_$[$0]}; 
+break;
+case 29:
+ this.$ = {type:'name_hat', name:$$[$0], location:_$[$0]}; 
+break;
+case 31:
+ this.$ = {type:'term_metavariable_hat', name:$$[$0], location:_$[$0]}; 
+break;
+case 33:
+ this.$ = [$$[$0-2]].concat($$[$0]) 
+break;
+case 34: case 36:
+ this.$ = {type:'substitution', from:$$[$0-2], to:$$[$0], symbol:$$[$0-1]}; 
+break;
+case 35: case 37:
+ this.$ = {type:'substitution', from:$$[$0-2], to:null, symbol:$$[$0-1]}; 
+break;
+case 38:
+ this.$ = {type:'box', term:$$[$0-1]}; 
+break;
+}
+},
+table: [{3:1,4:2,6:3,7:$V0,9:$V1,16:$V2,17:$V3,18:$V4,19:9,20:$V5,22:11,24:$V6,26:[1,13],29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd},{1:[3]},{5:[1,22],10:$Ve,11:$Vf,12:$Vg,13:$Vh,14:$Vi,15:$Vj,26:$Vk},{4:31,5:[1,30],7:$V0,9:$V1,16:$V2,17:$V3,18:$V4,19:9,20:$V5,22:11,24:$V6,26:$Vl,29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd},{8:33,31:34,32:$V9,33:$Va},{8:35,31:34,32:$V9,33:$Va},{4:36,7:$V0,9:$V1,16:$V2,17:$V3,18:$V4,19:9,20:$V5,22:11,24:$V6,26:$Vl,29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd},o($Vm,[2,13]),o($Vm,[2,14]),o($Vm,[2,15]),{21:37,22:38,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd},{23:$Vn},{4:40,7:$V0,9:$V1,16:$V2,17:$V3,18:$V4,19:9,20:$V5,22:11,24:$V6,26:$Vl,29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd},{4:41,7:$V0,9:$V1,16:$V2,17:$V3,18:$V4,19:9,20:$V5,22:42,24:$V6,26:$Vl,29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd},o($Vo,[2,21]),o($Vo,[2,22]),o($Vp,[2,28]),o($Vp,[2,29]),o($Vp,[2,30]),o($Vp,[2,31]),o($Vq,[2,23]),o($Vq,[2,24]),{1:[2,1]},{4:43,7:$V0,9:$V1,16:$V2,17:$V3,18:$V4,19:9,20:$V5,22:11,24:$V6,26:$Vl,29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd},{4:44,7:$V0,9:$V1,16:$V2,17:$V3,18:$V4,19:9,20:$V5,22:11,24:$V6,26:$Vl,29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd},{4:45,7:$V0,9:$V1,16:$V2,17:$V3,18:$V4,19:9,20:$V5,22:11,24:$V6,26:$Vl,29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd},{4:46,7:$V0,9:$V1,16:$V2,17:$V3,18:$V4,19:9,20:$V5,22:11,24:$V6,26:$Vl,29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd},{4:47,7:$V0,9:$V1,16:$V2,17:$V3,18:$V4,19:9,20:$V5,22:11,24:$V6,26:$Vl,29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd},{4:48,7:$V0,9:$V1,16:$V2,17:$V3,18:$V4,19:9,20:$V5,22:11,24:$V6,26:$Vl,29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd},{19:52,22:51,28:49,29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd,37:50},{1:[2,2]},{5:[1,53],10:$Ve,11:$Vf,12:$Vg,13:$Vh,14:$Vi,15:$Vj,26:$Vk},{4:41,7:$V0,9:$V1,16:$V2,17:$V3,18:$V4,19:9,20:$V5,22:11,24:$V6,26:$Vl,29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd},{4:54,7:$V0,9:$V1,16:$V2,17:$V3,18:$V4,19:9,20:$V5,22:11,24:$V6,26:$Vl,29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd},o([7,9,16,17,18,20,24,26,29,30,32,33,34,35,36],[2,25]),{4:55,7:$V0,9:$V1,16:$V2,17:$V3,18:$V4,19:9,20:$V5,22:11,24:$V6,26:$Vl,29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd},o($Vr,[2,12],{26:$Vk}),o($Vm,[2,16]),o($Vm,[2,26],{31:18,22:38,21:56,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd}),{22:57,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd},{10:$Ve,11:$Vf,12:$Vg,13:$Vh,14:$Vi,15:$Vj,25:[1,58],26:$Vk},{10:$Ve,11:$Vf,12:$Vg,13:$Vh,14:$Vi,15:$Vj,26:$Vk,27:[1,59]},{23:$Vn,27:[1,60]},o($Vr,[2,6],{26:$Vk}),o($Vr,[2,7],{26:$Vk}),o($Vr,[2,8],{26:$Vk}),o($Vr,[2,9],{26:$Vk}),o($Vs,[2,10],{10:$Ve,11:$Vf,12:$Vg,13:$Vh,26:$Vk}),o($Vs,[2,11],{10:$Ve,11:$Vf,12:$Vg,13:$Vh,26:$Vk}),{27:[1,61]},{27:[2,32],38:[1,62]},{39:[1,63]},{39:[1,64]},{1:[2,3]},o($Vr,[2,4],{26:$Vk}),o($Vr,[2,5],{26:$Vk}),o($Vm,[2,27]),o($Vm,[2,17]),o($Vm,[2,18]),o($Vm,[2,19]),o([5,7,9,16,17,18,20,24,26,29,30,32,33,34,35,36],[2,38]),o($Vm,[2,20]),{19:52,22:51,28:65,29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd,37:50},{22:66,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd,40:[1,67]},{4:68,7:$V0,9:$V1,16:$V2,17:$V3,18:$V4,19:9,20:$V5,22:11,24:$V6,26:$Vl,29:$V7,30:$V8,31:18,32:$V9,33:$Va,34:$Vb,35:$Vc,36:$Vd,40:[1,69]},{27:[2,33]},o($Vt,[2,34]),o($Vt,[2,35]),o($Vt,[2,36],{10:$Ve,11:$Vf,12:$Vg,13:$Vh,14:$Vi,15:$Vj,26:$Vk}),o($Vt,[2,37])],
+defaultActions: {22:[2,1],30:[2,2],53:[2,3],65:[2,33]},
+parseError: function parseError(str, hash) {
+    if (hash.recoverable) {
+        this.trace(str);
+    } else {
+        function _parseError (msg, hash) {
+            this.message = msg;
+            this.hash = hash;
+        }
+        _parseError.prototype = Error;
+
+        throw new _parseError(str, hash);
+    }
+},
+parse: function parse(input) {
+    var self = this, stack = [0], tstack = [], vstack = [null], lstack = [], table = this.table, yytext = '', yylineno = 0, yyleng = 0, recovering = 0, TERROR = 2, EOF = 1;
+    var args = lstack.slice.call(arguments, 1);
+    var lexer = Object.create(this.lexer);
+    var sharedState = { yy: {} };
+    for (var k in this.yy) {
+        if (Object.prototype.hasOwnProperty.call(this.yy, k)) {
+            sharedState.yy[k] = this.yy[k];
+        }
+    }
+    lexer.setInput(input, sharedState.yy);
+    sharedState.yy.lexer = lexer;
+    sharedState.yy.parser = this;
+    if (typeof lexer.yylloc == 'undefined') {
+        lexer.yylloc = {};
+    }
+    var yyloc = lexer.yylloc;
+    lstack.push(yyloc);
+    var ranges = lexer.options && lexer.options.ranges;
+    if (typeof sharedState.yy.parseError === 'function') {
+        this.parseError = sharedState.yy.parseError;
+    } else {
+        this.parseError = Object.getPrototypeOf(this).parseError;
+    }
+    function popStack(n) {
+        stack.length = stack.length - 2 * n;
+        vstack.length = vstack.length - n;
+        lstack.length = lstack.length - n;
+    }
+    _token_stack:
+        var lex = function () {
+            var token;
+            token = lexer.lex() || EOF;
+            if (typeof token !== 'number') {
+                token = self.symbols_[token] || token;
+            }
+            return token;
+        };
+    var symbol, preErrorSymbol, state, action, a, r, yyval = {}, p, len, newState, expected;
+    while (true) {
+        state = stack[stack.length - 1];
+        if (this.defaultActions[state]) {
+            action = this.defaultActions[state];
+        } else {
+            if (symbol === null || typeof symbol == 'undefined') {
+                symbol = lex();
+            }
+            action = table[state] && table[state][symbol];
+        }
+                    if (typeof action === 'undefined' || !action.length || !action[0]) {
+                var errStr = '';
+                expected = [];
+                for (p in table[state]) {
+                    if (this.terminals_[p] && p > TERROR) {
+                        expected.push('\'' + this.terminals_[p] + '\'');
+                    }
+                }
+                if (lexer.showPosition) {
+                    errStr = 'Parse error on line ' + (yylineno + 1) + ':\n' + lexer.showPosition() + '\nExpecting ' + expected.join(', ') + ', got \'' + (this.terminals_[symbol] || symbol) + '\'';
+                } else {
+                    errStr = 'Parse error on line ' + (yylineno + 1) + ': Unexpected ' + (symbol == EOF ? 'end of input' : '\'' + (this.terminals_[symbol] || symbol) + '\'');
+                }
+                this.parseError(errStr, {
+                    text: lexer.match,
+                    token: this.terminals_[symbol] || symbol,
+                    line: lexer.yylineno,
+                    loc: yyloc,
+                    expected: expected
+                });
+            }
+        if (action[0] instanceof Array && action.length > 1) {
+            throw new Error('Parse Error: multiple actions possible at state: ' + state + ', token: ' + symbol);
+        }
+        switch (action[0]) {
+        case 1:
+            stack.push(symbol);
+            vstack.push(lexer.yytext);
+            lstack.push(lexer.yylloc);
+            stack.push(action[1]);
+            symbol = null;
+            if (!preErrorSymbol) {
+                yyleng = lexer.yyleng;
+                yytext = lexer.yytext;
+                yylineno = lexer.yylineno;
+                yyloc = lexer.yylloc;
+                if (recovering > 0) {
+                    recovering--;
+                }
+            } else {
+                symbol = preErrorSymbol;
+                preErrorSymbol = null;
+            }
+            break;
+        case 2:
+            len = this.productions_[action[1]][1];
+            yyval.$ = vstack[vstack.length - len];
+            yyval._$ = {
+                first_line: lstack[lstack.length - (len || 1)].first_line,
+                last_line: lstack[lstack.length - 1].last_line,
+                first_column: lstack[lstack.length - (len || 1)].first_column,
+                last_column: lstack[lstack.length - 1].last_column
+            };
+            if (ranges) {
+                yyval._$.range = [
+                    lstack[lstack.length - (len || 1)].range[0],
+                    lstack[lstack.length - 1].range[1]
+                ];
+            }
+            r = this.performAction.apply(yyval, [
+                yytext,
+                yyleng,
+                yylineno,
+                sharedState.yy,
+                action[1],
+                vstack,
+                lstack
+            ].concat(args));
+            if (typeof r !== 'undefined') {
+                return r;
+            }
+            if (len) {
+                stack = stack.slice(0, -1 * len * 2);
+                vstack = vstack.slice(0, -1 * len);
+                lstack = lstack.slice(0, -1 * len);
+            }
+            stack.push(this.productions_[action[1]][0]);
+            vstack.push(yyval.$);
+            lstack.push(yyval._$);
+            newState = table[stack[stack.length - 2]][stack[stack.length - 1]];
+            stack.push(newState);
+            break;
+        case 3:
+            return true;
+        }
+    }
+    return true;
+}};
+/* generated by jison-lex 0.3.4 */
+var lexer = (function(){
+var lexer = ({
+
+EOF:1,
+
+parseError:function parseError(str, hash) {
+        if (this.yy.parser) {
+            this.yy.parser.parseError(str, hash);
+        } else {
+            throw new Error(str);
+        }
+    },
+
+// resets the lexer, sets new input
+setInput:function (input, yy) {
+        this.yy = yy || this.yy || {};
+        this._input = input;
+        this._more = this._backtrack = this.done = false;
+        this.yylineno = this.yyleng = 0;
+        this.yytext = this.matched = this.match = '';
+        this.conditionStack = ['INITIAL'];
+        this.yylloc = {
+            first_line: 1,
+            first_column: 0,
+            last_line: 1,
+            last_column: 0
+        };
+        if (this.options.ranges) {
+            this.yylloc.range = [0,0];
+        }
+        this.offset = 0;
+        return this;
+    },
+
+// consumes and returns one char from the input
+input:function () {
+        var ch = this._input[0];
+        this.yytext += ch;
+        this.yyleng++;
+        this.offset++;
+        this.match += ch;
+        this.matched += ch;
+        var lines = ch.match(/(?:\r\n?|\n).*/g);
+        if (lines) {
+            this.yylineno++;
+            this.yylloc.last_line++;
+        } else {
+            this.yylloc.last_column++;
+        }
+        if (this.options.ranges) {
+            this.yylloc.range[1]++;
+        }
+
+        this._input = this._input.slice(1);
+        return ch;
+    },
+
+// unshifts one char (or a string) into the input
+unput:function (ch) {
+        var len = ch.length;
+        var lines = ch.split(/(?:\r\n?|\n)/g);
+
+        this._input = ch + this._input;
+        this.yytext = this.yytext.substr(0, this.yytext.length - len);
+        //this.yyleng -= len;
+        this.offset -= len;
+        var oldLines = this.match.split(/(?:\r\n?|\n)/g);
+        this.match = this.match.substr(0, this.match.length - 1);
+        this.matched = this.matched.substr(0, this.matched.length - 1);
+
+        if (lines.length - 1) {
+            this.yylineno -= lines.length - 1;
+        }
+        var r = this.yylloc.range;
+
+        this.yylloc = {
+            first_line: this.yylloc.first_line,
+            last_line: this.yylineno + 1,
+            first_column: this.yylloc.first_column,
+            last_column: lines ?
+                (lines.length === oldLines.length ? this.yylloc.first_column : 0)
+                 + oldLines[oldLines.length - lines.length].length - lines[0].length :
+              this.yylloc.first_column - len
+        };
+
+        if (this.options.ranges) {
+            this.yylloc.range = [r[0], r[0] + this.yyleng - len];
+        }
+        this.yyleng = this.yytext.length;
+        return this;
+    },
+
+// When called from action, caches matched text and appends it on next action
+more:function () {
+        this._more = true;
+        return this;
+    },
+
+// When called from action, signals the lexer that this rule fails to match the input, so the next matching rule (regex) should be tested instead.
+reject:function () {
+        if (this.options.backtrack_lexer) {
+            this._backtrack = true;
+        } else {
+            return this.parseError('Lexical error on line ' + (this.yylineno + 1) + '. You can only invoke reject() in the lexer when the lexer is of the backtracking persuasion (options.backtrack_lexer = true).\n' + this.showPosition(), {
+                text: "",
+                token: null,
+                line: this.yylineno
+            });
+
+        }
+        return this;
+    },
+
+// retain first n characters of the match
+less:function (n) {
+        this.unput(this.match.slice(n));
+    },
+
+// displays already matched input, i.e. for error messages
+pastInput:function () {
+        var past = this.matched.substr(0, this.matched.length - this.match.length);
+        return (past.length > 20 ? '...':'') + past.substr(-20).replace(/\n/g, "");
+    },
+
+// displays upcoming input, i.e. for error messages
+upcomingInput:function () {
+        var next = this.match;
+        if (next.length < 20) {
+            next += this._input.substr(0, 20-next.length);
+        }
+        return (next.substr(0,20) + (next.length > 20 ? '...' : '')).replace(/\n/g, "");
+    },
+
+// displays the character position where the lexing error occurred, i.e. for error messages
+showPosition:function () {
+        var pre = this.pastInput();
+        var c = new Array(pre.length + 1).join("-");
+        return pre + this.upcomingInput() + "\n" + c + "^";
+    },
+
+// test the lexed token: return FALSE when not a match, otherwise return token
+test_match:function (match, indexed_rule) {
+        var token,
+            lines,
+            backup;
+
+        if (this.options.backtrack_lexer) {
+            // save context
+            backup = {
+                yylineno: this.yylineno,
+                yylloc: {
+                    first_line: this.yylloc.first_line,
+                    last_line: this.last_line,
+                    first_column: this.yylloc.first_column,
+                    last_column: this.yylloc.last_column
+                },
+                yytext: this.yytext,
+                match: this.match,
+                matches: this.matches,
+                matched: this.matched,
+                yyleng: this.yyleng,
+                offset: this.offset,
+                _more: this._more,
+                _input: this._input,
+                yy: this.yy,
+                conditionStack: this.conditionStack.slice(0),
+                done: this.done
+            };
+            if (this.options.ranges) {
+                backup.yylloc.range = this.yylloc.range.slice(0);
+            }
+        }
+
+        lines = match[0].match(/(?:\r\n?|\n).*/g);
+        if (lines) {
+            this.yylineno += lines.length;
+        }
+        this.yylloc = {
+            first_line: this.yylloc.last_line,
+            last_line: this.yylineno + 1,
+            first_column: this.yylloc.last_column,
+            last_column: lines ?
+                         lines[lines.length - 1].length - lines[lines.length - 1].match(/\r?\n?/)[0].length :
+                         this.yylloc.last_column + match[0].length
+        };
+        this.yytext += match[0];
+        this.match += match[0];
+        this.matches = match;
+        this.yyleng = this.yytext.length;
+        if (this.options.ranges) {
+            this.yylloc.range = [this.offset, this.offset += this.yyleng];
+        }
+        this._more = false;
+        this._backtrack = false;
+        this._input = this._input.slice(match[0].length);
+        this.matched += match[0];
+        token = this.performAction.call(this, this.yy, this, indexed_rule, this.conditionStack[this.conditionStack.length - 1]);
+        if (this.done && this._input) {
+            this.done = false;
+        }
+        if (token) {
+            return token;
+        } else if (this._backtrack) {
+            // recover context
+            for (var k in backup) {
+                this[k] = backup[k];
+            }
+            return false; // rule action called reject() implying the next rule should be tested instead.
+        }
+        return false;
+    },
+
+// return next match in input
+next:function () {
+        if (this.done) {
+            return this.EOF;
+        }
+        if (!this._input) {
+            this.done = true;
+        }
+
+        var token,
+            match,
+            tempMatch,
+            index;
+        if (!this._more) {
+            this.yytext = '';
+            this.match = '';
+        }
+        var rules = this._currentRules();
+        for (var i = 0; i < rules.length; i++) {
+            tempMatch = this._input.match(this.rules[rules[i]]);
+            if (tempMatch && (!match || tempMatch[0].length > match[0].length)) {
+                match = tempMatch;
+                index = i;
+                if (this.options.backtrack_lexer) {
+                    token = this.test_match(tempMatch, rules[i]);
+                    if (token !== false) {
+                        return token;
+                    } else if (this._backtrack) {
+                        match = false;
+                        continue; // rule action called reject() implying a rule MISmatch.
+                    } else {
+                        // else: this is a lexer rule which consumes input without producing a token (e.g. whitespace)
+                        return false;
+                    }
+                } else if (!this.options.flex) {
+                    break;
+                }
+            }
+        }
+        if (match) {
+            token = this.test_match(match, rules[index]);
+            if (token !== false) {
+                return token;
+            }
+            // else: this is a lexer rule which consumes input without producing a token (e.g. whitespace)
+            return false;
+        }
+        if (this._input === "") {
+            return this.EOF;
+        } else {
+            return this.parseError('Lexical error on line ' + (this.yylineno + 1) + '. Unrecognized text.\n' + this.showPosition(), {
+                text: "",
+                token: null,
+                line: this.yylineno
+            });
+        }
+    },
+
+// return next match that has a token
+lex:function lex() {
+        var r = this.next();
+        if (r) {
+            return r;
+        } else {
+            return this.lex();
+        }
+    },
+
+// activates a new lexer condition state (pushes the new lexer condition state onto the condition stack)
+begin:function begin(condition) {
+        this.conditionStack.push(condition);
+    },
+
+// pop the previously active lexer condition state off the condition stack
+popState:function popState() {
+        var n = this.conditionStack.length - 1;
+        if (n > 0) {
+            return this.conditionStack.pop();
+        } else {
+            return this.conditionStack[0];
+        }
+    },
+
+// produce the lexer rule set which is active for the currently active lexer condition state
+_currentRules:function _currentRules() {
+        if (this.conditionStack.length && this.conditionStack[this.conditionStack.length - 1]) {
+            return this.conditions[this.conditionStack[this.conditionStack.length - 1]].rules;
+        } else {
+            return this.conditions["INITIAL"].rules;
+        }
+    },
+
+// return the currently active lexer condition state; when an index argument is provided it produces the N-th previous condition state, if available
+topState:function topState(n) {
+        n = this.conditionStack.length - 1 - Math.abs(n || 0);
+        if (n >= 0) {
+            return this.conditionStack[n];
+        } else {
+            return "INITIAL";
+        }
+    },
+
+// alias for begin(condition)
+pushState:function pushState(condition) {
+        this.begin(condition);
+    },
+
+// return the number of states currently on the stack
+stateStackSize:function stateStackSize() {
+        return this.conditionStack.length;
+    },
+options: {},
+performAction: function anonymous(yy,yy_,$avoiding_name_collisions,YY_START) {
+var YYSTATE=YY_START;
+switch($avoiding_name_collisions) {
+case 0: /* skip whitespace */             
+break;
+case 1: return 24; 
+break;
+case 2: return 25; 
+break;
+case 3: return 26; 
+break;
+case 4: return 27; 
+break;
+case 5: return 38; 
+break;
+case 6: return 20;               
+break;
+case 7: return 39; 
+break;
+case 8: return 17; 
+break;
+case 9: return 18; 
+break;
+case 10: return 23; 
+break;
+case 11: return 10; 
+break;
+case 12: return 14; 
+break;
+case 13: return 15; 
+break;
+case 14: return 11; 
+break;
+case 15: return 16; 
+break;
+case 16: return 13; 
+break;
+case 17: return 12; 
+break;
+case 18: return 9; 
+break;
+case 19: return 7; 
+break;
+case 20: return 30; 
+break;
+case 21: return 40; 
+break;
+case 22: return 35; 
+break;
+case 23: return 34; 
+break;
+case 24: return 32; 
+break;
+case 25: return 29; 
+break;
+case 26: return 36; 
+break;
+case 27: return 33; 
+break;
+case 28: return 5; 
+break;
+case 29: return 'invalid_character'; 
+break;
+}
+},
+rules: [/^(?:\s+)/,/^(?:\()/,/^(?:\))/,/^(?:\[)/,/^(?:\])/,/^(?:,)/,/^(?:[A-Z][0-9]*(?=([a-zαβγτ]+)))/,/^(?:-->)/,/^(?:true\b)/,/^(?:false|⊥|_\|_|contradiction|contra\b)/,/^(?:=)/,/^(?:and|&|∧|•)/,/^(?:arrow|->|⇒|→|⊃)/,/^(?:↔|≡|⇔|double_arrow|<->)/,/^(?:or|∨|\+|ǀǀ|\|)/,/^(?:not|¬|~|˜|!)/,/^(?:nor|↓)/,/^(?:nand|↑)/,/^(?:all|∀|every\b)/,/^(?:some|exists|∃)/,/^(?:[A-Z][0-9]*)/,/^(?:[nN][uU][lL][lL])/,/^(?:[a-w][0-9]*\^)/,/^(?:[a-w][0-9]*)/,/^(?:[xyz][0-9]*)/,/^(?:[φψχ][0-9]*)/,/^(?:[αβγτ][0-9]*\^)/,/^(?:[αβγτ][0-9]*)/,/^(?:$)/,/^(?:.)/],
+conditions: {"expectLeftBracket":{"rules":[],"inclusive":false},"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29],"inclusive":true}}
+});
+return lexer;
+})();
+parser.lexer = lexer;
+function Parser () {
+  this.yy = {};
+}
+Parser.prototype = parser;parser.Parser = Parser;
+return new Parser;
+})();
+
+
+if (typeof require !== 'undefined' && typeof exports !== 'undefined') {
+exports.parser = forallxFOL;
+exports.Parser = forallxFOL.Parser;
+exports.parse = function () { return forallxFOL.parse.apply(forallxFOL, arguments); };
+exports.main = function commonjsMain(args) {
+    if (!args[1]) {
+        console.log('Usage: '+args[0]+' FILE');
+        process.exit(1);
+    }
+    var source = require('fs').readFileSync(require('path').normalize(args[1]), "utf8");
+    return exports.parser.parse(source);
+};
+if (typeof module !== 'undefined' && require.main === module) {
+  exports.main(process.argv.slice(1));
+}
+}
+}).call(this,require('_process'))
+},{"_process":3,"fs":1,"path":2}],14:[function(require,module,exports){
+(function (process){
+/* parser generated by jison 0.4.17 */
+/*
+  Returns a Parser object of the following structure:
+
+  Parser: {
+    yy: {}
+  }
+
+  Parser.prototype: {
+    yy: {},
+    trace: function(),
+    symbols_: {associative list: name ==> number},
+    terminals_: {associative list: number ==> name},
+    productions_: [...],
+    performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate, $$, _$),
+    table: [...],
+    defaultActions: {...},
+    parseError: function(str, hash),
+    parse: function(input),
+
+    lexer: {
+        EOF: 1,
+        parseError: function(str, hash),
+        setInput: function(input),
+        input: function(),
+        unput: function(str),
+        more: function(),
+        less: function(n),
+        pastInput: function(),
+        upcomingInput: function(),
+        showPosition: function(),
+        test_match: function(regex_match_array, rule_index),
+        next: function(),
+        lex: function(),
+        begin: function(condition),
+        popState: function(),
+        _currentRules: function(),
+        topState: function(),
+        pushState: function(condition),
+
+        options: {
+            ranges: boolean           (optional: true ==> token location info will include a .range[] member)
+            flex: boolean             (optional: true ==> flex-like lexing behaviour where the rules are tested exhaustively to find the longest match)
+            backtrack_lexer: boolean  (optional: true ==> lexer regexes are tested in order and for each matching regex the action code is invoked; the lexer terminates the scan when a token is returned by the action code)
+        },
+
+        performAction: function(yy, yy_, $avoiding_name_collisions, YY_START),
+        rules: [...],
+        conditions: {associative list: name ==> set},
+    }
+  }
+
+
+  token location info (@$, _$, etc.): {
+    first_line: n,
+    last_line: n,
+    first_column: n,
+    last_column: n,
+    range: [start_number, end_number]       (where the numbers are indexes into the input string, regular zero-based)
+  }
+
+
+  the parseError function receives a 'hash' object with these members for lexer and parser errors: {
+    text:        (matched text)
+    token:       (the produced terminal token, if any)
+    line:        (yylineno)
+  }
+  while parser (grammar) errors will also provide these members, i.e. parser errors deliver a superset of attributes: {
+    loc:         (yylloc)
+    expected:    (string describing the set of expected tokens)
+    recoverable: (boolean: TRUE when the parser has a error recovery rule available for this particular error)
+  }
+*/
+var tellerFOL = (function(){
+var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,4],$V1=[1,5],$V2=[1,6],$V3=[1,7],$V4=[1,9],$V5=[1,12],$V6=[1,13],$V7=[1,18],$V8=[1,19],$V9=[1,14],$Va=[1,15],$Vb=[1,17],$Vc=[1,21],$Vd=[1,22],$Ve=[1,23],$Vf=[1,24],$Vg=[1,25],$Vh=[1,26],$Vi=[1,27],$Vj=[1,30],$Vk=[5,10,12,13,14,15,16,17,26,27,38],$Vl=[1,37],$Vm=[5,10,12,13,14,15,16,17,26,27,38,39],$Vn=[5,10,12,13,14,15,16,17,25,26,27,32,33,34,35,36,38,39],$Vo=[5,10,12,13,14,15,16,17,27,38],$Vp=[5,10,27,38],$Vq=[27,38];
+var parser = {trace: function trace() { },
+yy: {},
+symbols_: {"error":2,"expressions":3,"e":4,"EOF":5,"box":6,"(":7,"existential_quantifier":8,"quantifier_variable":9,")":10,"universal_quantifier":11,"and":12,"or":13,"nand":14,"nor":15,"arrow":16,"double_arrow":17,"not":18,"true":19,"false":20,"sentence_letter_or_expression_variable":21,"predicate":22,"termlist":23,"term":24,"identity":25,"[":26,"]":27,"substitution_list":28,"expression_variable":29,"sentence_letter":30,"variable_or_metavariable":31,"variable":32,"term_metavariable":33,"name":34,"name_hat":35,"term_metavariable_hat":36,"substitution":37,",":38,"substitution_symbol":39,"null":40,"$accept":0,"$end":1},
+terminals_: {2:"error",5:"EOF",7:"(",8:"existential_quantifier",10:")",11:"universal_quantifier",12:"and",13:"or",14:"nand",15:"nor",16:"arrow",17:"double_arrow",18:"not",19:"true",20:"false",22:"predicate",25:"identity",26:"[",27:"]",29:"expression_variable",30:"sentence_letter",32:"variable",33:"term_metavariable",34:"name",35:"name_hat",36:"term_metavariable_hat",38:",",39:"substitution_symbol",40:"null"},
+productions_: [0,[3,2],[3,2],[3,3],[4,5],[4,5],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,2],[4,1],[4,1],[4,1],[4,2],[4,3],[4,3],[4,3],[4,4],[21,1],[21,1],[31,1],[31,1],[9,1],[23,1],[23,2],[24,1],[24,1],[24,1],[24,1],[28,1],[28,3],[37,3],[37,3],[37,3],[37,3],[6,3]],
+performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate /* action[1] */, $$ /* vstack */, _$ /* lstack */) {
+/* this == yyval */
+
+var $0 = $$.length - 1;
+switch (yystate) {
+case 1: case 2:
+ return $$[$0-1]; 
+break;
+case 3:
+ $$[$0-1].box = $$[$0-2]; return $$[$0-1]; 
+break;
+case 4:
+ this.$ = {type:"existential_quantifier", symbol:$$[$0-3], location:_$[$0-3], boundVariable:$$[$0-2], left:$$[$0], right:null}; 
+break;
+case 5:
+ this.$ = {type:"universal_quantifier", symbol:$$[$0-3], location:_$[$0-3], boundVariable:$$[$0-2], left:$$[$0], right:null}; 
+break;
+case 6:
+ this.$ = {type:'and', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 7:
+ this.$ = {type:'or', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 8:
+ this.$ = {type:'nand', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 9:
+ this.$ = {type:'nor', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 10:
+ this.$ = {type:'arrow', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 11:
+ this.$ = {type:'double_arrow', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0-2], right:$$[$0]}; 
+break;
+case 12:
+ this.$ = {type:'not', symbol:$$[$0-1], location:_$[$0-1], left:$$[$0], right:null}; 
+break;
+case 13:
+ this.$ = {type:'value', symbol:$$[$0], location:_$[$0], value:true, left:null, right:null}; 
+break;
+case 14:
+ this.$ = {type:'value', symbol:$$[$0], location:_$[$0], value:false, left:null, right:null}; 
+break;
+case 15: case 25: case 30:
+ this.$ = $$[$0]; 
+break;
+case 16:
+ this.$ = { type:'predicate', name:$$[$0-1], location:_$[$0-1], termlist:$$[$0] } ; 
+break;
+case 17:
+ this.$ = {type:'identity', symbol:$$[$0-1], termlist:[$$[$0-2], $$[$0]] }; 
+break;
+case 18: case 19:
+ this.$ = $$[$0-1]; 
+break;
+case 20:
+
+         if( $$[$0-3].substitutions && $$[$0-3].substitutions.length ) {
+           $$[$0-3].substitutions = $$[$0-3].substitutions.concat($$[$0-1]);
+         } else {
+           $$[$0-3].substitutions = $$[$0-1];
+         }
+         this.$ = $$[$0-3]; 
+      
+break;
+case 21:
+ this.$ = {type:'expression_variable', location:_$[$0], letter:$$[$0], left:null, right:null}; 
+break;
+case 22:
+ this.$ = {type:'sentence_letter', location:_$[$0], letter:$$[$0], left:null, right:null}; 
+break;
+case 23:
+ this.$ = {type:'variable', name:$$[$0], location:_$[$0]}; 
+break;
+case 24:
+ this.$ = {type:'term_metavariable', name:$$[$0], location:_$[$0]}; 
+break;
+case 26: case 32:
+ this.$ = [$$[$0]] 
+break;
+case 27:
+ this.$ = [$$[$0-1]].concat($$[$0]) 
+break;
+case 28:
+ this.$ = {type:'name', name:$$[$0], location:_$[$0]}; 
+break;
+case 29:
+ this.$ = {type:'name_hat', name:$$[$0], location:_$[$0]}; 
+break;
+case 31:
+ this.$ = {type:'term_metavariable_hat', name:$$[$0], location:_$[$0]}; 
+break;
+case 33:
+ this.$ = [$$[$0-2]].concat($$[$0]) 
+break;
+case 34: case 36:
+ this.$ = {type:'substitution', from:$$[$0-2], to:$$[$0], symbol:$$[$0-1]}; 
+break;
+case 35: case 37:
+ this.$ = {type:'substitution', from:$$[$0-2], to:null, symbol:$$[$0-1]}; 
+break;
+case 38:
+ this.$ = {type:'box', term:$$[$0-1]}; 
+break;
+}
+},
+table: [{3:1,4:2,6:3,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:[1,11],29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{1:[3]},{5:[1,20],12:$Vc,13:$Vd,14:$Ve,15:$Vf,16:$Vg,17:$Vh,26:$Vi},{4:29,5:[1,28],7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:33,7:$V0,8:[1,31],11:[1,32],18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:34,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},o($Vk,[2,13]),o($Vk,[2,14]),o($Vk,[2,15]),{23:35,24:36,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{25:$Vl},{4:38,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:39,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},o($Vm,[2,21]),o($Vm,[2,22]),o($Vn,[2,28]),o($Vn,[2,29]),o($Vn,[2,30]),o($Vn,[2,31]),o($Vn,[2,23]),o($Vn,[2,24]),{1:[2,1]},{4:40,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:41,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:42,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:43,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:44,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:45,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{21:49,24:48,28:46,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb,37:47},{1:[2,2]},{5:[1,50],12:$Vc,13:$Vd,14:$Ve,15:$Vf,16:$Vg,17:$Vh,26:$Vi},{4:38,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{9:51,31:52,32:$V7,33:$V8},{9:53,31:52,32:$V7,33:$V8},{10:[1,54],12:$Vc,13:$Vd,14:$Ve,15:$Vf,16:$Vg,17:$Vh,26:$Vi},o($Vo,[2,12],{26:$Vi}),o($Vk,[2,16]),o($Vk,[2,26],{31:16,24:36,23:55,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb}),{24:56,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{12:$Vc,13:$Vd,14:$Ve,15:$Vf,16:$Vg,17:$Vh,26:$Vi,27:[1,57]},{25:$Vl,27:[1,58]},o($Vo,[2,6],{26:$Vi}),o($Vo,[2,7],{26:$Vi}),o($Vo,[2,8],{26:$Vi}),o($Vo,[2,9],{26:$Vi}),o($Vp,[2,10],{12:$Vc,13:$Vd,14:$Ve,15:$Vf,26:$Vi}),o($Vp,[2,11],{12:$Vc,13:$Vd,14:$Ve,15:$Vf,26:$Vi}),{27:[1,59]},{27:[2,32],38:[1,60]},{39:[1,61]},{39:[1,62]},{1:[2,3]},{10:[1,63]},{10:[2,25]},{10:[1,64]},o($Vk,[2,18]),o($Vk,[2,27]),o($Vk,[2,17]),o($Vk,[2,19]),o([5,7,18,19,20,22,26,29,30,32,33,34,35,36],[2,38]),o($Vk,[2,20]),{21:49,24:48,28:65,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb,37:47},{24:66,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb,40:[1,67]},{4:68,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb,40:[1,69]},{4:70,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{4:71,7:$V0,18:$V1,19:$V2,20:$V3,21:8,22:$V4,24:10,26:$Vj,29:$V5,30:$V6,31:16,32:$V7,33:$V8,34:$V9,35:$Va,36:$Vb},{27:[2,33]},o($Vq,[2,34]),o($Vq,[2,35]),o($Vq,[2,36],{12:$Vc,13:$Vd,14:$Ve,15:$Vf,16:$Vg,17:$Vh,26:$Vi}),o($Vq,[2,37]),o($Vo,[2,4],{26:$Vi}),o($Vo,[2,5],{26:$Vi})],
+defaultActions: {20:[2,1],28:[2,2],50:[2,3],52:[2,25],65:[2,33]},
+parseError: function parseError(str, hash) {
+    if (hash.recoverable) {
+        this.trace(str);
+    } else {
+        function _parseError (msg, hash) {
+            this.message = msg;
+            this.hash = hash;
+        }
+        _parseError.prototype = Error;
+
+        throw new _parseError(str, hash);
+    }
+},
+parse: function parse(input) {
+    var self = this, stack = [0], tstack = [], vstack = [null], lstack = [], table = this.table, yytext = '', yylineno = 0, yyleng = 0, recovering = 0, TERROR = 2, EOF = 1;
+    var args = lstack.slice.call(arguments, 1);
+    var lexer = Object.create(this.lexer);
+    var sharedState = { yy: {} };
+    for (var k in this.yy) {
+        if (Object.prototype.hasOwnProperty.call(this.yy, k)) {
+            sharedState.yy[k] = this.yy[k];
+        }
+    }
+    lexer.setInput(input, sharedState.yy);
+    sharedState.yy.lexer = lexer;
+    sharedState.yy.parser = this;
+    if (typeof lexer.yylloc == 'undefined') {
+        lexer.yylloc = {};
+    }
+    var yyloc = lexer.yylloc;
+    lstack.push(yyloc);
+    var ranges = lexer.options && lexer.options.ranges;
+    if (typeof sharedState.yy.parseError === 'function') {
+        this.parseError = sharedState.yy.parseError;
+    } else {
+        this.parseError = Object.getPrototypeOf(this).parseError;
+    }
+    function popStack(n) {
+        stack.length = stack.length - 2 * n;
+        vstack.length = vstack.length - n;
+        lstack.length = lstack.length - n;
+    }
+    _token_stack:
+        var lex = function () {
+            var token;
+            token = lexer.lex() || EOF;
+            if (typeof token !== 'number') {
+                token = self.symbols_[token] || token;
+            }
+            return token;
+        };
+    var symbol, preErrorSymbol, state, action, a, r, yyval = {}, p, len, newState, expected;
+    while (true) {
+        state = stack[stack.length - 1];
+        if (this.defaultActions[state]) {
+            action = this.defaultActions[state];
+        } else {
+            if (symbol === null || typeof symbol == 'undefined') {
+                symbol = lex();
+            }
+            action = table[state] && table[state][symbol];
+        }
+                    if (typeof action === 'undefined' || !action.length || !action[0]) {
+                var errStr = '';
+                expected = [];
+                for (p in table[state]) {
+                    if (this.terminals_[p] && p > TERROR) {
+                        expected.push('\'' + this.terminals_[p] + '\'');
+                    }
+                }
+                if (lexer.showPosition) {
+                    errStr = 'Parse error on line ' + (yylineno + 1) + ':\n' + lexer.showPosition() + '\nExpecting ' + expected.join(', ') + ', got \'' + (this.terminals_[symbol] || symbol) + '\'';
+                } else {
+                    errStr = 'Parse error on line ' + (yylineno + 1) + ': Unexpected ' + (symbol == EOF ? 'end of input' : '\'' + (this.terminals_[symbol] || symbol) + '\'');
+                }
+                this.parseError(errStr, {
+                    text: lexer.match,
+                    token: this.terminals_[symbol] || symbol,
+                    line: lexer.yylineno,
+                    loc: yyloc,
+                    expected: expected
+                });
+            }
+        if (action[0] instanceof Array && action.length > 1) {
+            throw new Error('Parse Error: multiple actions possible at state: ' + state + ', token: ' + symbol);
+        }
+        switch (action[0]) {
+        case 1:
+            stack.push(symbol);
+            vstack.push(lexer.yytext);
+            lstack.push(lexer.yylloc);
+            stack.push(action[1]);
+            symbol = null;
+            if (!preErrorSymbol) {
+                yyleng = lexer.yyleng;
+                yytext = lexer.yytext;
+                yylineno = lexer.yylineno;
+                yyloc = lexer.yylloc;
+                if (recovering > 0) {
+                    recovering--;
+                }
+            } else {
+                symbol = preErrorSymbol;
+                preErrorSymbol = null;
+            }
+            break;
+        case 2:
+            len = this.productions_[action[1]][1];
+            yyval.$ = vstack[vstack.length - len];
+            yyval._$ = {
+                first_line: lstack[lstack.length - (len || 1)].first_line,
+                last_line: lstack[lstack.length - 1].last_line,
+                first_column: lstack[lstack.length - (len || 1)].first_column,
+                last_column: lstack[lstack.length - 1].last_column
+            };
+            if (ranges) {
+                yyval._$.range = [
+                    lstack[lstack.length - (len || 1)].range[0],
+                    lstack[lstack.length - 1].range[1]
+                ];
+            }
+            r = this.performAction.apply(yyval, [
+                yytext,
+                yyleng,
+                yylineno,
+                sharedState.yy,
+                action[1],
+                vstack,
+                lstack
+            ].concat(args));
+            if (typeof r !== 'undefined') {
+                return r;
+            }
+            if (len) {
+                stack = stack.slice(0, -1 * len * 2);
+                vstack = vstack.slice(0, -1 * len);
+                lstack = lstack.slice(0, -1 * len);
+            }
+            stack.push(this.productions_[action[1]][0]);
+            vstack.push(yyval.$);
+            lstack.push(yyval._$);
+            newState = table[stack[stack.length - 2]][stack[stack.length - 1]];
+            stack.push(newState);
+            break;
+        case 3:
+            return true;
+        }
+    }
+    return true;
+}};
+/* generated by jison-lex 0.3.4 */
+var lexer = (function(){
+var lexer = ({
+
+EOF:1,
+
+parseError:function parseError(str, hash) {
+        if (this.yy.parser) {
+            this.yy.parser.parseError(str, hash);
+        } else {
+            throw new Error(str);
+        }
+    },
+
+// resets the lexer, sets new input
+setInput:function (input, yy) {
+        this.yy = yy || this.yy || {};
+        this._input = input;
+        this._more = this._backtrack = this.done = false;
+        this.yylineno = this.yyleng = 0;
+        this.yytext = this.matched = this.match = '';
+        this.conditionStack = ['INITIAL'];
+        this.yylloc = {
+            first_line: 1,
+            first_column: 0,
+            last_line: 1,
+            last_column: 0
+        };
+        if (this.options.ranges) {
+            this.yylloc.range = [0,0];
+        }
+        this.offset = 0;
+        return this;
+    },
+
+// consumes and returns one char from the input
+input:function () {
+        var ch = this._input[0];
+        this.yytext += ch;
+        this.yyleng++;
+        this.offset++;
+        this.match += ch;
+        this.matched += ch;
+        var lines = ch.match(/(?:\r\n?|\n).*/g);
+        if (lines) {
+            this.yylineno++;
+            this.yylloc.last_line++;
+        } else {
+            this.yylloc.last_column++;
+        }
+        if (this.options.ranges) {
+            this.yylloc.range[1]++;
+        }
+
+        this._input = this._input.slice(1);
+        return ch;
+    },
+
+// unshifts one char (or a string) into the input
+unput:function (ch) {
+        var len = ch.length;
+        var lines = ch.split(/(?:\r\n?|\n)/g);
+
+        this._input = ch + this._input;
+        this.yytext = this.yytext.substr(0, this.yytext.length - len);
+        //this.yyleng -= len;
+        this.offset -= len;
+        var oldLines = this.match.split(/(?:\r\n?|\n)/g);
+        this.match = this.match.substr(0, this.match.length - 1);
+        this.matched = this.matched.substr(0, this.matched.length - 1);
+
+        if (lines.length - 1) {
+            this.yylineno -= lines.length - 1;
+        }
+        var r = this.yylloc.range;
+
+        this.yylloc = {
+            first_line: this.yylloc.first_line,
+            last_line: this.yylineno + 1,
+            first_column: this.yylloc.first_column,
+            last_column: lines ?
+                (lines.length === oldLines.length ? this.yylloc.first_column : 0)
+                 + oldLines[oldLines.length - lines.length].length - lines[0].length :
+              this.yylloc.first_column - len
+        };
+
+        if (this.options.ranges) {
+            this.yylloc.range = [r[0], r[0] + this.yyleng - len];
+        }
+        this.yyleng = this.yytext.length;
+        return this;
+    },
+
+// When called from action, caches matched text and appends it on next action
+more:function () {
+        this._more = true;
+        return this;
+    },
+
+// When called from action, signals the lexer that this rule fails to match the input, so the next matching rule (regex) should be tested instead.
+reject:function () {
+        if (this.options.backtrack_lexer) {
+            this._backtrack = true;
+        } else {
+            return this.parseError('Lexical error on line ' + (this.yylineno + 1) + '. You can only invoke reject() in the lexer when the lexer is of the backtracking persuasion (options.backtrack_lexer = true).\n' + this.showPosition(), {
+                text: "",
+                token: null,
+                line: this.yylineno
+            });
+
+        }
+        return this;
+    },
+
+// retain first n characters of the match
+less:function (n) {
+        this.unput(this.match.slice(n));
+    },
+
+// displays already matched input, i.e. for error messages
+pastInput:function () {
+        var past = this.matched.substr(0, this.matched.length - this.match.length);
+        return (past.length > 20 ? '...':'') + past.substr(-20).replace(/\n/g, "");
+    },
+
+// displays upcoming input, i.e. for error messages
+upcomingInput:function () {
+        var next = this.match;
+        if (next.length < 20) {
+            next += this._input.substr(0, 20-next.length);
+        }
+        return (next.substr(0,20) + (next.length > 20 ? '...' : '')).replace(/\n/g, "");
+    },
+
+// displays the character position where the lexing error occurred, i.e. for error messages
+showPosition:function () {
+        var pre = this.pastInput();
+        var c = new Array(pre.length + 1).join("-");
+        return pre + this.upcomingInput() + "\n" + c + "^";
+    },
+
+// test the lexed token: return FALSE when not a match, otherwise return token
+test_match:function (match, indexed_rule) {
+        var token,
+            lines,
+            backup;
+
+        if (this.options.backtrack_lexer) {
+            // save context
+            backup = {
+                yylineno: this.yylineno,
+                yylloc: {
+                    first_line: this.yylloc.first_line,
+                    last_line: this.last_line,
+                    first_column: this.yylloc.first_column,
+                    last_column: this.yylloc.last_column
+                },
+                yytext: this.yytext,
+                match: this.match,
+                matches: this.matches,
+                matched: this.matched,
+                yyleng: this.yyleng,
+                offset: this.offset,
+                _more: this._more,
+                _input: this._input,
+                yy: this.yy,
+                conditionStack: this.conditionStack.slice(0),
+                done: this.done
+            };
+            if (this.options.ranges) {
+                backup.yylloc.range = this.yylloc.range.slice(0);
+            }
+        }
+
+        lines = match[0].match(/(?:\r\n?|\n).*/g);
+        if (lines) {
+            this.yylineno += lines.length;
+        }
+        this.yylloc = {
+            first_line: this.yylloc.last_line,
+            last_line: this.yylineno + 1,
+            first_column: this.yylloc.last_column,
+            last_column: lines ?
+                         lines[lines.length - 1].length - lines[lines.length - 1].match(/\r?\n?/)[0].length :
+                         this.yylloc.last_column + match[0].length
+        };
+        this.yytext += match[0];
+        this.match += match[0];
+        this.matches = match;
+        this.yyleng = this.yytext.length;
+        if (this.options.ranges) {
+            this.yylloc.range = [this.offset, this.offset += this.yyleng];
+        }
+        this._more = false;
+        this._backtrack = false;
+        this._input = this._input.slice(match[0].length);
+        this.matched += match[0];
+        token = this.performAction.call(this, this.yy, this, indexed_rule, this.conditionStack[this.conditionStack.length - 1]);
+        if (this.done && this._input) {
+            this.done = false;
+        }
+        if (token) {
+            return token;
+        } else if (this._backtrack) {
+            // recover context
+            for (var k in backup) {
+                this[k] = backup[k];
+            }
+            return false; // rule action called reject() implying the next rule should be tested instead.
+        }
+        return false;
+    },
+
+// return next match in input
+next:function () {
+        if (this.done) {
+            return this.EOF;
+        }
+        if (!this._input) {
+            this.done = true;
+        }
+
+        var token,
+            match,
+            tempMatch,
+            index;
+        if (!this._more) {
+            this.yytext = '';
+            this.match = '';
+        }
+        var rules = this._currentRules();
+        for (var i = 0; i < rules.length; i++) {
+            tempMatch = this._input.match(this.rules[rules[i]]);
+            if (tempMatch && (!match || tempMatch[0].length > match[0].length)) {
+                match = tempMatch;
+                index = i;
+                if (this.options.backtrack_lexer) {
+                    token = this.test_match(tempMatch, rules[i]);
+                    if (token !== false) {
+                        return token;
+                    } else if (this._backtrack) {
+                        match = false;
+                        continue; // rule action called reject() implying a rule MISmatch.
+                    } else {
+                        // else: this is a lexer rule which consumes input without producing a token (e.g. whitespace)
+                        return false;
+                    }
+                } else if (!this.options.flex) {
+                    break;
+                }
+            }
+        }
+        if (match) {
+            token = this.test_match(match, rules[index]);
+            if (token !== false) {
+                return token;
+            }
+            // else: this is a lexer rule which consumes input without producing a token (e.g. whitespace)
+            return false;
+        }
+        if (this._input === "") {
+            return this.EOF;
+        } else {
+            return this.parseError('Lexical error on line ' + (this.yylineno + 1) + '. Unrecognized text.\n' + this.showPosition(), {
+                text: "",
+                token: null,
+                line: this.yylineno
+            });
+        }
+    },
+
+// return next match that has a token
+lex:function lex() {
+        var r = this.next();
+        if (r) {
+            return r;
+        } else {
+            return this.lex();
+        }
+    },
+
+// activates a new lexer condition state (pushes the new lexer condition state onto the condition stack)
+begin:function begin(condition) {
+        this.conditionStack.push(condition);
+    },
+
+// pop the previously active lexer condition state off the condition stack
+popState:function popState() {
+        var n = this.conditionStack.length - 1;
+        if (n > 0) {
+            return this.conditionStack.pop();
+        } else {
+            return this.conditionStack[0];
+        }
+    },
+
+// produce the lexer rule set which is active for the currently active lexer condition state
+_currentRules:function _currentRules() {
+        if (this.conditionStack.length && this.conditionStack[this.conditionStack.length - 1]) {
+            return this.conditions[this.conditionStack[this.conditionStack.length - 1]].rules;
+        } else {
+            return this.conditions["INITIAL"].rules;
+        }
+    },
+
+// return the currently active lexer condition state; when an index argument is provided it produces the N-th previous condition state, if available
+topState:function topState(n) {
+        n = this.conditionStack.length - 1 - Math.abs(n || 0);
+        if (n >= 0) {
+            return this.conditionStack[n];
+        } else {
+            return "INITIAL";
+        }
+    },
+
+// alias for begin(condition)
+pushState:function pushState(condition) {
+        this.begin(condition);
+    },
+
+// return the number of states currently on the stack
+stateStackSize:function stateStackSize() {
+        return this.conditionStack.length;
+    },
+options: {},
+performAction: function anonymous(yy,yy_,$avoiding_name_collisions,YY_START) {
+var YYSTATE=YY_START;
+switch($avoiding_name_collisions) {
+case 0: /* skip whitespace */             
+break;
+case 1: return 7; 
+break;
+case 2: return 10; 
+break;
+case 3: return 26; 
+break;
+case 4: return 27; 
+break;
+case 5: return 38; 
+break;
+case 6: return 22;               
+break;
+case 7: return 39; 
+break;
+case 8: return 19; 
+break;
+case 9: return 20; 
+break;
+case 10: return 25; 
+break;
+case 11: return 12; 
+break;
+case 12: return 16; 
+break;
+case 13: return 17; 
+break;
+case 14: return 13; 
+break;
+case 15: return 18; 
+break;
+case 16: return 15; 
+break;
+case 17: return 14; 
+break;
+case 18: return 11; 
+break;
+case 19: return 8; 
+break;
+case 20: return 30; 
+break;
+case 21: return 40; 
+break;
+case 22: return 35; 
+break;
+case 23: return 34; 
+break;
+case 24: return 32; 
+break;
+case 25: return 29; 
+break;
+case 26: return 36; 
+break;
+case 27: return 33; 
+break;
+case 28: return 5; 
+break;
+case 29: return 'invalid_character'; 
+break;
+}
+},
+rules: [/^(?:\s+)/,/^(?:\()/,/^(?:\))/,/^(?:\[)/,/^(?:\])/,/^(?:,)/,/^(?:[A-Z][0-9]*(?=([a-zαβγτ]+)))/,/^(?:-->)/,/^(?:true\b)/,/^(?:false|⊥|_\|_|contradiction|contra\b)/,/^(?:=)/,/^(?:and|&|∧|•)/,/^(?:arrow|->|⇒|→|⊃)/,/^(?:↔|≡|⇔|double_arrow|<->)/,/^(?:or|∨|\+|ǀǀ|\|)/,/^(?:not|¬|~|˜|!)/,/^(?:nor|↓)/,/^(?:nand|↑)/,/^(?:all|∀|every\b)/,/^(?:some|exists|∃)/,/^(?:[A-Z][0-9]*)/,/^(?:[nN][uU][lL][lL])/,/^(?:[a-r][0-9]*\^)/,/^(?:[a-r][0-9]*)/,/^(?:[xyzw][0-9]*)/,/^(?:[φψχ][0-9]*)/,/^(?:[αβγτ][0-9]*\^)/,/^(?:[αβγτ][0-9]*)/,/^(?:$)/,/^(?:.)/],
+conditions: {"expectLeftBracket":{"rules":[],"inclusive":false},"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29],"inclusive":true}}
+});
+return lexer;
+})();
+parser.lexer = lexer;
+function Parser () {
+  this.yy = {};
+}
+Parser.prototype = parser;parser.Parser = Parser;
+return new Parser;
+})();
+
+
+if (typeof require !== 'undefined' && typeof exports !== 'undefined') {
+exports.parser = tellerFOL;
+exports.Parser = tellerFOL.Parser;
+exports.parse = function () { return tellerFOL.parse.apply(tellerFOL, arguments); };
+exports.main = function commonjsMain(args) {
+    if (!args[1]) {
+        console.log('Usage: '+args[0]+' FILE');
+        process.exit(1);
+    }
+    var source = require('fs').readFileSync(require('path').normalize(args[1]), "utf8");
+    return exports.parser.parse(source);
+};
+if (typeof module !== 'undefined' && require.main === module) {
+  exports.main(process.argv.slice(1));
+}
+}
+}).call(this,require('_process'))
+},{"_process":3,"fs":1,"path":2}],15:[function(require,module,exports){
 var PREMISE_JUSTIFICATION, _, _FIND_JUSTIFICATION, _FIND_WHITESPACE_JUSTIFICATION, _isPremise, cleanNumber, dialectManager, findBlock, findLine, findLineOrBlock, getCitedBlocks, getCitedLines, getRuleName, jp, split, to;
 
 _ = require('lodash');
@@ -14700,6 +17056,9 @@ to = function(block) {
       line.findLineOrBlock = findLineOrBlock;
       line.getCitedLines = getCitedLines;
       line.getCitedBlocks = getCitedBlocks;
+      line.isPremise = function() {
+        return line.justification.rule.connective === PREMISE_JUSTIFICATION.rule.connective;
+      };
       return void 0;
     }
   };
@@ -14925,7 +17284,7 @@ getCitedBlocks = function() {
 };
 
 
-},{"../dialect_manager/dialectManager":5,"./add_line_numbers":13,"./justification_parser":19,"lodash":9}],13:[function(require,module,exports){
+},{"../dialect_manager/dialectManager":5,"./add_line_numbers":16,"./justification_parser":23,"lodash":9}],16:[function(require,module,exports){
 var _, _DROP_TRAILING_DOTS_AND_BRACKET, _GET_NUMBER, cleanNumber, split, to,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -15023,7 +17382,7 @@ to = function(block) {
 exports.to = to;
 
 
-},{"lodash":9}],14:[function(require,module,exports){
+},{"lodash":9}],17:[function(require,module,exports){
 var fol, substitute, to, util;
 
 fol = require('../fol');
@@ -15061,7 +17420,7 @@ to = function(block) {
 exports.to = to;
 
 
-},{"../fol":7,"../substitute":22,"../util":24}],15:[function(require,module,exports){
+},{"../fol":7,"../substitute":27,"../util":29}],18:[function(require,module,exports){
 var LineStatus, fol, substitute, to, util;
 
 fol = require('../fol');
@@ -15102,6 +17461,7 @@ exports.to = to;
 
 LineStatus = (function() {
   function LineStatus(line) {
+    var ref;
     this.line = line;
     this.messages = [];
     this.verified = false;
@@ -15112,7 +17472,7 @@ LineStatus = (function() {
       this.addMessage("the sentence you wrote (" + this.line.sentenceText + ") is not a sentence of awFOL.");
     }
     if (this.line.justificationErrors != null) {
-      this.addMessage("the justification your supplied (" + this.line.justificationText + ") either mentions a rule you can't use here or doesn't make sense.");
+      this.addMessage("the justification your supplied (" + ((ref = this.line.justificationText) != null ? ref.trim() : void 0) + ") either mentions a rule you can't use here or doesn't make sense.");
     }
     if (this.line.type === 'line' && (this.line.justification == null) && (this.line.justificationErrors == null)) {
       this.addMessage("you supplied no justification for this line.");
@@ -15174,8 +17534,8 @@ LineStatus = (function() {
 })();
 
 
-},{"../fol":7,"../substitute":22,"../util":24}],16:[function(require,module,exports){
-var _, _linesCitedAreOk, _parseProof, addJustification, addLineNumbers, addSentences, addStatus, blockParser, checkItAccordsWithTheRules, checkThisRule, theRules, to, verifyLine,
+},{"../fol":7,"../substitute":27,"../util":29}],19:[function(require,module,exports){
+var _, _linesCitedAreOk, _parseProof, addJustification, addLineNumbers, addSentences, addStatus, blockParser, checkItAccordsWithTheRules, checkLineAccordsWithOneOfTheseRules, dialectManager, to, verifyLine,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 _ = require('lodash');
@@ -15190,7 +17550,13 @@ addSentences = require('./add_sentences');
 
 addStatus = require('./add_status');
 
-theRules = (require('./fitch_rules')).rules;
+require('./fitch_rules');
+
+require('./teller_rules');
+
+require('./forallx_rules');
+
+dialectManager = require('../dialect_manager/dialectManager');
 
 _parseProof = function(proofText) {
   var block;
@@ -15274,7 +17640,7 @@ verifyLine = function(lineOrLineNumber, proofText) {
     theLine.status.verified = false;
     return false;
   }
-  result = checkItAccordsWithTheRules(theLine, result);
+  result = checkItAccordsWithTheRules(theLine);
   return result;
 };
 
@@ -15323,13 +17689,44 @@ _linesCitedAreOk = function(line) {
 
 exports._linesCitedAreOk = _linesCitedAreOk;
 
-checkItAccordsWithTheRules = function(line, result) {
-  var aRule, connective, intronation, leftMessage, rightMessage, ruleMap, side;
+checkLineAccordsWithOneOfTheseRules = function(line, rules) {
+  var aRule, errorMessages, i, idx, j, len, len1, m, msg, res;
+  errorMessages = [];
+  for (i = 0, len = rules.length; i < len; i++) {
+    aRule = rules[i];
+    res = aRule.check(line);
+    if (res === true) {
+      line.status.verified = true;
+      return true;
+    }
+    msg = line.status.popMessage();
+    if (msg != null) {
+      errorMessages.push(msg);
+    }
+  }
+  line.status.verified = false;
+  if (errorMessages.length === 1) {
+    line.status.addMessage(errorMessages[0]);
+  }
+  if (errorMessages.length > 1) {
+    msg = "This rule has multiple forms and none of them matched.  ";
+    for (idx = j = 0, len1 = errorMessages.length; j < len1; idx = ++j) {
+      m = errorMessages[idx];
+      msg += "(" + idx + ") " + m + "  ";
+    }
+    line.status.addMessage(msg);
+  }
+  return false;
+};
+
+checkItAccordsWithTheRules = function(line) {
+  var aRule, connective, i, intronation, j, len, len1, r, ref, ref1, ref2, ref3, ruleMap, rules, side, theRules;
   connective = line.justification.rule.connective;
   intronation = line.justification.rule.variant.intronation;
   side = line.justification.rule.variant.side;
+  theRules = dialectManager.getCurrentRules();
   ruleMap = theRules[connective];
-  if (!ruleMap) {
+  if (ruleMap == null) {
     line.status.addMessage(("the rule you specified, `" + connective + " " + (intronation || '') + " " + (side || '') + "` does not exist (or, if it does, you are not allowed to use it in this proof).").replace(/\s\s+/g, ''));
     line.status.verified = false;
     return false;
@@ -15337,14 +17734,18 @@ checkItAccordsWithTheRules = function(line, result) {
   if (!intronation) {
     if (ruleMap.type === 'rule') {
       aRule = ruleMap;
-      return checkThisRule(aRule, line, result);
+      return checkLineAccordsWithOneOfTheseRules(line, [aRule]);
+    }
+    if (_.isArray(ruleMap)) {
+      rules = ruleMap;
+      return checkLineAccordsWithOneOfTheseRules(line, rules);
     }
     line.status.addMessage("you only partially specified the rule: `" + connective + "` needs something extra (intro? elim?).");
     line.status.verified = false;
     return false;
   }
   ruleMap = ruleMap[intronation];
-  if (!ruleMap) {
+  if (ruleMap == null) {
     line.status.addMessage("you specified the rule " + connective + " *" + intronation + "* but there is no ‘" + intronation + "’ version of the rule for " + connective + " (or, if there is, you are not allowed to use it in this proof).");
     line.status.verified = false;
     return false;
@@ -15352,51 +17753,49 @@ checkItAccordsWithTheRules = function(line, result) {
   if (!side) {
     if (ruleMap.type === 'rule') {
       aRule = ruleMap;
-      return checkThisRule(aRule, line, result);
+      return checkLineAccordsWithOneOfTheseRules(line, [aRule]);
     }
-    if (ruleMap.left != null) {
-      result = checkThisRule(ruleMap.left, line, result);
-      if (result === true) {
-        return result;
+    if (_.isArray(ruleMap)) {
+      rules = ruleMap;
+      return checkLineAccordsWithOneOfTheseRules(line, rules);
+    }
+    rules = [];
+    if (((ref = ruleMap.left) != null ? ref.type : void 0) === 'rule') {
+      rules.push(ruleMap.left);
+    }
+    if (_.isArray(ruleMap.left)) {
+      ref1 = ruleMap.left;
+      for (i = 0, len = ref1.length; i < len; i++) {
+        r = ref1[i];
+        rules.push(r);
       }
     }
-    if (ruleMap.right == null) {
-      return result;
+    if (((ref2 = ruleMap.right) != null ? ref2.type : void 0) === 'rule') {
+      rules.push(ruleMap.right);
     }
-    leftMessage = line.status.popMessage();
-    result = checkThisRule(ruleMap.right, line, result);
-    if (result === false) {
-      rightMessage = line.status.popMessage();
-      if ((leftMessage != null) && (rightMessage != null)) {
-        line.status.addMessage("Either " + leftMessage + ", or else " + rightMessage + ".");
-      } else {
-        line.status.addMessage(leftMessage || rightMessage || '');
+    if (_.isArray(ruleMap.right)) {
+      ref3 = ruleMap.right;
+      for (j = 0, len1 = ref3.length; j < len1; j++) {
+        r = ref3[j];
+        rules.push(r);
       }
     }
-    return result;
+    return checkLineAccordsWithOneOfTheseRules(line, rules);
   }
   if (ruleMap[side] == null) {
     line.status.addMessage("you specified the rule " + connective + " " + intronation + " *" + side + "* but there is no ‘" + side + "’ version of  " + connective + " " + intronation + " (or, if there is, you are not allowed to use it in this proof).");
     line.status.verified = false;
     return false;
   }
-  return checkThisRule(ruleMap[side], line, result);
-};
-
-checkThisRule = function(rule, line, result) {
-  var outcome;
-  outcome = rule.check(line);
-  if (outcome === true) {
-    line.status.verified = true;
-    return true;
-  } else {
-    line.status.verified = false;
-    return false;
+  rules = ruleMap[side];
+  if (!_.isArray(rules)) {
+    rules = [rules];
   }
+  return checkLineAccordsWithOneOfTheseRules(line, rules);
 };
 
 
-},{"./add_justification":12,"./add_line_numbers":13,"./add_sentences":14,"./add_status":15,"./block_parser":17,"./fitch_rules":18,"lodash":9}],17:[function(require,module,exports){
+},{"../dialect_manager/dialectManager":5,"./add_justification":15,"./add_line_numbers":16,"./add_sentences":17,"./add_status":18,"./block_parser":20,"./fitch_rules":21,"./forallx_rules":22,"./teller_rules":26,"lodash":9}],20:[function(require,module,exports){
 var Block, _, _INDENTATION_AT_START_OF_LINE, _SPLIT_LINE_WHEN_INDENTATION_FIRST, _SPLIT_LINE_WHEN_NUMBER_FIRST, areLinesFormattedIndentationFirst, clean, extractIndentationAndContentFrom, isBlank, isDivider, parse, removeIndentationFrom, removeNumberFrom, split, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -15757,7 +18156,7 @@ Block = (function() {
 exports.Block = Block;
 
 
-},{"../util":24,"lodash":9}],18:[function(require,module,exports){
+},{"../util":29,"lodash":9}],21:[function(require,module,exports){
 var dialectManager, rule, rules;
 
 dialectManager = require('../dialect_manager/dialectManager');
@@ -15828,7 +18227,74 @@ exports.rules = rules;
 dialectManager.registerRuleSet('fitch', rules);
 
 
-},{"../dialect_manager/dialectManager":5,"./rule":21}],19:[function(require,module,exports){
+},{"../dialect_manager/dialectManager":5,"./rule":25}],22:[function(require,module,exports){
+var dialectManager, rule, rules;
+
+dialectManager = require('../dialect_manager/dialectManager');
+
+rule = require('./rule');
+
+rule.setParser(dialectManager.getParser('awFOL'));
+
+rules = {
+  _description: 'Rules of proof for the system of proof specified in forallx. ',
+  premise: rule.premise(),
+  reit: rule.from('φ').to('φ'),
+  'and': {
+    elim: {
+      left: rule.from('φ and ψ').to('φ'),
+      right: rule.from('φ and ψ').to('ψ')
+    },
+    intro: rule.from('φ').and('ψ').to('φ and ψ')
+  },
+  'or': {
+    elim: {
+      left: rule.from('φ or ψ').and('not φ').to('ψ'),
+      right: rule.from('φ or ψ').and('not ψ').to('φ')
+    },
+    intro: {
+      left: rule.from('φ').to('φ or ψ'),
+      right: rule.from('φ').to('ψ or φ')
+    }
+  },
+  arrow: {
+    elim: rule.from('φ arrow ψ').and('φ').to('ψ'),
+    intro: rule.from(rule.subproof('φ', 'ψ')).to('φ arrow ψ')
+  },
+  double_arrow: {
+    elim: {
+      left: rule.from('φ↔ψ').and('φ').to('ψ'),
+      right: rule.from('φ↔ψ').and('ψ').to('φ')
+    },
+    intro: rule.from(rule.subproof('φ', 'ψ')).and(rule.subproof('ψ', 'φ')).to('φ↔ψ')
+  },
+  'not': {
+    elim: rule.from(rule.subproof('not φ', 'φ2').contains('ψ', 'not ψ')).to('φ'),
+    intro: rule.from(rule.subproof('φ', 'φ2').contains('ψ', 'not ψ')).to('not φ')
+  },
+  identity: {
+    intro: rule.to('α=α'),
+    elim: {
+      left: rule.from('α=β').and('φ').to('φ[α-->β]'),
+      right: rule.from('α=β').and('φ').to('φ[β-->α]')
+    }
+  },
+  existential: {
+    elim: rule.from('exists τ φ').and(rule.subproof(rule.match('φ[τ-->α]').isNewName('α'), 'ψ')).to('ψ[α-->null]'),
+    intro: rule.from('φ[τ-->α]').to('exists τ φ')
+  },
+  universal: {
+    elim: rule.from('all τ φ').to('φ[τ-->α]'),
+    intro: rule.from(rule.match('φ[τ-->α]').isNotInAnyUndischargedPremise('α')).to('all τ φ')
+  }
+};
+
+exports.rules = rules;
+
+dialectManager.registerRuleSet('forallx', rules);
+
+
+},{"../dialect_manager/dialectManager":5,"./rule":25}],23:[function(require,module,exports){
 (function (process){
 /* parser generated by jison 0.4.17 */
 /*
@@ -15904,12 +18370,12 @@ dialectManager.registerRuleSet('fitch', rules);
   }
 */
 var justification_parser = (function(){
-var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,5],$V1=[1,10],$V2=[1,11],$V3=[1,12],$V4=[1,13],$V5=[1,9],$V6=[1,14],$V7=[1,15],$V8=[5,18],$V9=[5,8,14,15,16,17,19,20],$Va=[5,8,16,17,18],$Vb=[5,8,14,15,18];
+var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,5],$V1=[1,10],$V2=[1,11],$V3=[1,12],$V4=[1,13],$V5=[1,9],$V6=[1,14],$V7=[1,15],$V8=[1,16],$V9=[5,18],$Va=[5,8,14,15,16,17,19,20,21],$Vb=[5,8,16,17,18],$Vc=[5,8,14,15,18];
 var parser = {trace: function trace() { },
 yy: {},
-symbols_: {"error":2,"justification":3,"j":4,"EOF":5,"rule_name":6,"numberlist":7,"connective":8,"intronation":9,"rule_name_option0":10,"rule_name_option1":11,"side":12,"rule_name_group0":13,"elim":14,"intro":15,"left":16,"right":17,"number":18,"reit":19,"premise":20,"$accept":0,"$end":1},
-terminals_: {2:"error",5:"EOF",8:"connective",14:"elim",15:"intro",16:"left",17:"right",18:"number",19:"reit",20:"premise"},
-productions_: [0,[3,2],[4,1],[4,2],[4,2],[6,3],[6,3],[6,3],[6,3],[6,3],[6,3],[6,1],[9,1],[9,1],[12,1],[12,1],[7,1],[7,2],[10,0],[10,1],[11,0],[11,1],[13,1],[13,1]],
+symbols_: {"error":2,"justification":3,"j":4,"EOF":5,"rule_name":6,"numberlist":7,"connective":8,"intronation":9,"rule_name_option0":10,"rule_name_option1":11,"side":12,"rule_name_group0":13,"elim":14,"intro":15,"left":16,"right":17,"number":18,"reit":19,"premise":20,"bare_rule":21,"$accept":0,"$end":1},
+terminals_: {2:"error",5:"EOF",8:"connective",14:"elim",15:"intro",16:"left",17:"right",18:"number",19:"reit",20:"premise",21:"bare_rule"},
+productions_: [0,[3,2],[4,1],[4,2],[4,2],[6,3],[6,3],[6,3],[6,3],[6,3],[6,3],[6,1],[9,1],[9,1],[12,1],[12,1],[7,1],[7,2],[10,0],[10,1],[11,0],[11,1],[13,1],[13,1],[13,1]],
 performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate /* action[1] */, $$ /* vstack */, _$ /* lstack */) {
 /* this == yyval */
 
@@ -15980,8 +18446,8 @@ case 17:
 break;
 }
 },
-table: [{3:1,4:2,6:3,7:4,8:$V0,9:6,12:7,13:8,14:$V1,15:$V2,16:$V3,17:$V4,18:$V5,19:$V6,20:$V7},{1:[3]},{5:[1,16]},{5:[2,2],7:17,18:$V5},{6:18,8:$V0,9:6,12:7,13:8,14:$V1,15:$V2,16:$V3,17:$V4,19:$V6,20:$V7},{9:19,12:20,14:$V1,15:$V2,16:$V3,17:$V4},{8:[1,21],12:22,16:$V3,17:$V4},{8:[1,23],9:24,14:$V1,15:$V2},o($V8,[2,11]),o($V9,[2,16],{7:25,18:$V5}),o($Va,[2,12]),o($Va,[2,13]),o($Vb,[2,14]),o($Vb,[2,15]),o($V8,[2,22]),o($V8,[2,23]),{1:[2,1]},{5:[2,3]},{5:[2,4]},o($V8,[2,18],{10:26,12:27,16:$V3,17:$V4}),{9:28,14:$V1,15:$V2},o($V8,[2,20],{11:29,12:30,16:$V3,17:$V4}),{8:[1,31]},{9:32,14:$V1,15:$V2},{8:[1,33]},o($V9,[2,17]),o($V8,[2,5]),o($V8,[2,19]),o($V8,[2,8]),o($V8,[2,6]),o($V8,[2,21]),o($V8,[2,10]),o($V8,[2,7]),o($V8,[2,9])],
-defaultActions: {16:[2,1],17:[2,3],18:[2,4]},
+table: [{3:1,4:2,6:3,7:4,8:$V0,9:6,12:7,13:8,14:$V1,15:$V2,16:$V3,17:$V4,18:$V5,19:$V6,20:$V7,21:$V8},{1:[3]},{5:[1,17]},{5:[2,2],7:18,18:$V5},{6:19,8:$V0,9:6,12:7,13:8,14:$V1,15:$V2,16:$V3,17:$V4,19:$V6,20:$V7,21:$V8},{9:20,12:21,14:$V1,15:$V2,16:$V3,17:$V4},{8:[1,22],12:23,16:$V3,17:$V4},{8:[1,24],9:25,14:$V1,15:$V2},o($V9,[2,11]),o($Va,[2,16],{7:26,18:$V5}),o($Vb,[2,12]),o($Vb,[2,13]),o($Vc,[2,14]),o($Vc,[2,15]),o($V9,[2,22]),o($V9,[2,23]),o($V9,[2,24]),{1:[2,1]},{5:[2,3]},{5:[2,4]},o($V9,[2,18],{10:27,12:28,16:$V3,17:$V4}),{9:29,14:$V1,15:$V2},o($V9,[2,20],{11:30,12:31,16:$V3,17:$V4}),{8:[1,32]},{9:33,14:$V1,15:$V2},{8:[1,34]},o($Va,[2,17]),o($V9,[2,5]),o($V9,[2,19]),o($V9,[2,8]),o($V9,[2,6]),o($V9,[2,21]),o($V9,[2,10]),o($V9,[2,7]),o($V9,[2,9])],
+defaultActions: {17:[2,1],18:[2,3],19:[2,4]},
 parseError: function parseError(str, hash) {
     if (hash.recoverable) {
         this.trace(str);
@@ -16504,23 +18970,49 @@ break;
 case 14: yy_.yytext = 'premise';
       return 20; 
 break;
-case 15: yy_.yytext = 'universal';
+case 15: yy_.yytext = 'weakening';return 21; 
+break;
+case 16: yy_.yytext = 'cases';return 21; 
+break;
+case 17: yy_.yytext = 'DC';return 21; 
+break;
+case 18: yy_.yytext = 'DC';return 21; 
+break;
+case 19: yy_.yytext = 'reductio';return 21; 
+break;
+case 20: yy_.yytext = 'DM';return 21; 
+break;
+case 21: yy_.yytext = 'contraposition';return 21; 
+break;
+case 22: yy_.yytext = 'C';return 21; 
+break;
+case 23: yy_.yytext = 'CD';return 21; 
+break;
+case 24: yy_.yytext = 'not-all';return 21; 
+break;
+case 25: yy_.yytext = 'all-not';return 21; 
+break;
+case 26: yy_.yytext = 'exists-not';return 21; 
+break;
+case 27: yy_.yytext = 'not-exists';return 21; 
+break;
+case 28: yy_.yytext = 'universal';
       return 8; 
 break;
-case 16: yy_.yytext = 'existential';
+case 29: yy_.yytext = 'existential';
       return 8; 
 break;
-case 17: return 16; 
+case 30: return 16; 
 break;
-case 18: return 17; 
+case 31: return 17; 
 break;
-case 19: /*  Skip whitespace and commas. 
+case 32: /*  Skip whitespace and commas. 
       */ 
     
 break;
-case 20: return 5; 
+case 33: return 5; 
 break;
-case 21: 
+case 34: 
       /*  I would love to `return 'waffle';` and treat
           waffle as a category because I want to allow 
           some of the connectives to appear in waffle, e.g. 'not'.
@@ -16528,14 +19020,14 @@ case 21:
       */ 
     
 break;
-case 22: /* Ignore everything else */ 
+case 35: /* Ignore everything else */ 
 break;
-case 23:console.log(yy_.yytext);
+case 36:console.log(yy_.yytext);
 break;
 }
 },
-rules: [/^(?:([0-9][^,\s]*)(\s+and\s+)(?=[0-9]))/i,/^(?:([0-9][^,\s]*)\s+to\s+([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*?)\s*(?:-+)\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*)(?:(\s*,)*))/i,/^(?:elimination|eliminate|elim|e)/i,/^(?:introduction|introduce|intro|i)/i,/^(?:⊥|_\|_|contradiction|contra|false)/i,/^(?:or|∨|\+|ǀǀ|\|)/i,/^(?:=|identity)/i,/^(?:and|conjunction|∧|•|&)/i,/^(?:double_arrow|↔|≡|⇔|<->)/i,/^(?:arrow|->|⇒|→|⊃)/i,/^(?:not|¬|˜|!|negation)/i,/^(?:reit|reiteration|r)/i,/^(?:premise|assumption|p)/i,/^(?:all|∀|every|universal)/i,/^(?:some|exists|∃|existential)/i,/^(?:left)/i,/^(?:right)/i,/^(?:[\s,]+)/i,/^(?:$)/i,/^(?:\w+)/i,/^(?:.)/i,/^(?:.)/i],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23],"inclusive":true}}
+rules: [/^(?:([0-9][^,\s]*)(\s+and\s+)(?=[0-9]))/i,/^(?:([0-9][^,\s]*)\s+to\s+([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*?)\s*(?:-+)\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*)(?:(\s*,)*))/i,/^(?:elimination|eliminate|elim|e)/i,/^(?:introduction|introduce|intro|i)/i,/^(?:⊥|_\|_|contradiction|contra|false)/i,/^(?:or|∨|\+|ǀǀ|\|)/i,/^(?:=|identity)/i,/^(?:and|conjunction|∧|•|&)/i,/^(?:double_arrow|↔|≡|⇔|<->)/i,/^(?:arrow|->|⇒|→|⊃)/i,/^(?:not|¬|˜|~|!|negation)/i,/^(?:reit|reiteration|r)/i,/^(?:premise|assumption|p)/i,/^(?:weakening|w)/i,/^(?:argument by cases|cases|ac)/i,/^(?:denying the consequent|dc)/i,/^(?:denying the consequent|dc)/i,/^(?:reductio|rd|reductio ad absurdum)/i,/^(?:dm|de morgan|deMorgan)/i,/^(?:contraposition|cp)/i,/^(?:c|conditional)/i,/^(?:cd|contradiction)/i,/^(?:not all|not-all|~∀)/i,/^(?:all not|all-not|∀~)/i,/^(?:exists not|exists-not|∃~)/i,/^(?:not exists|not-exists|~∃)/i,/^(?:all|∀|every|universal)/i,/^(?:some|exists|∃|existential)/i,/^(?:left)/i,/^(?:right)/i,/^(?:[\s,]+)/i,/^(?:$)/i,/^(?:\w+)/i,/^(?:.)/i,/^(?:.)/i],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36],"inclusive":true}}
 });
 return lexer;
 })();
@@ -16565,7 +19057,7 @@ if (typeof module !== 'undefined' && require.main === module) {
 }
 }
 }).call(this,require('_process'))
-},{"_process":3,"fs":1,"path":2}],20:[function(require,module,exports){
+},{"_process":3,"fs":1,"path":2}],24:[function(require,module,exports){
 var _, _decorate, addJustification, addLineNumbers, addSentences, addStatus, addVerification, blockParser, padRight, parse;
 
 _ = require('lodash');
@@ -16694,7 +19186,7 @@ _decorate = function(proof) {
     for (i = 0, len1 = ref.length; i < len1; i++) {
       line = ref[i];
       indentationSentence = padRight(line.indentation + " " + line.sentence, maxSentenceLength + 1);
-      if (walker.needLineNumbers) {
+      if (walker.needLineNumbers || o.numberLines === true) {
         txt += line.number + " ";
       }
       txt += indentationSentence + "   " + line.justification + "\n";
@@ -16743,9 +19235,10 @@ parse = function(proofText) {
 exports.parse = parse;
 
 
-},{"./add_justification":12,"./add_line_numbers":13,"./add_sentences":14,"./add_status":15,"./add_verification":16,"./block_parser":17,"lodash":9}],21:[function(require,module,exports){
-var LineChecker, Pathfinder, RequirementChecker, _, _From, _notImplementedYet, _parseIfNecessaryAndDecorate, _permutations, combinations, fol, from, numberToWords, parser, permutations, premise, subproof, to, truthtable, util,
-  indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+},{"./add_justification":15,"./add_line_numbers":16,"./add_sentences":17,"./add_status":18,"./add_verification":19,"./block_parser":20,"lodash":9}],25:[function(require,module,exports){
+var LineChecker, Pathfinder, RequirementChecker, _, _From, _matchesToString, _notImplementedYet, _parseIfNecessaryAndDecorate, _parseNameIfNecessaryAndDecorate, _permutations, areAllRequirementsMet, areRequirementsMetByTheseLinesAndBlocks, checkCorrectNofLinesAndSubproofsCited, checkRequirementsMet, combinations, convertTextToRequirementIfNecessary, doAnyCandidatesMeetThisReq, doesALineAboveContainThisName, doesAPremiseHereOrAboveContainThisName, doesLineMatchPattern, fol, from, match, numberToWords, parseAndDecorateIfNecessary, parser, permutations, premise, subproof, to, truthtable, util,
+  indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
+  slice = [].slice;
 
 _ = require('lodash');
 
@@ -16755,15 +19248,310 @@ fol = require('../fol');
 
 parser = void 0;
 
-exports.setParser = function(parser) {
-  return parser = parser;
+exports.setParser = function(aParser) {
+  return parser = aParser;
 };
+
+_matchesToString = function(priorMatches) {
+  var key, res;
+  res = "";
+  for (key in priorMatches) {
+    res += key + " : " + (fol._decorate(priorMatches[key]).toString()) + " ; ";
+  }
+  return res;
+};
+
+match = function(sentence) {
+  var baseCheck, checkFunctions, pattern;
+  pattern = _parseIfNecessaryAndDecorate(sentence);
+  baseCheck = function(line, priorMatches) {
+    var test;
+    test = doesLineMatchPattern(line, pattern, priorMatches);
+    return test;
+  };
+  checkFunctions = [baseCheck];
+  return {
+    check: function(line, priorMatches) {
+      var currentMatches, f, k, len, test;
+      currentMatches = priorMatches;
+      for (k = 0, len = checkFunctions.length; k < len; k++) {
+        f = checkFunctions[k];
+        test = f(line, currentMatches);
+        if (test === false) {
+          return false;
+        }
+        currentMatches = test;
+      }
+      return currentMatches;
+    },
+    toString: function() {
+      return pattern.toString();
+    },
+    isNewName: function(name) {
+      var nameThatMustBeNew, newNameCheck;
+      nameThatMustBeNew = _parseNameIfNecessaryAndDecorate(name);
+      newNameCheck = function(line, priorMatches) {
+        var nameThatMustBeNewClone, theNameTxt;
+        nameThatMustBeNewClone = nameThatMustBeNew.clone();
+        nameThatMustBeNewClone = nameThatMustBeNewClone.applyMatches(priorMatches).applySubstitutions();
+        theNameTxt = nameThatMustBeNewClone.name;
+        if (doesALineAboveContainThisName(theNameTxt, line)) {
+          return false;
+        }
+        return priorMatches;
+      };
+      checkFunctions.push(newNameCheck);
+      return this;
+    },
+    isNotInAnyUndischargedPremise: function(name) {
+      var nameThatCantBeInAnyUndischargedPremise, newCheck;
+      nameThatCantBeInAnyUndischargedPremise = _parseNameIfNecessaryAndDecorate(name);
+      newCheck = function(line, priorMatches) {
+        var nameClone, nameTxt;
+        nameClone = nameThatCantBeInAnyUndischargedPremise.clone();
+        nameClone = nameClone.applyMatches(priorMatches).applySubstitutions();
+        nameTxt = nameClone.name;
+        if (doesAPremiseHereOrAboveContainThisName(nameTxt, line)) {
+          return false;
+        }
+        return priorMatches;
+      };
+      checkFunctions.push(newCheck);
+      return this;
+    }
+  };
+};
+
+exports.match = match;
+
+doesLineMatchPattern = function(line, pattern, priorMatches) {
+  var aBox, aSentence, k, len, metaVariableNames, newMatches, patternClone, ref, test, testVerbotenName, theName, varName;
+  if (line.type !== 'line') {
+    return false;
+  }
+  metaVariableNames = pattern.listMetaVariableNames();
+  ref = metaVariableNames.inSub.left;
+  for (k = 0, len = ref.length; k < len; k++) {
+    varName = ref[k];
+    if (!(varName in priorMatches)) {
+      return false;
+    }
+  }
+  patternClone = pattern.clone().applyMatches(priorMatches);
+  testVerbotenName = patternClone.applySubstitutions();
+  if (testVerbotenName === null) {
+    return false;
+  }
+  aSentence = line.sentence;
+  if (aSentence == null) {
+    return false;
+  }
+  if ((patternClone.box == null) && (aSentence.box != null)) {
+    aSentence = aSentence.clone();
+    delete aSentence.box;
+  }
+  newMatches = aSentence.findMatches(patternClone, priorMatches);
+  if (newMatches === false) {
+    return false;
+  }
+  if ((patternClone.box != null) || (patternClone.type === 'box')) {
+    aBox = (patternClone.type === 'box' ? patternClone : void 0) || (patternClone.box != null ? patternClone.box : void 0);
+    aBox = aBox.applyMatches(newMatches).applySubstitutions();
+    theName = aBox.term.name;
+    test = doesALineAboveContainThisName(theName, line);
+    if (test !== false) {
+      return false;
+    }
+  }
+  return newMatches;
+};
+
+doesALineAboveContainThisName = function(theName, aLine) {
+  var test;
+  test = function(lineOrBlock) {
+    if (lineOrBlock.type !== 'line') {
+      return false;
+    }
+    if ((indexOf.call(lineOrBlock.sentence.getNames(), theName) >= 0)) {
+      return true;
+    }
+    return false;
+  };
+  return aLine.findAbove(test);
+};
+
+doesAPremiseHereOrAboveContainThisName = function(theName, aLine) {
+  var test;
+  if (aLine.isPremise()) {
+    if ((indexOf.call(aLine.sentence.getNames(), theName) >= 0)) {
+      return true;
+    }
+  }
+  test = function(lineOrBlock) {
+    if (lineOrBlock.type !== 'line') {
+      return false;
+    }
+    if (!lineOrBlock.isPremise()) {
+      return false;
+    }
+    if ((indexOf.call(lineOrBlock.sentence.getNames(), theName) >= 0)) {
+      return true;
+    }
+    return false;
+  };
+  return aLine.findAbove(test);
+};
+
+convertTextToRequirementIfNecessary = function(requirement) {
+  if (_.isString(requirement)) {
+    return match(requirement);
+  }
+  return requirement;
+};
+
+subproof = function(premisePattern, conclusionPattern) {
+  var baseCheck, baseToString, checkFunctions, conclusionReq, premiseReq, toStringFunctions;
+  premiseReq = convertTextToRequirementIfNecessary(premisePattern);
+  conclusionReq = convertTextToRequirementIfNecessary(conclusionPattern);
+  baseCheck = function(subproof, priorMatches) {
+    var conclusionLine, currentMatches, newMatches, premiseLine, testConclusion2, testConculsion1, testPremise1, testPremise2;
+    premiseLine = subproof.getFirstLine();
+    conclusionLine = subproof.getLastLine();
+    currentMatches = priorMatches;
+    testPremise1 = premiseReq.check(premiseLine, currentMatches);
+    if (testPremise1 !== false) {
+      currentMatches = testPremise1;
+      testConculsion1 = conclusionReq.check(conclusionLine, currentMatches);
+      if (testConculsion1 !== false) {
+        newMatches = testConculsion1;
+        return newMatches;
+      }
+    }
+    currentMatches = priorMatches;
+    testConclusion2 = conclusionReq.check(conclusionLine, currentMatches);
+    if (testConclusion2 === false) {
+      return false;
+    }
+    currentMatches = testConclusion2;
+    testPremise2 = premiseReq.check(premiseLine, currentMatches);
+    if (testPremise2 === false) {
+      return false;
+    }
+    newMatches = testPremise2;
+    return newMatches;
+  };
+  checkFunctions = [baseCheck];
+  baseToString = function() {
+    return (premiseReq.toString()) + " ⊢ " + (conclusionReq.toString());
+  };
+  toStringFunctions = [baseToString];
+  return {
+    type: 'subproof',
+    check: function(subproof, priorMatches) {
+      var currentMatches, f, k, len, test;
+      currentMatches = priorMatches;
+      for (k = 0, len = checkFunctions.length; k < len; k++) {
+        f = checkFunctions[k];
+        test = f(subproof, currentMatches);
+        if (test === false) {
+          return false;
+        }
+        currentMatches = test;
+      }
+      return currentMatches;
+    },
+    contains: function() {
+      var listOfSentencesThatMustBeInSubproof, newCheck, newToString, x;
+      listOfSentencesThatMustBeInSubproof = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+      listOfSentencesThatMustBeInSubproof = (function() {
+        var k, len, results1;
+        results1 = [];
+        for (k = 0, len = listOfSentencesThatMustBeInSubproof.length; k < len; k++) {
+          x = listOfSentencesThatMustBeInSubproof[k];
+          results1.push(_parseIfNecessaryAndDecorate(x));
+        }
+        return results1;
+      })();
+      newCheck = function(subproof, priorMatches) {
+        var allPatternsAreMatched, doesPatternMatchAnyLines, item, k, len, len1, linesOfProof, m, patternsPerms, ref, test, thePatterns;
+        doesPatternMatchAnyLines = function(pattern, theLines, priorMatches) {
+          var k, len, line, sentence, test;
+          for (k = 0, len = theLines.length; k < len; k++) {
+            line = theLines[k];
+            sentence = line.sentence;
+            test = sentence.findMatches(pattern, priorMatches);
+            if (test !== false) {
+              return test;
+            }
+          }
+          return false;
+        };
+        allPatternsAreMatched = function(thePatterns, theLines, priorMatches) {
+          var k, len, newMatches, pattern, test;
+          newMatches = priorMatches;
+          for (k = 0, len = thePatterns.length; k < len; k++) {
+            pattern = thePatterns[k];
+            test = doesPatternMatchAnyLines(pattern, theLines, newMatches);
+            if (test === false) {
+              return false;
+            }
+            newMatches = test;
+          }
+          return newMatches;
+        };
+        linesOfProof = [];
+        ref = subproof.content;
+        for (k = 0, len = ref.length; k < len; k++) {
+          item = ref[k];
+          if (item.type === 'line') {
+            if (!item.isPremise()) {
+              linesOfProof.push(item);
+            }
+          }
+        }
+        patternsPerms = _permutations(listOfSentencesThatMustBeInSubproof);
+        for (m = 0, len1 = patternsPerms.length; m < len1; m++) {
+          thePatterns = patternsPerms[m];
+          test = allPatternsAreMatched(thePatterns, linesOfProof, priorMatches);
+          if (test !== false) {
+            return test;
+          }
+        }
+        return false;
+      };
+      checkFunctions.push(newCheck);
+      newToString = function() {
+        return ", where this subproof contains " + (((function() {
+          var k, len, results1;
+          results1 = [];
+          for (k = 0, len = listOfSentencesThatMustBeInSubproof.length; k < len; k++) {
+            x = listOfSentencesThatMustBeInSubproof[k];
+            results1.push(x.toString());
+          }
+          return results1;
+        })()).join(' and '));
+      };
+      return this;
+    },
+    toString: function() {
+      var f, k, len, res;
+      res = "";
+      for (k = 0, len = toStringFunctions.length; k < len; k++) {
+        f = toStringFunctions[k];
+        res += f();
+      }
+      return res;
+    }
+  };
+};
+
+exports.subproof = subproof;
 
 _From = (function() {
   function _From(requirement) {
-    requirement = _parseIfNecessaryAndDecorate(requirement);
+    requirement = convertTextToRequirementIfNecessary(requirement);
     this._requirements = {
-      from: (requirement ? [requirement] : void 0) || [],
+      from: (requirement != null ? [requirement] : void 0) || [],
       to: void 0
     };
   }
@@ -16771,7 +19559,7 @@ _From = (function() {
   _From.prototype.type = 'rule';
 
   _From.prototype['and'] = function(requirement) {
-    requirement = _parseIfNecessaryAndDecorate(requirement);
+    requirement = convertTextToRequirementIfNecessary(requirement);
     this._requirements.from.push(requirement);
     return this;
   };
@@ -16780,13 +19568,13 @@ _From = (function() {
     if (this._requirements.to) {
       throw new Error("You cannot specify `.to` more than once in a single rule.");
     }
-    requirement = _parseIfNecessaryAndDecorate(requirement);
+    requirement = convertTextToRequirementIfNecessary(requirement);
     this._requirements.to = requirement;
     return this;
   };
 
   _From.prototype.check = function(line) {
-    return new LineChecker(line, this._requirements).check();
+    return checkRequirementsMet(line, this._requirements);
   };
 
   return _From;
@@ -16805,26 +19593,153 @@ to = function(requirement) {
 
 exports.to = to;
 
-subproof = function(startReq, endReq) {
-  startReq = _parseIfNecessaryAndDecorate(startReq);
-  endReq = _parseIfNecessaryAndDecorate(endReq);
-  return {
-    type: 'subproof',
-    startReq: startReq,
-    endReq: endReq,
-    listMetaVariableNames: function() {
-      var result;
-      result = this.startReq.listMetaVariableNames();
-      result = _.defaults(result, this.endReq.listMetaVariableNames());
-      return result;
-    },
-    toString: function() {
-      return (startReq.toString()) + " ⊢ " + (endReq.toString());
+checkRequirementsMet = function(line, theReqs) {
+  var citedBlockOrdering, citedBlocks, citedBlocksPerms, citedLineOrdering, citedLines, citedLinesPerms, k, l, len, len1, len2, len3, m, msg, o, preliminaryTest, q, r, ref, ref1, ruleName, test;
+  preliminaryTest = checkCorrectNofLinesAndSubproofsCited(line, theReqs);
+  if (!preliminaryTest) {
+    return false;
+  }
+  citedLines = [];
+  ref = line.getCitedLines();
+  for (k = 0, len = ref.length; k < len; k++) {
+    l = ref[k];
+    if (indexOf.call(citedLines, l) >= 0) {
+      citedLines.push(_.clone(l));
+    } else {
+      citedLines.push(l);
     }
-  };
+  }
+  citedBlocks = line.getCitedBlocks();
+  citedLinesPerms = _permutations(citedLines);
+  citedBlocksPerms = _permutations(citedBlocks);
+  for (m = 0, len1 = citedLinesPerms.length; m < len1; m++) {
+    citedLineOrdering = citedLinesPerms[m];
+    for (o = 0, len2 = citedBlocksPerms.length; o < len2; o++) {
+      citedBlockOrdering = citedBlocksPerms[o];
+      test = areRequirementsMetByTheseLinesAndBlocks(theReqs, line, citedLineOrdering, citedBlockOrdering);
+      if (test !== false) {
+        return true;
+      }
+    }
+  }
+  ruleName = line.getRuleName();
+  msg = [];
+  if (theReqs.to != null) {
+    msg.push("on a line with the form " + theReqs.to);
+  }
+  ref1 = theReqs.from;
+  for (q = 0, len3 = ref1.length; q < len3; q++) {
+    r = ref1[q];
+    if (r.type === 'subproof') {
+      msg.push(" citing a subproof of the form " + r);
+    } else {
+      msg.push(" citing a line of the form " + r);
+    }
+  }
+  line.status.addMessage("you can only use " + ruleName + " " + (msg.join('; ')) + ".");
+  return false;
 };
 
-exports.subproof = subproof;
+areRequirementsMetByTheseLinesAndBlocks = function(theReqs, line, citedLineOrdering, citedBlockOrdering) {
+  var aReq, checkList, checkListPermutations, k, len, len1, m, ref, test, thingsToCheck;
+  checkList = [];
+  if (theReqs.to != null) {
+    checkList.push({
+      req: theReqs.to,
+      linesOrBlocks: [line]
+    });
+  }
+  ref = theReqs.from;
+  for (k = 0, len = ref.length; k < len; k++) {
+    aReq = ref[k];
+    checkList.push({
+      req: aReq,
+      linesOrBlocks: (aReq.type === 'subproof' ? citedBlockOrdering : void 0) || citedLineOrdering
+    });
+  }
+  checkListPermutations = _permutations(checkList);
+  for (m = 0, len1 = checkListPermutations.length; m < len1; m++) {
+    thingsToCheck = checkListPermutations[m];
+    test = areAllRequirementsMet(thingsToCheck);
+    if (test !== false) {
+      return true;
+    }
+  }
+  return false;
+};
+
+checkCorrectNofLinesAndSubproofsCited = function(line, theReqs) {
+  var actualAndText, actualBlocksTxt, actualLinesTxt, citedBlocks, citedLines, expectedAndText, expectedBlocksTxt, expectedLinesTxt, k, len, nofCitedBlocks, nofCitedLines, nofLinesNeeded, nofSubproofsNeeded, r, ref, ruleName, test;
+  citedLines = line.getCitedLines();
+  nofCitedLines = citedLines.length;
+  citedBlocks = line.getCitedBlocks();
+  nofCitedBlocks = citedBlocks.length;
+  nofLinesNeeded = 0;
+  nofSubproofsNeeded = 0;
+  ref = theReqs.from;
+  for (k = 0, len = ref.length; k < len; k++) {
+    r = ref[k];
+    if (r.type === 'subproof') {
+      nofSubproofsNeeded += 1;
+    } else {
+      nofLinesNeeded += 1;
+    }
+  }
+  test = (nofLinesNeeded === nofCitedLines) && (nofSubproofsNeeded === nofCitedBlocks);
+  if (test === true) {
+    return true;
+  }
+  expectedLinesTxt = numberToWords(nofLinesNeeded, 'line');
+  expectedBlocksTxt = numberToWords(nofSubproofsNeeded, 'subproof');
+  expectedAndText = (expectedLinesTxt && expectedBlocksTxt ? "and " : void 0) || (!expectedLinesTxt && !expectedBlocksTxt ? "nothing" : void 0) || "";
+  actualLinesTxt = numberToWords(nofCitedLines, 'line');
+  actualBlocksTxt = numberToWords(nofCitedBlocks, 'subproof');
+  actualAndText = (actualLinesTxt && actualBlocksTxt ? "and " : void 0) || (!actualLinesTxt && !actualBlocksTxt ? "nothing" : void 0) || "";
+  ruleName = line.getRuleName();
+  line.status.addMessage(("you must cite " + expectedLinesTxt + " " + expectedAndText + expectedBlocksTxt + " when using the rule " + ruleName + " (you cited " + actualLinesTxt + " " + actualAndText + actualBlocksTxt + ").").replace(/\s\s+/g, ' '));
+  return false;
+};
+
+areAllRequirementsMet = function(thingsToCheck) {
+  var c, candidates, checkThis, currentMatches, k, len, len1, m, matchedLineOrBlock, matchedLinesAndBlocks, newMatches, ref, req, test;
+  matchedLinesAndBlocks = [];
+  currentMatches = {};
+  for (k = 0, len = thingsToCheck.length; k < len; k++) {
+    checkThis = thingsToCheck[k];
+    req = checkThis.req;
+    candidates = [];
+    ref = checkThis.linesOrBlocks;
+    for (m = 0, len1 = ref.length; m < len1; m++) {
+      c = ref[m];
+      if (indexOf.call(matchedLinesAndBlocks, c) < 0) {
+        candidates.push(c);
+      }
+    }
+    test = doAnyCandidatesMeetThisReq(req, candidates, currentMatches);
+    if (test === false) {
+      return false;
+    }
+    newMatches = test.newMatches, matchedLineOrBlock = test.matchedLineOrBlock;
+    currentMatches = newMatches;
+    matchedLinesAndBlocks.push(matchedLineOrBlock);
+  }
+  return true;
+};
+
+doAnyCandidatesMeetThisReq = function(req, candidates, priorMatches) {
+  var k, len, lineOrBlock, test;
+  for (k = 0, len = candidates.length; k < len; k++) {
+    lineOrBlock = candidates[k];
+    test = req.check(lineOrBlock, priorMatches);
+    if (test !== false) {
+      return {
+        newMatches: test,
+        matchedLineOrBlock: lineOrBlock
+      };
+    }
+  }
+  return false;
+};
 
 premise = function() {
   var baseCheck, premiseRule;
@@ -16890,6 +19805,23 @@ _parseIfNecessaryAndDecorate = function(requirement) {
   }
   fol._decorate(requirement);
   return requirement;
+};
+
+parseAndDecorateIfNecessary = function(sentence) {
+  var requirement;
+  if (_.isString(sentence)) {
+    requirement = fol.parse(sentence, parser);
+  }
+  return sentence;
+};
+
+_parseNameIfNecessaryAndDecorate = function(name) {
+  var sentence;
+  if (!_.isString(name)) {
+    return name;
+  }
+  sentence = _parseIfNecessaryAndDecorate("F(" + name + ")");
+  return sentence.termlist[0];
 };
 
 _permutations = function(list) {
@@ -17096,7 +20028,7 @@ RequirementChecker = (function() {
   };
 
   RequirementChecker.prototype._checkOne = function(candidate) {
-    var moreNewMatches, newMatches;
+    var evenMoreNewMatches, moreNewMatches, nameIsAlreadyUsedInProof, newMatches, newNameReqClone, theName;
     if ((this.theRequirement.type != null) && this.theRequirement.type === 'subproof') {
       if (candidate.type !== 'block') {
         return false;
@@ -17106,7 +20038,23 @@ RequirementChecker = (function() {
         return false;
       }
       moreNewMatches = this._checkOneLine(this.theRequirement.endReq, candidate.getLastLine(), newMatches);
-      return moreNewMatches;
+      if (moreNewMatches === false) {
+        return false;
+      }
+      evenMoreNewMatches = moreNewMatches;
+      if (this.theRequirement.containsReq != null) {
+        evenMoreNewMatches = this._checkSubproofContainsLines(this.theRequirement.containsReq, candidate, moreNewMatches);
+      }
+      if (this.theRequirement.newNameReq != null) {
+        newNameReqClone = this.theRequirement.newNameReq.clone();
+        newNameReqClone = newNameReqClone.applyMatches(evenMoreNewMatches).applySubstitutions();
+        theName = newNameReqClone.name;
+        nameIsAlreadyUsedInProof = this._isALineContainingTheName(theName, candidate.getFirstLine());
+        if (nameIsAlreadyUsedInProof) {
+          return false;
+        }
+      }
+      return evenMoreNewMatches;
     }
     if (candidate.type === 'block') {
       return false;
@@ -17116,7 +20064,7 @@ RequirementChecker = (function() {
   };
 
   RequirementChecker.prototype._checkOneLine = function(aReq, aLine, priorMatches) {
-    var aBox, aSentence, iSALineContainingTheName, nameInBoxIsAlreadyUsedInProof, newMatches, reqClone, testVerbotenName, theName;
+    var aBox, aSentence, nameInBoxIsAlreadyUsedInProof, newMatches, reqClone, testVerbotenName, theName;
     reqClone = aReq.clone().applyMatches(priorMatches);
     testVerbotenName = reqClone.applySubstitutions();
     if (testVerbotenName === null) {
@@ -17138,21 +20086,84 @@ RequirementChecker = (function() {
       aBox = (reqClone.type === 'box' ? reqClone : void 0) || (reqClone.box != null ? reqClone.box : void 0);
       aBox = aBox.applyMatches(newMatches).applySubstitutions();
       theName = aBox.term.name;
-      iSALineContainingTheName = function(lineOrBlock) {
-        if (lineOrBlock.type !== 'line') {
-          return false;
-        }
-        if ((indexOf.call(lineOrBlock.sentence.getNames(), theName) >= 0)) {
-          return true;
-        }
-        return false;
-      };
-      nameInBoxIsAlreadyUsedInProof = aLine.findAbove(iSALineContainingTheName);
+      nameInBoxIsAlreadyUsedInProof = this._isALineContainingTheName(theName, aLine);
       if (nameInBoxIsAlreadyUsedInProof) {
         newMatches = false;
       }
     }
     return newMatches;
+  };
+
+  RequirementChecker.prototype._isALineContainingTheName = function(theName, aLine) {
+    var test;
+    test = function(lineOrBlock) {
+      if (lineOrBlock.type !== 'line') {
+        return false;
+      }
+      if ((indexOf.call(lineOrBlock.sentence.getNames(), theName) >= 0)) {
+        return true;
+      }
+      return false;
+    };
+    return aLine.findAbove(test);
+  };
+
+  RequirementChecker.prototype._checkSubproofContainsLines = function(theReqs, aProof, priorMatches) {
+    var allReqsAreMet, doesReqMatchAnyLines, item, k, len, len1, linesOfProof, m, ref, reqs, test, theReqsPerms;
+    linesOfProof = [];
+    ref = aProof.content;
+    for (k = 0, len = ref.length; k < len; k++) {
+      item = ref[k];
+      if (item.type === 'line') {
+        if (!item.isPremise()) {
+          linesOfProof.push(item);
+        }
+      }
+    }
+    doesReqMatchAnyLines = function(aReq, theLines, priorMatches) {
+      var len1, line, m, sentence, test, x;
+      for (m = 0, len1 = theLines.length; m < len1; m++) {
+        line = theLines[m];
+        sentence = line.sentence;
+        test = sentence.findMatches(aReq, priorMatches);
+        console.log("tested req " + (aReq.toString()) + " against " + line.sentence + ", res is " + test + ", newMatches contains entries for " + (((function() {
+          var len2, o, ref1, results1;
+          ref1 = _.keys(test);
+          results1 = [];
+          for (o = 0, len2 = ref1.length; o < len2; o++) {
+            x = ref1[o];
+            results1.push(x.toString());
+          }
+          return results1;
+        })()).join(', ')) + " with newMatches.ψ = " + (test.ψ ? fol._decorate(test.ψ).toString() : void 0));
+        if (test !== false) {
+          return test;
+        }
+      }
+      return false;
+    };
+    allReqsAreMet = function(theReqs, theLines, priorMatches) {
+      var aReq, len1, m, newMatches, test;
+      newMatches = priorMatches;
+      for (m = 0, len1 = theReqs.length; m < len1; m++) {
+        aReq = theReqs[m];
+        test = doesReqMatchAnyLines(aReq, theLines, newMatches);
+        if (test === false) {
+          return false;
+        }
+        newMatches = test;
+      }
+      return newMatches;
+    };
+    theReqsPerms = _permutations(theReqs);
+    for (m = 0, len1 = theReqsPerms.length; m < len1; m++) {
+      reqs = theReqsPerms[m];
+      test = allReqsAreMet(reqs, linesOfProof, priorMatches);
+      if (test !== false) {
+        return test;
+      }
+    }
+    return false;
   };
 
   return RequirementChecker;
@@ -17325,7 +20336,86 @@ exports.Pathfinder = Pathfinder;
 exports.LineChecker = LineChecker;
 
 
-},{"../fol":7,"../util":24,"lodash":9}],22:[function(require,module,exports){
+},{"../fol":7,"../util":29,"lodash":9}],26:[function(require,module,exports){
+var dialectManager, rule, rules;
+
+dialectManager = require('../dialect_manager/dialectManager');
+
+rule = require('./rule');
+
+rule.setParser(dialectManager.getParser('teller'));
+
+rules = {
+  _description: 'Rules of proof for classical first-order logic as presented in Paul Teller,\nA Modern Formal Logic Primer (1998).',
+  premise: rule.premise(),
+  reit: rule.from('φ').to('φ'),
+  'and': {
+    elim: {
+      left: rule.from('φ and ψ').to('φ'),
+      right: rule.from('φ and ψ').to('ψ')
+    },
+    intro: rule.from('φ').and('ψ').to('φ and ψ')
+  },
+  'or': {
+    elim: {
+      left: [rule.from('φ or ψ').and('not φ').to('ψ'), rule.from('not φ or ψ').and('φ').to('ψ')],
+      right: [rule.from('φ or ψ').and('not ψ').to('φ'), rule.from('φ or not ψ').and('ψ').to('φ')]
+    },
+    intro: {
+      left: rule.from('φ').to('φ or ψ'),
+      right: rule.from('φ').to('ψ or φ')
+    }
+  },
+  'not': {
+    elim: rule.from('not not φ').to('φ'),
+    intro: [rule.from(rule.subproof('φ', 'ψ and not ψ')).to('not φ'), rule.from(rule.subproof('φ', 'φ2').contains('ψ', 'not ψ')).to('not φ')]
+  },
+  arrow: {
+    elim: rule.from('φ arrow ψ').and('φ').to('ψ'),
+    intro: rule.from(rule.subproof('φ', 'ψ')).to('φ arrow ψ')
+  },
+  double_arrow: {
+    elim: {
+      left: [rule.from('φ↔ψ').to('φ arrow ψ'), rule.from('φ↔ψ').and('φ').to('ψ')],
+      right: [rule.from('φ↔ψ').to('ψ arrow φ'), rule.from('φ↔ψ').and('ψ').to('φ')]
+    },
+    intro: rule.from('φ arrow ψ').and('ψ arrow φ').to('φ↔ψ')
+  },
+  identity: {
+    intro: rule.to('α=α'),
+    elim: {
+      left: rule.from('α=β').and('φ').to('φ[α-->β]'),
+      right: rule.from('α=β').and('φ').to('φ[β-->α]')
+    }
+  },
+  existential: {
+    elim: rule.from('(exists τ) φ').and(rule.subproof('[α]φ[τ-->α]', 'ψ')).to('ψ[α-->null]'),
+    intro: rule.from('φ[τ-->α]').to('(exists τ) φ')
+  },
+  universal: {
+    elim: rule.from('(all τ) φ').to('φ[τ-->α]'),
+    intro: rule.from('φ[τ-->α^]').to('(all τ) φ')
+  },
+  weakening: rule.from('φ').to('ψ arrow φ'),
+  cases: [rule.from('φ or ψ').and('φ arrow χ').and('ψ arrow χ').to('χ'), rule.from('φ or ψ').and(rule.subproof('φ', 'χ')).and(rule.subproof('ψ', 'χ')).to('χ')],
+  DC: [rule.from('φ arrow ψ').and('not ψ').to('not φ'), rule.from('φ arrow not ψ').and('ψ').to('not φ'), rule.from('not φ arrow ψ').and('not ψ').to('φ')],
+  reductio: [rule.from(rule.subproof('not φ', 'ψ and not ψ')).to('φ'), rule.from(rule.subproof('not φ', 'φ2').contains('ψ', 'not ψ')).to('φ')],
+  DM: [rule.from('not (φ or ψ)').to('not φ and not ψ'), rule.from('not φ and not ψ').to('not (φ or ψ)'), rule.from('not (φ and ψ)').to('not φ or not ψ'), rule.from('not φ or not ψ').to('not (φ and ψ)')],
+  contraposition: [rule.from('φ arrow ψ').to('not ψ arrow not φ'), rule.from('not ψ arrow not φ').to('φ arrow ψ'), rule.from('not φ arrow ψ').to('not ψ arrow φ'), rule.from('not ψ arrow φ').to('not φ arrow ψ'), rule.from('φ arrow not ψ').to('ψ arrow not φ'), rule.from('ψ arrow not φ').to('φ arrow not ψ')],
+  C: [rule.from('φ arrow ψ').to('not φ or ψ'), rule.from('not φ or ψ').to('φ arrow ψ'), rule.from('not (φ arrow ψ)').to('φ and not ψ'), rule.from('φ and not ψ').to('not (φ arrow ψ)')],
+  CD: rule.from('φ').and('not φ').to('ψ'),
+  'not-all': rule.from('not (all τ) φ').to('(exists τ) not φ'),
+  'all-not': rule.from('(all τ) not  φ').to('not (exists τ) φ'),
+  'not-exists': rule.from('not (exists τ) φ').to('(all τ) not φ'),
+  'exists-not': rule.from('(exists τ) not φ').to('not (all τ) φ')
+};
+
+exports.rules = rules;
+
+dialectManager.registerRuleSet('teller', rules);
+
+
+},{"../dialect_manager/dialectManager":5,"./rule":25}],27:[function(require,module,exports){
 var _, _subsForPNF, _subs_eliminate_redundancy, applySubstitutions, awFOL, dialectManager, doSub, doSubRecursive, from, k, match, replace, subsForPNF, subs_eliminate_redundancy, theSub, to, util, v;
 
 _ = require('lodash');
@@ -17622,7 +20712,7 @@ applySubstitutions = function(expression) {
 exports.applySubstitutions = applySubstitutions;
 
 
-},{"./dialect_manager/dialectManager":5,"./match":8,"./util":24,"lodash":9}],23:[function(require,module,exports){
+},{"./dialect_manager/dialectManager":5,"./match":8,"./util":29,"lodash":9}],28:[function(require,module,exports){
 var _, symbols;
 
 _ = require('lodash');
@@ -17658,7 +20748,10 @@ symbols = {
     'universal_quantifier': "",
     'universal': "all",
     'existential_quantifier': "∃",
-    'existential': "∃"
+    'existential': "∃",
+    quantifiersInBrackets: true,
+    predicationBracketsAndCommas: false,
+    singleLetterPredicates: true
   },
   teller: {
     'not': '~',
@@ -17674,18 +20767,46 @@ symbols = {
     'universal_quantifier': "∀",
     'universal': "∀",
     'existential_quantifier': "∃",
-    'existential': "∃"
+    'existential': "∃",
+    quantifiersInBrackets: true,
+    predicationBracketsAndCommas: false,
+    singleLetterPredicates: true,
+    'not-all': '~∀',
+    'all-not': '∀~',
+    'exists-not': '∃~',
+    'not-exists': '~∃'
+  },
+  forallx: {
+    'not': '¬',
+    'false': "⊥",
+    'contradiction': "⊥",
+    'identity': "=",
+    'and': "&",
+    'arrow': "→",
+    'double_arrow': "↔",
+    'or': "∨",
+    'nor': "↓",
+    'nand': "↑",
+    'universal_quantifier': "∀",
+    'universal': "∀",
+    'existential_quantifier': "∃",
+    'existential': "∃",
+    quantifiersInBrackets: false,
+    predicationBracketsAndCommas: false,
+    singleLetterPredicates: true
   }
 };
 
 module.exports = symbols;
 
 
-},{"lodash":9}],24:[function(require,module,exports){
-var SYMBOLS, _, _delExtraneousProperties, _typeComparator, areIdenticalExpressions, atomicExpressionComparator, atomicSentenceTypes, cloneExpression, delExtraneousProperties, exhaust, expressionContainsSubstitutions, expressionHasSub, expressionToString, expressionTypes, find, listMetaVariableNames, listOfAtomicExpressionsComparator, listTerms, matchesToString, max, termComparator, termTypes, walk, walkCompare, walkMutate, walkMutateFindOne,
+},{"lodash":9}],29:[function(require,module,exports){
+var _, _delExtraneousProperties, _typeComparator, areIdenticalExpressions, atomicExpressionComparator, atomicSentenceTypes, cloneExpression, delExtraneousProperties, dialectManager, exhaust, expressionContainsSubstitutions, expressionHasSub, expressionToString, expressionTypes, find, listMetaVariableNames, listOfAtomicExpressionsComparator, listTerms, matchesToString, max, termComparator, termTypes, walk, walkCompare, walkMutate, walkMutateFindOne,
   hasProp = {}.hasOwnProperty;
 
 _ = require('lodash');
+
+dialectManager = require('./dialect_manager/dialectManager');
 
 walkMutate = function(expression, fn, o) {
   var e, result;
@@ -17971,22 +21092,6 @@ cloneExpression = function(expression) {
 
 exports.cloneExpression = cloneExpression;
 
-SYMBOLS = {
-  'not': '¬',
-  'false': "⊥",
-  'identity': "=",
-  'and': "∧",
-  'arrow': "→",
-  'double_arrow': "↔",
-  'or': "∨",
-  'nor': "↓",
-  'nand': "↑",
-  'universal_quantifier': "∀",
-  'existential_quantifier': "∃"
-};
-
-exports.SYMBOLS = SYMBOLS;
-
 expressionToString = function(expression, o) {
   var _cleanUp, eClone, expressionStr, i, k, len, ref, rplc, symbolNum, test, walker;
   if (o == null) {
@@ -17995,7 +21100,7 @@ expressionToString = function(expression, o) {
   if (o.symbols != null) {
     o.replaceSymbols = true;
   } else {
-    o.symbols = SYMBOLS;
+    o.symbols = dialectManager.getSymbols();
   }
   ref = [_.isBoolean, _.isNumber, _.isString, _.isArray];
   for (i = 0, len = ref.length; i < len; i++) {
@@ -18019,14 +21124,18 @@ expressionToString = function(expression, o) {
       }
     }
     if (_.isArray(e)) {
-      return e.join(',');
+      if (o.symbols.predicationBracketsAndCommas === false) {
+        return e.join('');
+      } else {
+        return e.join(',');
+      }
     }
     if ((e != null ? e.type : void 0) == null) {
       if (e === void 0) {
         return '[undefined]';
       }
     }
-    if ((ref2 = e.type) === 'variable' || ref2 === 'name' || ref2 === 'term_metavariable') {
+    if ((ref2 = e.type) === 'variable' || ref2 === 'name' || ref2 === 'name_hat' || ref2 === 'term_metavariable' || ref2 === 'term_metavariable_hat') {
       if (!e.substitutions) {
         return e.name;
       }
@@ -18057,7 +21166,16 @@ expressionToString = function(expression, o) {
     }
     if (e.termlist != null) {
       symbol = e.name || e.symbol || o.symbols[e.type] || e.type;
-      middle = symbol + "(" + (e.termlist.join(',')) + ")";
+      if (o.symbols.singleLetterPredicates === true && e.type === 'predicate') {
+        if (symbol.replace(/[A-Z][0-9]*/, '') !== '') {
+          symbol = symbol[0];
+        }
+      }
+      if (o.symbols.predicationBracketsAndCommas === false) {
+        middle = "" + symbol + (e.termlist.join(''));
+      } else {
+        middle = symbol + "(" + (e.termlist.join(',')) + ")";
+      }
     }
     if (e.type === 'identity') {
       symbol = e.symbol || '=';
@@ -18083,7 +21201,7 @@ expressionToString = function(expression, o) {
     }
     if (e.boundVariable != null) {
       variableName = e.boundVariable;
-      if (o.symbols.universal_quantifier === '') {
+      if (o.symbols.universal_quantifier === '' || o.symbols.quantifiersInBrackets === true) {
         middle = "(" + symbol + variableName + ")" + left_bracket + e.left + (e.right || '') + right_bracket;
       } else {
         middle = "" + symbol + variableName + " " + left_bracket + e.left + (e.right || '') + right_bracket;
@@ -18125,7 +21243,7 @@ expressionToString = function(expression, o) {
       to: '$2'
     }
   };
-  if (o.symbols.universal_quantifier !== '') {
+  if (!((o.symbols.universal_quantifier === '' || o.symbols.quantifiersInBrackets === true) && (expression.boundVariable != null))) {
     for (k in _cleanUp) {
       rplc = _cleanUp[k];
       expressionStr = expressionStr.replace(rplc.from, rplc.to);
@@ -18401,4 +21519,4 @@ expressionHasSub = function(expression, sub) {
 exports.expressionHasSub = expressionHasSub;
 
 
-},{"lodash":9}]},{},[4]);
+},{"./dialect_manager/dialectManager":5,"lodash":9}]},{},[4]);

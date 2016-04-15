@@ -1,11 +1,11 @@
 /*  Defines a JISON lexer and parser for the first-order language
-    in Paul Teller’s A Modern Formal Logic Primer (1998).
+    in Copi et al’s An Introduction to Logic (2014).
     The parser returns objects like {type:"and", left:[Object], right:[Object], location:{...}, symbol:'&'}.
     where `location` is the parser's object describing the location of the symbol parsed.
     and `symbol` is the symbol from the input.
     
-    Differences from Teller:
-      - this parser allows predicates like `F2x` (the name can match [A-Z][0-9]*)
+    Differences from Copi:
+      - [incomplete : this is work in progress]
       
     Note that this parser must create objects compatible with those
     created by the awFOL parse.
@@ -146,6 +146,8 @@ e
         { $$ = {type:"existential_quantifier", symbol:$2, location:@2, boundVariable:$3, left:$5, right:null}; }
     | '(' universal_quantifier quantifier_variable ')' e
         { $$ = {type:"universal_quantifier", symbol:$2, location:@2, boundVariable:$3, left:$5, right:null}; }
+    | '(' variable_or_metavariable ')' e
+        { $$ = {type:"universal_quantifier", symbol:'', location:@2, boundVariable:$2, left:$4, right:null}; }
     | e and e
         { $$ = {type:'and', symbol:$2, location:@2, left:$1, right:$3}; }
     | e or e

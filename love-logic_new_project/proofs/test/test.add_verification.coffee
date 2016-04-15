@@ -885,7 +885,7 @@ describe "the verify module:", ->
       console.log result.message if not result.verified
       expect(result).to.be.true
       
-    it "spots incorrect use of double_arrow intro", ->
+    it "spots incorrect use of double_arrow intro, v1", ->
       proof = '''
         1. |
         2. | | A                
@@ -899,7 +899,7 @@ describe "the verify module:", ->
       result = verify._line 8, proof
       console.log result.message if not result.verified
       expect(result).to.be.false
-    it "spots incorrect use of double_arrow intro", ->
+    it "spots incorrect use of double_arrow intro, v2", ->
       proof = '''
         1. |
         2. | | A                
