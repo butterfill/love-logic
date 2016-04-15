@@ -149,95 +149,9 @@ describe "`rule`", ->
         expect( line.status.getMessage().length > 0 ).to.be.true
   
   
-  describe "`RequirementChecker`", ->
-    
-    it "has a `canCheckAlready` method", ->
-      req = fol.parse 'not not φ'
-      line = { sentence : fol.parse 'not not A' }
-      rc = new rule.RequirementChecker(req, [line])
-      expect(rc.canCheckAlready()).to.be.true
-      
-    it "says no to `canCheckAlready` when necessary", ->
-      req = fol.parse 'ψ[α-->null]' 
-      line = { sentence : fol.parse 'not not A' }
-      rc = new rule.RequirementChecker(req, [line])
-      console.log rc.metaVariableNames.inSub.left
-      expect(rc.canCheckAlready()).to.be.false
-      
-    it "says yes to `canCheckAlready` when possible", ->
-      req = fol.parse 'φ[α-->a]'
-      line = { sentence : fol.parse 'not not A' }
-      matches = 
-        α : (fol.parse 'F(b)').termlist[0]
-      rc = new rule.RequirementChecker(req, [line], matches)
-      expect(rc.canCheckAlready()).to.be.true
-    
-    it "can save and restore matches", ->
-      req = fol.parse 'not not φ'
-      line = { sentence : fol.parse 'not not A' }
-      matches = 
-        α : (fol.parse 'F(b)').termlist[0]
-      rc = new rule.RequirementChecker(req, [line], matches)
-      expect(rc.matches.α.name).to.equal('b')
-      rc.saveMatches()
-      rc.matches.α = (fol.parse 'F(c)').termlist[0]
-      expect(rc.matches.α.name).to.equal('c')
-      rc.restoreMatches()
-      expect(rc.matches.α.name).to.equal('b')
-    
-    it "can check whether a requirement is met", ->
-      req = fol.parse 'not not φ'
-      proof = '''
-        1. not not A
-      ''' 
-      proof = _parse proof
-      line = proof.getLine 1
-      rc = new rule.RequirementChecker(req, [line])
-      result = rc.check()
-      expect(result).not.to.be.false
-
-    it "returns matches when a requirement is met", ->
-      req = fol.parse 'not not φ'
-      proof = '''
-        1. not not A
-      ''' 
-      proof = _parse proof
-      line = proof.getLine 1
-      rc = new rule.RequirementChecker(req, [line])
-      result = rc.check()
-      matches = result['1']
-      expect(matches.φ.letter).to.equal('A')
-
-    it "knows when a requirement is not met", ->
-      req = fol.parse 'not not φ'
-      proof = '''
-        1. A
-      ''' 
-      proof = _parse proof
-      line = proof.getLine 1
-      rc = new rule.RequirementChecker(req, [line])
-      result = rc.check()
-      expect(result).to.be.false
-    
-    it "deals with a tricky case involving matches and substitutions (`[α]φ[τ-->α]`)", ->
-      req = fol.parse '[α]φ[τ-->α]'
-      proof = '''
-        1. [a]F(a)
-      ''' 
-      proof = _parse proof
-      line = proof.getLine 1
-      matches = 
-        φ : fol.parse "F(x)"
-        τ : (fol.parse 'F(x)').termlist[0]
-      rc = new rule.RequirementChecker(req, [line])
-      rc.setMatches(matches)
-      result = rc.check()
-      expect(result).not.to.be.false
-      matches = result['1']
-      expect(matches.α.name).to.equal('a')
       
 
-  describe "LineChecker",->
+  describe "checking rules",->
     it "allows checking cited things are correct when one line is required", ->
       proof = '''
         1. not not A

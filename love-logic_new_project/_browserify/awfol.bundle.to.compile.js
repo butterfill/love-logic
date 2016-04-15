@@ -19236,7 +19236,7 @@ exports.parse = parse;
 
 
 },{"./add_justification":15,"./add_line_numbers":16,"./add_sentences":17,"./add_status":18,"./add_verification":19,"./block_parser":20,"lodash":9}],25:[function(require,module,exports){
-var LineChecker, Pathfinder, RequirementChecker, _, _From, _matchesToString, _notImplementedYet, _parseIfNecessaryAndDecorate, _parseNameIfNecessaryAndDecorate, _permutations, areAllRequirementsMet, areRequirementsMetByTheseLinesAndBlocks, checkCorrectNofLinesAndSubproofsCited, checkRequirementsMet, combinations, convertTextToRequirementIfNecessary, doAnyCandidatesMeetThisReq, doesALineAboveContainThisName, doesAPremiseHereOrAboveContainThisName, doesLineMatchPattern, fol, from, match, numberToWords, parseAndDecorateIfNecessary, parser, permutations, premise, subproof, to, truthtable, util,
+var _, _From, _matchesToString, _notImplementedYet, _parseNameIfNecessaryAndDecorate, _permutations, areAllRequirementsMet, areRequirementsMetByTheseLinesAndBlocks, checkCorrectNofLinesAndSubproofsCited, checkRequirementsMet, convertTextToRequirementIfNecessary, doAnyCandidatesMeetThisReq, doesALineAboveContainThisName, doesAPremiseHereOrAboveContainThisName, doesLineMatchPattern, fol, from, match, numberToWords, parseAndDecorateIfNecessary, parser, premise, subproof, to, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
   slice = [].slice;
 
@@ -19263,7 +19263,7 @@ _matchesToString = function(priorMatches) {
 
 match = function(sentence) {
   var baseCheck, checkFunctions, pattern;
-  pattern = _parseIfNecessaryAndDecorate(sentence);
+  pattern = parseAndDecorateIfNecessary(sentence);
   baseCheck = function(line, priorMatches) {
     var test;
     test = doesLineMatchPattern(line, pattern, priorMatches);
@@ -19464,13 +19464,13 @@ subproof = function(premisePattern, conclusionPattern) {
       var listOfSentencesThatMustBeInSubproof, newCheck, newToString, x;
       listOfSentencesThatMustBeInSubproof = 1 <= arguments.length ? slice.call(arguments, 0) : [];
       listOfSentencesThatMustBeInSubproof = (function() {
-        var k, len, results1;
-        results1 = [];
+        var k, len, results;
+        results = [];
         for (k = 0, len = listOfSentencesThatMustBeInSubproof.length; k < len; k++) {
           x = listOfSentencesThatMustBeInSubproof[k];
-          results1.push(_parseIfNecessaryAndDecorate(x));
+          results.push(parseAndDecorateIfNecessary(x));
         }
-        return results1;
+        return results;
       })();
       newCheck = function(subproof, priorMatches) {
         var allPatternsAreMatched, doesPatternMatchAnyLines, item, k, len, len1, linesOfProof, m, patternsPerms, ref, test, thePatterns;
@@ -19522,13 +19522,13 @@ subproof = function(premisePattern, conclusionPattern) {
       checkFunctions.push(newCheck);
       newToString = function() {
         return ", where this subproof contains " + (((function() {
-          var k, len, results1;
-          results1 = [];
+          var k, len, results;
+          results = [];
           for (k = 0, len = listOfSentencesThatMustBeInSubproof.length; k < len; k++) {
             x = listOfSentencesThatMustBeInSubproof[k];
-            results1.push(x.toString());
+            results.push(x.toString());
           }
-          return results1;
+          return results;
         })()).join(' and '));
       };
       return this;
@@ -19594,7 +19594,7 @@ to = function(requirement) {
 exports.to = to;
 
 checkRequirementsMet = function(line, theReqs) {
-  var citedBlockOrdering, citedBlocks, citedBlocksPerms, citedLineOrdering, citedLines, citedLinesPerms, k, l, len, len1, len2, len3, m, msg, o, preliminaryTest, q, r, ref, ref1, ruleName, test;
+  var citedBlockOrdering, citedBlocks, citedBlocksPerms, citedLineOrdering, citedLines, citedLinesPerms, k, l, len, len1, len2, len3, m, msg, n, o, preliminaryTest, r, ref, ref1, ruleName, test;
   preliminaryTest = checkCorrectNofLinesAndSubproofsCited(line, theReqs);
   if (!preliminaryTest) {
     return false;
@@ -19614,8 +19614,8 @@ checkRequirementsMet = function(line, theReqs) {
   citedBlocksPerms = _permutations(citedBlocks);
   for (m = 0, len1 = citedLinesPerms.length; m < len1; m++) {
     citedLineOrdering = citedLinesPerms[m];
-    for (o = 0, len2 = citedBlocksPerms.length; o < len2; o++) {
-      citedBlockOrdering = citedBlocksPerms[o];
+    for (n = 0, len2 = citedBlocksPerms.length; n < len2; n++) {
+      citedBlockOrdering = citedBlocksPerms[n];
       test = areRequirementsMetByTheseLinesAndBlocks(theReqs, line, citedLineOrdering, citedBlockOrdering);
       if (test !== false) {
         return true;
@@ -19628,8 +19628,8 @@ checkRequirementsMet = function(line, theReqs) {
     msg.push("on a line with the form " + theReqs.to);
   }
   ref1 = theReqs.from;
-  for (q = 0, len3 = ref1.length; q < len3; q++) {
-    r = ref1[q];
+  for (o = 0, len3 = ref1.length; o < len3; o++) {
+    r = ref1[o];
     if (r.type === 'subproof') {
       msg.push(" citing a subproof of the form " + r);
     } else {
@@ -19793,24 +19793,9 @@ _notImplementedYet = function(line) {
 
 exports._notImplementedYet = _notImplementedYet;
 
-_parseIfNecessaryAndDecorate = function(requirement) {
-  if (!requirement) {
-    return requirement;
-  }
-  if (requirement.type === 'subproof') {
-    return requirement;
-  }
-  if (_.isString(requirement)) {
-    requirement = fol.parse(requirement, parser);
-  }
-  fol._decorate(requirement);
-  return requirement;
-};
-
 parseAndDecorateIfNecessary = function(sentence) {
-  var requirement;
   if (_.isString(sentence)) {
-    requirement = fol.parse(sentence, parser);
+    sentence = fol.parse(sentence, parser);
   }
   return sentence;
 };
@@ -19820,7 +19805,7 @@ _parseNameIfNecessaryAndDecorate = function(name) {
   if (!_.isString(name)) {
     return name;
   }
-  sentence = _parseIfNecessaryAndDecorate("F(" + name + ")");
+  sentence = parseAndDecorateIfNecessary("F(" + name + ")");
   return sentence.termlist[0];
 };
 
@@ -19844,414 +19829,6 @@ _permutations = function(list) {
 
 exports._permutations = _permutations;
 
-LineChecker = (function() {
-  function LineChecker(line1, requirements) {
-    this.line = line1;
-    this.requirements = requirements;
-    this.citedLines = this.line.getCitedLines();
-    this.citedBlocks = this.line.getCitedBlocks();
-    this.ruleName = this.line.getRuleName();
-    this.matches = null;
-  }
-
-  LineChecker.prototype.check = function() {
-    var aReq, k, len, path, pathFound, ref, reqCheckList, reqCheckListPermutations, toCheck;
-    if (!this.citedTypesAreCorrect()) {
-      return this;
-    }
-    reqCheckList = [];
-    if (this.requirements.to) {
-      reqCheckList.push(new RequirementChecker(this.requirements.to, [this.line]));
-    }
-    ref = this.requirements.from;
-    for (k = 0, len = ref.length; k < len; k++) {
-      aReq = ref[k];
-      if (((aReq != null ? aReq.type : void 0) != null) && aReq.type === 'subproof') {
-        reqCheckList.push(new RequirementChecker(aReq, this.citedBlocks));
-      } else {
-        reqCheckList.push(new RequirementChecker(aReq, this.citedLines));
-      }
-    }
-    reqCheckList.reverse();
-    reqCheckListPermutations = _permutations(reqCheckList);
-    pathFound = false;
-    while (!pathFound && reqCheckListPermutations.length > 0) {
-      toCheck = reqCheckListPermutations.shift();
-      path = new Pathfinder(toCheck, this.line);
-      pathFound = path.find();
-    }
-    if (pathFound) {
-      return true;
-    } else {
-      return this;
-    }
-  };
-
-  LineChecker.prototype.citedTypesAreCorrect = function() {
-    var actual, actualAndText, actualBlocksTxt, actualLinesTxt, expected, expectedAndText, expectedBlocksTxt, expectedLinesTxt;
-    expected = this.whatToCite();
-    actual = {
-      lines: this.citedLines.length,
-      subproofs: this.citedBlocks.length
-    };
-    if (expected.lines === actual.lines && expected.subproofs === actual.subproofs) {
-      return true;
-    }
-    expectedLinesTxt = numberToWords(expected.lines, 'line');
-    expectedBlocksTxt = numberToWords(expected.subproofs, 'subproof');
-    expectedAndText = (expectedLinesTxt && expectedBlocksTxt ? "and " : void 0) || (!expectedLinesTxt && !expectedBlocksTxt ? "nothing" : void 0) || "";
-    actualLinesTxt = numberToWords(actual.lines, 'line');
-    actualBlocksTxt = numberToWords(actual.subproofs, 'subproof');
-    actualAndText = (actualLinesTxt && actualBlocksTxt ? "and " : void 0) || (!actualLinesTxt && !actualBlocksTxt ? "nothing" : void 0) || "";
-    this.line.status.addMessage(("you must cite " + expectedLinesTxt + " " + expectedAndText + expectedBlocksTxt + " when using the rule " + this.ruleName + " (you cited " + actualLinesTxt + " " + actualAndText + actualBlocksTxt + ").").replace(/\s\s+/g, ' '));
-    return false;
-  };
-
-  LineChecker.prototype.whatToCite = function() {
-    var k, len, r, ref, result;
-    result = {
-      lines: 0,
-      subproofs: 0
-    };
-    ref = this.requirements.from;
-    for (k = 0, len = ref.length; k < len; k++) {
-      r = ref[k];
-      if (r.type === 'subproof') {
-        result.subproofs += 1;
-      } else {
-        result.lines += 1;
-      }
-    }
-    return result;
-  };
-
-  return LineChecker;
-
-})();
-
-RequirementChecker = (function() {
-  function RequirementChecker(theRequirement, candidateLinesOrSubproofs, matches) {
-    this.theRequirement = theRequirement;
-    this.candidateLinesOrSubproofs = candidateLinesOrSubproofs;
-    this.matches = matches != null ? matches : {};
-    this.saveMatches(this.matches);
-    this.metaVariableNames = this.theRequirement.listMetaVariableNames();
-  }
-
-  RequirementChecker.prototype.setMatches = function(matches) {
-    this.matches = matches;
-    return this.saveMatches(this.matches);
-  };
-
-  RequirementChecker.prototype._matchesStack = [];
-
-  RequirementChecker.prototype.saveMatches = function() {
-    var newMatches;
-    newMatches = _.cloneDeep(this.matches);
-    this._matchesStack.push(newMatches);
-    this.matches = newMatches;
-    return void 0;
-  };
-
-  RequirementChecker.prototype.restoreMatches = function() {
-    var ref;
-    this._matchesStack.pop();
-    ref = this._matchesStack, this.matches = ref[ref.length - 1];
-    return void 0;
-  };
-
-  RequirementChecker.prototype.tempRemovedCandidates = {};
-
-  RequirementChecker.prototype.temporarilyRemoveCandidate = function(lineNumber) {
-    var _toRemove, x;
-    _toRemove = (function() {
-      var k, len, ref, results1;
-      ref = this.candidateLinesOrSubproofs;
-      results1 = [];
-      for (k = 0, len = ref.length; k < len; k++) {
-        x = ref[k];
-        if (x.number === lineNumber) {
-          results1.push(x);
-        }
-      }
-      return results1;
-    }).call(this);
-    if (_toRemove.length === 1) {
-      this.tempRemovedCandidates[lineNumber] = _toRemove[0];
-      return this.candidateLinesOrSubproofs = (function() {
-        var k, len, ref, results1;
-        ref = this.candidateLinesOrSubproofs;
-        results1 = [];
-        for (k = 0, len = ref.length; k < len; k++) {
-          x = ref[k];
-          if (x.number !== lineNumber) {
-            results1.push(x);
-          }
-        }
-        return results1;
-      }).call(this);
-    }
-  };
-
-  RequirementChecker.prototype.restoreCandidate = function(lineNumber) {
-    if (lineNumber in this.tempRemovedCandidates) {
-      this.candidateLinesOrSubproofs.push(this.tempRemovedCandidates[lineNumber]);
-      return delete this.tempRemovedCandidates[lineNumber];
-    }
-  };
-
-  RequirementChecker.prototype.canCheckAlready = function() {
-    var k, len, mustBeInMatches, varName;
-    mustBeInMatches = this.metaVariableNames.inSub.left;
-    for (k = 0, len = mustBeInMatches.length; k < len; k++) {
-      varName = mustBeInMatches[k];
-      if (!(varName in this.matches)) {
-        return false;
-      }
-    }
-    return true;
-  };
-
-  RequirementChecker.prototype.check = function() {
-    var candidate, k, len, newMatches, ref, results;
-    results = false;
-    ref = this.candidateLinesOrSubproofs;
-    for (k = 0, len = ref.length; k < len; k++) {
-      candidate = ref[k];
-      newMatches = this._checkOne(candidate);
-      if (newMatches !== false) {
-        results = results || {};
-        results[candidate.number] = newMatches;
-      }
-    }
-    return results;
-  };
-
-  RequirementChecker.prototype._checkOne = function(candidate) {
-    var evenMoreNewMatches, moreNewMatches, nameIsAlreadyUsedInProof, newMatches, newNameReqClone, theName;
-    if ((this.theRequirement.type != null) && this.theRequirement.type === 'subproof') {
-      if (candidate.type !== 'block') {
-        return false;
-      }
-      newMatches = this._checkOneLine(this.theRequirement.startReq, candidate.getFirstLine(), this.matches);
-      if (newMatches === false) {
-        return false;
-      }
-      moreNewMatches = this._checkOneLine(this.theRequirement.endReq, candidate.getLastLine(), newMatches);
-      if (moreNewMatches === false) {
-        return false;
-      }
-      evenMoreNewMatches = moreNewMatches;
-      if (this.theRequirement.containsReq != null) {
-        evenMoreNewMatches = this._checkSubproofContainsLines(this.theRequirement.containsReq, candidate, moreNewMatches);
-      }
-      if (this.theRequirement.newNameReq != null) {
-        newNameReqClone = this.theRequirement.newNameReq.clone();
-        newNameReqClone = newNameReqClone.applyMatches(evenMoreNewMatches).applySubstitutions();
-        theName = newNameReqClone.name;
-        nameIsAlreadyUsedInProof = this._isALineContainingTheName(theName, candidate.getFirstLine());
-        if (nameIsAlreadyUsedInProof) {
-          return false;
-        }
-      }
-      return evenMoreNewMatches;
-    }
-    if (candidate.type === 'block') {
-      return false;
-    }
-    newMatches = this._checkOneLine(this.theRequirement, candidate, this.matches);
-    return newMatches;
-  };
-
-  RequirementChecker.prototype._checkOneLine = function(aReq, aLine, priorMatches) {
-    var aBox, aSentence, nameInBoxIsAlreadyUsedInProof, newMatches, reqClone, testVerbotenName, theName;
-    reqClone = aReq.clone().applyMatches(priorMatches);
-    testVerbotenName = reqClone.applySubstitutions();
-    if (testVerbotenName === null) {
-      return false;
-    }
-    aSentence = aLine.sentence;
-    if (aSentence == null) {
-      return false;
-    }
-    if ((reqClone.box == null) && (aSentence.box != null)) {
-      aSentence = aSentence.clone();
-      delete aSentence.box;
-    }
-    newMatches = aSentence.findMatches(reqClone, priorMatches);
-    if (newMatches === false) {
-      return newMatches;
-    }
-    if ((reqClone.box != null) || (reqClone.type === 'box')) {
-      aBox = (reqClone.type === 'box' ? reqClone : void 0) || (reqClone.box != null ? reqClone.box : void 0);
-      aBox = aBox.applyMatches(newMatches).applySubstitutions();
-      theName = aBox.term.name;
-      nameInBoxIsAlreadyUsedInProof = this._isALineContainingTheName(theName, aLine);
-      if (nameInBoxIsAlreadyUsedInProof) {
-        newMatches = false;
-      }
-    }
-    return newMatches;
-  };
-
-  RequirementChecker.prototype._isALineContainingTheName = function(theName, aLine) {
-    var test;
-    test = function(lineOrBlock) {
-      if (lineOrBlock.type !== 'line') {
-        return false;
-      }
-      if ((indexOf.call(lineOrBlock.sentence.getNames(), theName) >= 0)) {
-        return true;
-      }
-      return false;
-    };
-    return aLine.findAbove(test);
-  };
-
-  RequirementChecker.prototype._checkSubproofContainsLines = function(theReqs, aProof, priorMatches) {
-    var allReqsAreMet, doesReqMatchAnyLines, item, k, len, len1, linesOfProof, m, ref, reqs, test, theReqsPerms;
-    linesOfProof = [];
-    ref = aProof.content;
-    for (k = 0, len = ref.length; k < len; k++) {
-      item = ref[k];
-      if (item.type === 'line') {
-        if (!item.isPremise()) {
-          linesOfProof.push(item);
-        }
-      }
-    }
-    doesReqMatchAnyLines = function(aReq, theLines, priorMatches) {
-      var len1, line, m, sentence, test, x;
-      for (m = 0, len1 = theLines.length; m < len1; m++) {
-        line = theLines[m];
-        sentence = line.sentence;
-        test = sentence.findMatches(aReq, priorMatches);
-        console.log("tested req " + (aReq.toString()) + " against " + line.sentence + ", res is " + test + ", newMatches contains entries for " + (((function() {
-          var len2, o, ref1, results1;
-          ref1 = _.keys(test);
-          results1 = [];
-          for (o = 0, len2 = ref1.length; o < len2; o++) {
-            x = ref1[o];
-            results1.push(x.toString());
-          }
-          return results1;
-        })()).join(', ')) + " with newMatches.ψ = " + (test.ψ ? fol._decorate(test.ψ).toString() : void 0));
-        if (test !== false) {
-          return test;
-        }
-      }
-      return false;
-    };
-    allReqsAreMet = function(theReqs, theLines, priorMatches) {
-      var aReq, len1, m, newMatches, test;
-      newMatches = priorMatches;
-      for (m = 0, len1 = theReqs.length; m < len1; m++) {
-        aReq = theReqs[m];
-        test = doesReqMatchAnyLines(aReq, theLines, newMatches);
-        if (test === false) {
-          return false;
-        }
-        newMatches = test;
-      }
-      return newMatches;
-    };
-    theReqsPerms = _permutations(theReqs);
-    for (m = 0, len1 = theReqsPerms.length; m < len1; m++) {
-      reqs = theReqsPerms[m];
-      test = allReqsAreMet(reqs, linesOfProof, priorMatches);
-      if (test !== false) {
-        return test;
-      }
-    }
-    return false;
-  };
-
-  return RequirementChecker;
-
-})();
-
-Pathfinder = (function() {
-  function Pathfinder(reqCheckList, line1, matches) {
-    var x;
-    this.line = line1;
-    this.matches = matches != null ? matches : {};
-    this.reqCheckList = (function() {
-      var k, len, results1;
-      results1 = [];
-      for (k = 0, len = reqCheckList.length; k < len; k++) {
-        x = reqCheckList[k];
-        results1.push(x);
-      }
-      return results1;
-    })();
-    this.line.status.clearMessages();
-  }
-
-  Pathfinder.prototype.find = function() {
-    var aMatches, k, len, len1, lineNumber, m, newPath, numChecked, ref, ref1, reqChecker, result, results, x;
-    if (this.reqCheckList.length === 0) {
-      return true;
-    }
-    reqChecker = this.reqCheckList.pop();
-    reqChecker.setMatches(this.matches);
-    numChecked = 0;
-    while ((!reqChecker.canCheckAlready()) && (numChecked < (this.reqCheckList.length + 1))) {
-      this.reqCheckList.unshift(reqChecker);
-      reqChecker = this.reqCheckList.pop();
-      reqChecker.setMatches(this.matches);
-      numChecked += 1;
-    }
-    if (numChecked === (this.reqCheckList.length + 1)) {
-      throw new Error("Rule problem!  I can’t start checking any of the conditions in the rule.");
-    }
-    results = reqChecker.check();
-    if (results === false) {
-      this.writeMessage(reqChecker);
-      return false;
-    }
-    for (lineNumber in results) {
-      aMatches = results[lineNumber];
-      ref = this.reqCheckList;
-      for (k = 0, len = ref.length; k < len; k++) {
-        x = ref[k];
-        x.temporarilyRemoveCandidate(lineNumber);
-      }
-      newPath = new Pathfinder(this.reqCheckList, this.line, aMatches);
-      result = newPath.find();
-      ref1 = this.reqCheckList;
-      for (m = 0, len1 = ref1.length; m < len1; m++) {
-        x = ref1[m];
-        x.restoreCandidate(lineNumber);
-      }
-      if (result === true) {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  Pathfinder.prototype.writeMessage = function(reqChecker) {
-    var ref, requirementConcernsCurrentLine, thingToCite;
-    requirementConcernsCurrentLine = this.line.number === ((ref = reqChecker.candidateLinesOrSubproofs[0]) != null ? ref.number : void 0);
-    if (requirementConcernsCurrentLine) {
-      return this.line.status.addMessage("You can only use " + (this.line.getRuleName()) + " on a line with the form ‘" + (reqChecker.theRequirement.toString({
-        replaceSymbols: true
-      })) + "’.");
-    } else {
-      thingToCite = reqChecker.theRequirement.type;
-      if (thingToCite !== 'subproof') {
-        thingToCite = 'line';
-      }
-      return this.line.status.addMessage("to apply " + (this.line.getRuleName()) + " you need to cite a " + thingToCite + " with the form ‘" + (reqChecker.theRequirement.toString({
-        replaceSymbols: true
-      })) + "’.");
-    }
-  };
-
-  return Pathfinder;
-
-})();
-
 numberToWords = function(num, type) {
   if (num === 0) {
     return '';
@@ -20263,77 +19840,6 @@ numberToWords = function(num, type) {
     return num + " " + type + "s";
   }
 };
-
-permutations = function(n) {
-  var base, i, k, l, len, m, old, p, ref, result;
-  if (n === 1) {
-    return [[0]];
-  }
-  base = permutations(n - 1);
-  result = [];
-  for (i = k = 0, ref = n - 1; 0 <= ref ? k <= ref : k >= ref; i = 0 <= ref ? ++k : --k) {
-    for (m = 0, len = base.length; m < len; m++) {
-      p = base[m];
-      l = _.clone(p);
-      l.unshift(n - 1);
-      old = l[i];
-      l[i] = n - 1;
-      l[0] = old;
-      result.push(l);
-    }
-  }
-  return result;
-};
-
-truthtable = function(nofLetters) {
-  return combinations(nofLetters, 2).reverse();
-};
-
-combinations = function(length, max) {
-  var base, i, k, l, len, m, p, r, ref, result, x, y;
-  if (length === 1) {
-    return (function() {
-      var k, ref, results1;
-      results1 = [];
-      for (x = k = 1, ref = max; 1 <= ref ? k <= ref : k >= ref; x = 1 <= ref ? ++k : --k) {
-        results1.push([x - 1]);
-      }
-      return results1;
-    })();
-  }
-  r = (function() {
-    var k, ref, results1;
-    results1 = [];
-    for (y = k = 1, ref = max; 1 <= ref ? k <= ref : k >= ref; y = 1 <= ref ? ++k : --k) {
-      results1.push((function() {
-        var m, ref1, results2;
-        results2 = [];
-        for (x = m = 1, ref1 = max; 1 <= ref1 ? m <= ref1 : m >= ref1; x = 1 <= ref1 ? ++m : --m) {
-          results2.push([x, y]);
-        }
-        return results2;
-      })());
-    }
-    return results1;
-  })();
-  base = combinations(length - 1, max);
-  result = [];
-  for (k = 0, len = base.length; k < len; k++) {
-    p = base[k];
-    for (i = m = 1, ref = max; 1 <= ref ? m <= ref : m >= ref; i = 1 <= ref ? ++m : --m) {
-      l = _.clone(p);
-      l.push(i - 1);
-      result.push(l);
-    }
-  }
-  return result;
-};
-
-exports.RequirementChecker = RequirementChecker;
-
-exports.Pathfinder = Pathfinder;
-
-exports.LineChecker = LineChecker;
 
 
 },{"../fol":7,"../util":29,"lodash":9}],26:[function(require,module,exports){
