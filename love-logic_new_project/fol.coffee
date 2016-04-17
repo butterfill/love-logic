@@ -21,14 +21,23 @@ parse = (text, parser) ->
   e = parser.parse text
   return _decorate(e)
 exports.parse = parse
+exports.parseUsingSystemParser = (text) ->
+  parser = dialectManager.getParser('awFOL')
+  return parse(text, parser)
 
 exports.symbols = symbols
 
 # Use `fol.setDialect` to determine how sentences will be 
 # parsed and toStrung, and which rules of proof the proof checker will use.
-exports.setDialect = (name) ->
-  dialectManager.set(name)
-
+exports.setDialect = (name, version) ->
+  dialectManager.set(name, version)
+exports.getAllDialectNamesAndDescriptions = () ->
+  dialectManager.getAllDialectNamesAndDescriptions()
+exports.getCurrentDialectNameAndVersion = () ->
+  dialectManager.getCurrentDialectNameAndVersion()
+exports._dialectManager = dialectManager
+exports.getTextbookForDialect = (name) ->
+  dialectManager.getTextbookForDialect(name)
 # Add some useful functions to an expression and every part of it.
 _decorate = (expression) ->
   walker = (e) ->

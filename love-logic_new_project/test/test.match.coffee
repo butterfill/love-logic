@@ -235,7 +235,7 @@ describe "match (module)", ->
       expectedMatch = PROP_A
       expect(matches).not.to.be.false
       expect(util.areIdenticalExpressions(matches.φ, expectedMatch)).to.be.true
-      dialectManager.set('default')
+      dialectManager.set('lpl')
 
     it "should find match 'not not φ' with φ='A and B' in 'not not (A and B)'", ->
       pattern = fol.parse 'not not φ'

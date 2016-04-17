@@ -336,39 +336,110 @@ global.proof = proof;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"../fol":7,"../proofs/proof":24}],5:[function(require,module,exports){
-var currentParserName, currentRulesName, currentSymbolsName, dialects, parsers, ruleSets, setCurrentParser, setCurrentRules, setSymbols, symbols;
+var _, currentParserName, currentRulesName, currentSymbolsName, dialectName, dialectVersion, dialects, parsers, ruleSets, setCurrentParser, setCurrentRules, setSymbols, symbols;
+
+_ = require('lodash');
 
 symbols = require('../symbols');
 
 dialects = {
-  "default": {
-    symbols: 'default',
-    parser: 'awFOL',
-    rules: 'fitch'
+  lpl: {
+    available: true,
+    description: 'The language and natural deduction proof system presented in Barker-Plummer, Barwise and Etchemndy’s ‘Language, Proof and Logic’',
+    textbook: "Language, Proof and Logic by Barker-Plummer, Barwise & Etchemendy",
+    versions: {
+      "0.1": {
+        symbols: 'default',
+        parser: 'awFOL',
+        rules: 'fitch'
+      }
+    }
   },
   teller: {
-    symbols: 'teller',
-    parser: 'teller',
-    rules: 'teller'
+    available: true,
+    description: 'The language and natural deduction proof system presented in Teller’s ‘A Modern Formal Logic Primer’ (1998)',
+    textbook: "A Modern Formal Logic Primer by Teller",
+    versions: {
+      "0.1": {
+        symbols: 'teller',
+        parser: 'teller',
+        rules: 'teller'
+      }
+    }
   },
   copi: {
-    symbols: 'copi',
-    parser: 'copi',
-    rules: 'copi'
+    available: false,
+    versions: {
+      "0.1": {
+        symbols: 'copi',
+        parser: 'copi',
+        rules: 'copi'
+      }
+    }
   },
   forallx: {
-    symbols: 'forallx',
-    parser: 'forallx',
-    rules: 'forallx'
+    available: true,
+    description: 'The language and natural deduction proof system presented in Magnus’ ‘forallx’ (2014)',
+    textbook: "A Modern Formal Logic Primer by Magnus",
+    versions: {
+      "0.1": {
+        symbols: 'forallx',
+        parser: 'forallx',
+        rules: 'forallx'
+      }
+    }
   }
 };
 
-exports.set = function(name) {
-  var d;
-  d = dialects[name];
+dialectName = 'lpl';
+
+dialectVersion = "0.1";
+
+exports.set = function(name, version) {
+  var allVersions, d;
+  dialectName = name;
+  allVersions = dialects[name].versions;
+  if (version == null) {
+    version = Math.max(_.keys(allVersions));
+  }
+  dialectVersion = version;
+  d = allVersions[version];
   setSymbols(d.symbols);
   setCurrentParser(d.parser);
   return setCurrentRules(d.rules);
+};
+
+exports.getCurrentDialectNameAndVersion = function() {
+  return {
+    name: dialectName,
+    version: dialectVersion
+  };
+};
+
+exports.getTextbookForDialect = function(name) {
+  if (name == null) {
+    name = dialectName;
+  }
+  return dialects[name].textbook;
+};
+
+exports.getAllDialectNamesAndDescriptions = function() {
+  var d, dialectNames, i, key, len, res;
+  dialectNames = _.keys(dialects);
+  res = [];
+  for (i = 0, len = dialectNames.length; i < len; i++) {
+    key = dialectNames[i];
+    d = dialects[key];
+    if (d.available !== true) {
+      continue;
+    }
+    res.push({
+      name: key,
+      description: d.description,
+      textbook: d.textbook
+    });
+  }
+  return res;
 };
 
 exports.listDialects = function() {
@@ -456,7 +527,7 @@ setCurrentRules = function(name) {
 exports.setCurrentRules = setCurrentRules;
 
 
-},{"../parser/awFOL":11,"../parser/copiFOL":12,"../parser/forallxFOL":13,"../parser/tellerFOL":14,"../symbols":28}],6:[function(require,module,exports){
+},{"../parser/awFOL":11,"../parser/copiFOL":12,"../parser/forallxFOL":13,"../parser/tellerFOL":14,"../symbols":28,"lodash":9}],6:[function(require,module,exports){
 var Evaluator, _, dialectManager, evaluate, parser;
 
 _ = require('lodash');
@@ -616,10 +687,30 @@ parse = function(text, parser) {
 
 exports.parse = parse;
 
+exports.parseUsingSystemParser = function(text) {
+  var parser;
+  parser = dialectManager.getParser('awFOL');
+  return parse(text, parser);
+};
+
 exports.symbols = symbols;
 
-exports.setDialect = function(name) {
-  return dialectManager.set(name);
+exports.setDialect = function(name, version) {
+  return dialectManager.set(name, version);
+};
+
+exports.getAllDialectNamesAndDescriptions = function() {
+  return dialectManager.getAllDialectNamesAndDescriptions();
+};
+
+exports.getCurrentDialectNameAndVersion = function() {
+  return dialectManager.getCurrentDialectNameAndVersion();
+};
+
+exports._dialectManager = dialectManager;
+
+exports.getTextbookForDialect = function(name) {
+  return dialectManager.getTextbookForDialect(name);
 };
 
 _decorate = function(expression) {
