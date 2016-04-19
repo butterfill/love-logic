@@ -6,6 +6,7 @@ expect = chai.expect
 substitute = require('../substitute')
 fol = require '../parser/awFOL' 
 util = require('../util')
+dialectManager = require('../dialect_manager/dialectManager')
 
 
 describe 'util', ->
@@ -707,3 +708,20 @@ describe 'util', ->
       result = util.expressionContainsSubstitutions e
       console.log util.expressionToString(e) if result is false
       expect(result).to.be.true
+
+  describe ".getLanguageNames", ->
+    it "works for FOL", ->
+      oldDialect = dialectManager.getCurrentDialectNameAndVersion()
+      dialectManager.set('lpl')
+      result = util.getLanguageNames()
+      expect(result.length).to.equal(1)
+      expect(result[0]).to.equal('FOL')
+      dialectManager.set(oldDialect)
+    it "works for forallx", ->
+      oldDialect = dialectManager.getCurrentDialectNameAndVersion()
+      dialectManager.set('forallx')
+      result = util.getLanguageNames()
+      expect(result.length).to.equal(2)
+      expect(result[0]).to.equal('SL')
+      expect(result[1]).to.equal('QL')
+      dialectManager.set(oldDialect)

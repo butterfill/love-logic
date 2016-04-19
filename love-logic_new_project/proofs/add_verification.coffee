@@ -24,6 +24,7 @@
  
 _ = require 'lodash'
 
+util = require '../util'
 
 blockParser = require './block_parser'
 addLineNumbers = require './add_line_numbers'
@@ -152,14 +153,16 @@ _linesCitedAreOk = (line) ->
     if not (found.type in ['line','block'])
       return "you cannot cite line #{num} because it is a #{found.type.replace(/_/g,' ')}."
     if found.type is 'line' and found.status.sentenceParsed isnt true
-      return "you cannot cite line #{num} yet because it does not contain a correct awFOL sentence."
+      languageNames = util.getLanguageNames()
+      return "you cannot cite line #{num} yet because it does not contain a correct sentence of #{languageNames.join(' or ')}."
     if found.type is 'block' 
       firstLine = found.getFirstLine()
       lastLine = found.getLastLine()
       if lastLine.type is 'block'
         return "you cannot cite #{num} because it finishes with an unclosed (sub)subproof (you must close it, then cite it)"
       if not (firstLine? and lastLine? and firstLine.status.sentenceParsed and lastLine.status.sentenceParsed)
-        return "you cannot cite subproof #{num} yet because it contains lines that are not correct sentence of awFOL."
+        languageNames = util.getLanguageNames()
+        return "you cannot cite subproof #{num} yet because it contains lines that are not correct sentence of #{languageNames.join(' or ')}."
   return true
 exports._linesCitedAreOk = _linesCitedAreOk
 
@@ -194,9 +197,9 @@ checkItAccordsWithTheRules = (line) ->
   # `connective` is 'and', 'reit' or 'premise' or ...
   connective = line.justification.rule.connective
   # `intronation` is 'elim' or 'intro'
-  intronation = line.justification.rule.variant.intronation
+  intronation = line.justification.rule.variant?.intronation
   # `side` is 'left' or 'right'
-  side = line.justification.rule.variant.side
+  side = line.justification.rule.variant?.side
 
   theRules = dialectManager.getCurrentRules()
   # console.log "using #{dialectManager.getCurrentRulesName()}"

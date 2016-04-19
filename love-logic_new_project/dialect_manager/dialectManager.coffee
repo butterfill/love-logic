@@ -7,7 +7,7 @@ dialects =
   lpl :
     available : true
     description : 'The language and natural deduction proof system presented in Barker-Plummer, Barwise and Etchemndy’s ‘Language, Proof and Logic’'
-    textbook : "Language, Proof and Logic by Barker-Plummer, Barwise & Etchemendy"
+    textbook : "‘Language, Proof and Logic’ by Barker-Plummer, Barwise & Etchemendy"
     versions : 
       "0.1" : # version 0.1
         symbols : 'default'
@@ -16,7 +16,7 @@ dialects =
   teller :
     available : true
     description : 'The language and natural deduction proof system presented in Teller’s ‘A Modern Formal Logic Primer’ (1998)'
-    textbook : "A Modern Formal Logic Primer by Teller"
+    textbook : "‘A Modern Formal Logic Primer’ by Teller"
     versions : 
       "0.1" : 
         symbols : 'teller'
@@ -33,18 +33,32 @@ dialects =
   forallx :
     available : true
     description : 'The language and natural deduction proof system presented in Magnus’ ‘forallx’ (2014)'
-    textbook : "A Modern Formal Logic Primer by Magnus"
+    textbook : "‘forallx’ Primer by Magnus"
     versions : 
       "0.1" : 
         symbols : 'forallx'
         parser : 'forallx'
         rules : 'forallx'
+  logicbook :
+    available : true
+    description : 'The language and natural deduction proof system presented in Bergmann, Moore and Nelson’s ‘The Logic Book’ (2014)'
+    textbook : "‘The Logic Book’ by Bergmann, Moore and Nelson"
+    versions : 
+      "0.1" : 
+        symbols : 'logicbook'
+        parser : 'forallx'
+        rules : 'logicbook'
     
 
 # default settings!
 dialectName = 'lpl'
 dialectVersion = "0.1"
 exports.set = (name, version) ->
+  # convenience: also accept an object
+  if name.version?
+    version = name.version
+    name = name.name
+    
   dialectName = name
   allVersions = dialects[name].versions
   unless version?

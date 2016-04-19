@@ -21,6 +21,7 @@
 _ = require 'lodash'
 
 util = require '../util'
+substitute = require '../substitute'
 fol = require '../fol'
 
 
@@ -88,6 +89,54 @@ match = (sentence) ->
   }
 exports.match = match
 
+
+# Supports rules of replacement (see Magnus or Bergmann et al).
+# Use like: rule.from('φ').to( rule.replace('φ', {from:'ψ or χ', to:'χ or ψ'}) )
+# Does not support substitutions in any params (because no need).
+# Also does not support matching the expression meta variables in 
+# the subsitution ` {from:'ψ or χ', to:'χ or ψ'}` (because no need).
+exports.replace = (sentence, sub) ->
+  pattern = parseAndDecorateIfNecessary(sentence)
+  sub.from = parseAndDecorateIfNecessary(sub.from)
+  sub.to = parseAndDecorateIfNecessary(sub.to)
+  baseCheck = (line, priorMatches) ->
+    # First check that `priorMatches` contains matches for 
+    # everything in `pattern`:
+    metaVariableNames = pattern.listMetaVariableNames()
+    for varName in metaVariableNames.inExpression
+      if not (varName of priorMatches)
+        # console.log "    fail check because #{varName} not of priorMatches, #{_matchesToString(priorMatches)}"
+        return false
+    
+    patternClone = pattern.clone().applyMatches(priorMatches)
+    
+    aSentence = line.sentence
+    if not patternClone.box? and aSentence.box?
+      aSentence = aSentence.clone()
+      delete aSentence.box
+    return substitute.isOneASubstitutionInstanceOfTheOther(aSentence, patternClone, sub)
+
+    patternAfterSubs = substitute.doSubRecursive(patternClone, sub)
+    fol._decorate patternAfterSubs
+    return doesLineMatchPattern(line, patternAfterSubs, priorMatches)
+  checkFunctions = [baseCheck]
+  return {
+    check : (line, priorMatches) ->
+      currentMatches = priorMatches
+      for f in checkFunctions
+        test = f(line, currentMatches)
+        # if test is false
+        #   console.log "    did not match #{pattern} to #{line.sentence}, #{_matchesToString(priorMatches)}"
+        # else
+        #   console.log "    matched #{pattern} to #{line.sentence}, #{_matchesToString(test)}"
+        return false if test is false
+        currentMatches = test
+      return currentMatches
+    
+    toString : () ->
+      return "#{pattern.toString()}[#{sub.from.toString()}-->#{sub.to.toString()}]"
+  }
+    
 # Return false if not; otherwise return the `newMatches` involved
 # in matching the line to the pattern.
 doesLineMatchPattern = (line, pattern, priorMatches) ->

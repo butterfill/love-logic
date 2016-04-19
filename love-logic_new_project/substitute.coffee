@@ -190,7 +190,6 @@ doSub = (expression, sub) ->
 exports.doSub = doSub
 
 # Apply the `sub` to the `expression` and all its components.  
-# (See doSub.)
 doSubRecursive = (expression, sub, o={}) ->
   walker = (e) ->
     return e if e is null
@@ -264,5 +263,52 @@ applySubstitutions = (expression) ->
 exports.applySubstitutions = applySubstitutions
 
 
+# Returns true if there is any way of recursively applying sub to 
+# first and its constituents to yield second.
+# 
+isOneASubstitutionInstanceOfTheOther = (first, second, sub) ->
+  first = util.delExtraneousProperties(util.cloneExpression(first))
+  second = util.delExtraneousProperties(util.cloneExpression(second))
+  return _isOneASubstitutionInstanceOfTheOther(first, second, sub)
+
+_isOneASubstitutionInstanceOfTheOther = (first, second, sub) ->
+  return true if util.areIdenticalExpressions(first, second)
+  
+  testParts = (first, second) ->
+    for attr in [ 'substitutions', 'from', 'to'       #for substitions
+                  'box','term'                        #for boxes
+                  'boundVariable'
+                  'termlist'
+                  'left', 'right'
+                  # attributes with primitive values:
+                  'type', 'name', 'letter', 'value'   
+                ]
+      if first[attr]? or second[attr]?
+        return false unless first[attr]? and second[attr]?
+        if _.isString(first[attr])
+          return false unless first[attr] is second[attr]
+        else
+          return false unless _isOneASubstitutionInstanceOfTheOther(first[attr], second[attr], sub)
+    return true
+  
+  return true if testParts(first, second)
+  
+  firstSubd = doSub( util.cloneExpression(first), sub )
+  return true if testParts(firstSubd, second)
+  return false 
+  
+exports.isOneASubstitutionInstanceOfTheOther = isOneASubstitutionInstanceOfTheOther
+
+isThereAWayOfApplyingTheSubstitutionToMakeTheFunctionReturnTrue = (sentence, sub, test) ->
+  
+  
+    
+  
+  sentenceClone = util.cloneExpression sentence
+  sentenceWithSub = doSub sentenceClone, sub
+  return true if test(sentenceWithSub)
+  
+  
+exports.isThereAWayOfApplyingTheSubstitutionToMakeTheFunctionReturnTrue =  isThereAWayOfApplyingTheSubstitutionToMakeTheFunctionReturnTrue
 
 

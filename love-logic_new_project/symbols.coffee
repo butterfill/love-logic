@@ -16,6 +16,9 @@ symbols =
     'universal' : "∀" # for proof parser
     'existential_quantifier' : "∃" 
     'existential' : "∃" # for proof parser
+    propLanguageName : 'FOL'
+    predLanguageName : 'FOL'
+    
 
   copi : 
     'not' : '~'
@@ -59,6 +62,9 @@ symbols =
     'all-not' : '∀~'
     'exists-not' : '∃~'
     'not-exists' : '~∃'
+    propLanguageName : 'sentence logic'
+    predLanguageName : 'predicate logic'
+    
     
   forallx : 
     'not' : '¬'
@@ -80,6 +86,30 @@ symbols =
     # TODO: predicates can have number subscripts 
     # (requires updates to parser and toString):
     singleLetterPredicates : true
+    propLanguageName : 'SL'
+    predLanguageName : 'QL'
+
+
+  logicbook : 
+    'not' : '~'
+    'false' : "⊥"
+    'contradiction' : "⊥" # for proof parser
+    'identity' : "="
+    'and' : "&"
+    'arrow' : "⊃"
+    'double_arrow' : "≡"
+    'or' : "∨"
+    'nor' :  "↓"
+    'nand' : "↑"
+    'universal_quantifier' : "∀"
+    'universal' : "∀" # for proof parser
+    'existential_quantifier' : "∃" 
+    'existential' : "∃" # for proof parser
+    quantifiersInBrackets : true
+    predicationBracketsAndCommas : false
+    singleLetterPredicates : true
+    propLanguageName : 'SL'
+    predLanguageName : 'PL'
 
 
 module.exports = symbols

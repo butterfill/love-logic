@@ -103,6 +103,165 @@ describe "forallx_rules", ->
       | exists x Gx     exists elim 1, 4-8
     '''
     testProof(text, false)
+
+  it "verifies a simple modus-tollens proof", ->
+    text = '''
+      | A arrow B
+      | not B
+      |---
+      | not A						MT 1,2 
+    '''
+    testProof(text, true)
+
+  it "verifies a simple dilemma proof", ->
+    text = '''
+      | A arrow C                   
+      | B arrow C
+      | A or B
+      |---
+      | C						DIL 1,2,3 
+    '''
+    testProof(text, true)
+
+  it "verifies a simple hypothetical-syllogism proof", ->
+    text = '''
+      | A arrow B                   
+      | B arrow C
+      |---
+      | A arrow C						hypothetical syllogism 1,2 
+    '''
+    testProof(text, true)
+
   
+  # ---
+  # rules of replacement
+  
+  it "supports rules of replacement (simplest case)", ->
+    text = '''
+      | A and B      premise
+      |---
+      | B and A						comm 1
+    '''
+    testProof(text, true)
+  it "supports rules of replacement (one of one subformula)", ->
+    text = '''
+      | (A and B) or C
+      |---
+      | (B and A) or C						comm 1
+    '''
+    testProof(text, true)
+  it "supports rules of replacement (all of two subformulae)", ->
+    text = '''
+      | (A and B) or (C and D)
+      |---
+      | (B and A) or (D and C)						comm 1
+    '''
+    testProof(text, true)
+  it "supports rules of replacement (one of two subformulae)", ->
+    text = '''
+      | (A and B) or (C and D)
+      |---
+      | (B and A) or (C and D)						comm 1
+    '''
+    testProof(text, true)
+  it "supports rules of replacement (all of two subformulae, other side)", ->
+    text = '''
+      | (A and B) or (C and D)
+      |---
+      | (A and B) or (D and C)						comm 1
+    '''
+    testProof(text, true)
+  it "supports rules of replacement (both of two nested instances)", ->
+    text = '''
+      | (A and B) and C
+      |---
+      | C and (B and A)						comm 1
+    '''
+    testProof(text, true)
+  it "supports rules of replacement (outer only of two nested instances)", ->
+    text = '''
+      | (A and B) and C
+      |---
+      | C and (A and B)						comm 1
+    '''
+    testProof(text, true)
+  it "supports rules of replacement (inner only of two nested instances)", ->
+    text = '''
+      | (A and B) and C
+      |---
+      | (B and A) and C						comm 1
+    '''
+    testProof(text, true)
+  it "identifies an error using rules of replacement (connective swapped)", ->
+    text = '''
+      | (A and B) and C
+      |---
+      | (B or A) and C						comm 1
+    '''
+    testProof(text, false)
+  it "identifies an error using rules of replacement (another connective swapped)", ->
+    text = '''
+      | (A and B) and C
+      |---
+      | (B and A) or C						comm 1
+    '''
+    testProof(text, false)
+  it "allows rules of replacement inside quantifiers", ->
+    text = '''
+      | all x (Fx and Gx) and C
+      |---
+      | all x (Gx and Fx) and C						comm 1
+    '''
+    testProof(text, true)
+  it "identifies an error using rules of replacement (quantifier variable swapped)", ->
+    text = '''
+      | all x (Fx and Gx) and C
+      |---
+      | all y (Gx and Fx) and C						comm 1
+    '''
+    testProof(text, false)
+  it "supports double-negation of replacement, simple", ->
+    text = '''
+      | ~~A
+      |---
+      | A						DN 1
+    '''
+    testProof(text, true)
+
+  it "supports double-negation of replacement, subformula", ->
+    text = '''
+      | ~~A and B
+      |---
+      | A and B						double negation 1
+    '''
+    testProof(text, true)
+  it "supports double-negation of replacement, one of two subformulae", ->
+    text = '''
+      | ~~A and ~~B
+      |---
+      | A and ~~B						double negation 1
+    '''
+    testProof(text, true)
+  it "supports double-negation of replacement, two of two subformulae", ->
+    text = '''
+      | ~~A and ~~B
+      |---
+      | A and B						double negation 1
+    '''
+    testProof(text, true)
+  it "verifies a quantification-replacement proof", ->
+    text = '''
+      | (not all x Fx) and (not all x Gx)
+      |---
+      | (exists x not Fx)  and (not all x Gx)     qn 1
+    '''
+    testProof(text, true)
+  it "spots a mistake in a quantification-replacement rule application", ->
+    text = '''
+      | (not all x Fx) and (not all x Gx)
+      |---
+      | (all x not Fx)  and (not all x Gx)     qn 1
+    '''
+    testProof(text, false)
 
 

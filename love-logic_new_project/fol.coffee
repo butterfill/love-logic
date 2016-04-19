@@ -26,6 +26,8 @@ exports.parseUsingSystemParser = (text) ->
   return parse(text, parser)
 
 exports.symbols = symbols
+exports.getLanguageNames = util.getLanguageNames
+exports.getPredLanguageName = util.getPredLanguageName
 
 # Use `fol.setDialect` to determine how sentences will be 
 # parsed and toStrung, and which rules of proof the proof checker will use.

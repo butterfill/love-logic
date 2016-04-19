@@ -346,7 +346,7 @@ dialects = {
   lpl: {
     available: true,
     description: 'The language and natural deduction proof system presented in Barker-Plummer, Barwise and Etchemndy’s ‘Language, Proof and Logic’',
-    textbook: "Language, Proof and Logic by Barker-Plummer, Barwise & Etchemendy",
+    textbook: "‘Language, Proof and Logic’ by Barker-Plummer, Barwise & Etchemendy",
     versions: {
       "0.1": {
         symbols: 'default',
@@ -358,7 +358,7 @@ dialects = {
   teller: {
     available: true,
     description: 'The language and natural deduction proof system presented in Teller’s ‘A Modern Formal Logic Primer’ (1998)',
-    textbook: "A Modern Formal Logic Primer by Teller",
+    textbook: "‘A Modern Formal Logic Primer’ by Teller",
     versions: {
       "0.1": {
         symbols: 'teller',
@@ -380,12 +380,24 @@ dialects = {
   forallx: {
     available: true,
     description: 'The language and natural deduction proof system presented in Magnus’ ‘forallx’ (2014)',
-    textbook: "A Modern Formal Logic Primer by Magnus",
+    textbook: "‘forallx’ Primer by Magnus",
     versions: {
       "0.1": {
         symbols: 'forallx',
         parser: 'forallx',
         rules: 'forallx'
+      }
+    }
+  },
+  logicbook: {
+    available: true,
+    description: 'The language and natural deduction proof system presented in Bergmann, Moore and Nelson’s ‘The Logic Book’ (2014)',
+    textbook: "‘The Logic Book’ by Bergmann, Moore and Nelson",
+    versions: {
+      "0.1": {
+        symbols: 'logicbook',
+        parser: 'forallx',
+        rules: 'logicbook'
       }
     }
   }
@@ -397,6 +409,10 @@ dialectVersion = "0.1";
 
 exports.set = function(name, version) {
   var allVersions, d;
+  if (name.version != null) {
+    version = name.version;
+    name = name.name;
+  }
   dialectName = name;
   allVersions = dialects[name].versions;
   if (version == null) {
@@ -694,6 +710,10 @@ exports.parseUsingSystemParser = function(text) {
 };
 
 exports.symbols = symbols;
+
+exports.getLanguageNames = util.getLanguageNames;
+
+exports.getPredLanguageName = util.getPredLanguageName;
 
 exports.setDialect = function(name, version) {
   return dialectManager.set(name, version);
@@ -14125,7 +14145,7 @@ exports.removeQuantifiersThatBindNothing = removeQuantifiersThatBindNothing;
   }
 */
 var awFOL = (function(){
-var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,4],$V1=[1,5],$V2=[1,6],$V3=[1,7],$V4=[1,8],$V5=[1,9],$V6=[1,11],$V7=[1,14],$V8=[1,15],$V9=[1,18],$Va=[1,19],$Vb=[1,16],$Vc=[1,21],$Vd=[1,22],$Ve=[1,23],$Vf=[1,24],$Vg=[1,25],$Vh=[1,26],$Vi=[1,27],$Vj=[1,32],$Vk=[5,10,13,14,15,16,17,18,27,29,34],$Vl=[5,10,13,14,15,16,17,18,27,29,34,37],$Vm=[5,10,13,14,15,16,17,18,26,27,29,34,37],$Vn=[2,32],$Vo=[5,7,9,10,11,13,14,15,16,17,18,19,20,21,23,26,27,29,30,31,32,33,34,35,37],$Vp=[7,9,10,11,19,20,21,23,30,31,32,33,35],$Vq=[5,10,13,14,15,16,17,18,29,34],$Vr=[5,10,29,34],$Vs=[29,34];
+var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,4],$V1=[1,5],$V2=[1,6],$V3=[1,7],$V4=[1,8],$V5=[1,9],$V6=[1,11],$V7=[1,14],$V8=[1,15],$V9=[1,18],$Va=[1,19],$Vb=[1,16],$Vc=[1,21],$Vd=[1,22],$Ve=[1,23],$Vf=[1,24],$Vg=[1,25],$Vh=[1,26],$Vi=[1,27],$Vj=[1,32],$Vk=[5,10,13,14,15,16,17,18,27,29,34,37],$Vl=[1,40],$Vm=[5,10,13,14,15,16,17,18,26,27,29,34,37],$Vn=[2,32],$Vo=[5,7,9,10,11,13,14,15,16,17,18,19,20,21,23,26,27,29,30,31,32,33,34,35,37],$Vp=[7,9,10,11,19,20,21,23,30,31,32,33,35],$Vq=[5,10,13,14,15,16,17,18,29,34,37],$Vr=[5,10,29,34,37],$Vs=[29,34];
 var parser = {trace: function trace() { },
 yy: {},
 symbols_: {"error":2,"expressions":3,"e":4,"EOF":5,"box":6,"existential_quantifier":7,"quantifier_variable":8,"(":9,")":10,"universal_quantifier":11,"variable_or_metavariable":12,"and":13,"or":14,"nand":15,"nor":16,"arrow":17,"double_arrow":18,"not":19,"true":20,"false":21,"sentence_letter_or_expression_variable":22,"predicate":23,"termlist":24,"term":25,"identity":26,"[":27,"substitution_list":28,"]":29,"expression_variable":30,"sentence_letter":31,"variable":32,"term_metavariable":33,",":34,"name":35,"substitution":36,"substitution_symbol":37,"null":38,"$accept":0,"$end":1},
@@ -14238,7 +14258,7 @@ case 39:
 break;
 }
 },
-table: [{3:1,4:2,6:3,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,27:[1,13],30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{1:[3]},{5:[1,20],13:$Vc,14:$Vd,15:$Ve,16:$Vf,17:$Vg,18:$Vh,27:$Vi},{4:29,5:[1,28],7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{8:30,9:$Vj,12:31,32:$V9,33:$Va},{4:36,7:[1,33],9:$V1,11:[1,34],12:35,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{8:37,9:$Vj,12:31,32:$V9,33:$Va},{4:38,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},o($Vk,[2,16]),o($Vk,[2,17]),o($Vk,[2,18]),{9:[1,39]},{26:[1,40]},{12:17,25:41,32:$V9,33:$Va,35:$Vb},o($Vl,[2,23]),o($Vl,[2,24]),o($Vm,[2,31]),o($Vm,$Vn),o($Vo,[2,25]),o($Vo,[2,26]),{1:[2,1]},{4:42,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:43,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:44,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:45,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:46,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:47,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{12:17,22:51,25:50,28:48,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb,36:49},{1:[2,2]},{5:[1,52],13:$Vc,14:$Vd,15:$Ve,16:$Vf,17:$Vg,18:$Vh,27:$Vi},{4:53,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},o($Vp,[2,27]),{12:54,32:$V9,33:$Va},{8:55,9:$Vj,12:31,32:$V9,33:$Va},{8:56,9:$Vj,12:31,32:$V9,33:$Va},{10:[1,57],26:$Vn},{10:[1,58],13:$Vc,14:$Vd,15:$Ve,16:$Vf,17:$Vg,18:$Vh,27:$Vi},{4:59,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},o($Vq,[2,15],{27:$Vi}),{12:17,24:60,25:61,32:$V9,33:$Va,35:$Vb},{12:17,25:62,32:$V9,33:$Va,35:$Vb},{29:[1,63]},o($Vq,[2,9],{27:$Vi}),o($Vq,[2,10],{27:$Vi}),o($Vq,[2,11],{27:$Vi}),o($Vq,[2,12],{27:$Vi}),o($Vr,[2,13],{13:$Vc,14:$Vd,15:$Ve,16:$Vf,27:$Vi}),o($Vr,[2,14],{13:$Vc,14:$Vd,15:$Ve,16:$Vf,27:$Vi}),{29:[1,64]},{29:[2,33],34:[1,65]},{37:[1,66]},{37:[1,67]},{1:[2,3]},o($Vq,[2,4],{27:$Vi}),{10:[1,68]},{4:53,7:$V0,9:$V1,10:[1,69],11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:59,7:$V0,9:$V1,10:[1,70],11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:71,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},o($Vk,[2,21]),o($Vq,[2,6],{27:$Vi}),{10:[1,72]},{10:[2,29],34:[1,73]},o($Vk,[2,20]),o([5,7,9,11,19,20,21,23,30,31,32,33,35],[2,39]),o($Vk,[2,22]),{12:17,22:51,25:50,28:74,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb,36:49},{12:17,25:75,32:$V9,33:$Va,35:$Vb,38:[1,76]},{4:77,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb,38:[1,78]},o($Vp,[2,28]),{4:79,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:80,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},o($Vq,[2,8],{27:$Vi}),o($Vk,[2,19]),{12:17,24:81,25:61,32:$V9,33:$Va,35:$Vb},{29:[2,34]},o($Vs,[2,35]),o($Vs,[2,36]),o($Vs,[2,37],{13:$Vc,14:$Vd,15:$Ve,16:$Vf,17:$Vg,18:$Vh,27:$Vi}),o($Vs,[2,38]),o($Vq,[2,5],{27:$Vi}),o($Vq,[2,7],{27:$Vi}),{10:[2,30]}],
+table: [{3:1,4:2,6:3,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,27:[1,13],30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{1:[3]},{5:[1,20],13:$Vc,14:$Vd,15:$Ve,16:$Vf,17:$Vg,18:$Vh,27:$Vi},{4:29,5:[1,28],7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{8:30,9:$Vj,12:31,32:$V9,33:$Va},{4:36,7:[1,33],9:$V1,11:[1,34],12:35,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{8:37,9:$Vj,12:31,32:$V9,33:$Va},{4:38,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},o($Vk,[2,16]),o($Vk,[2,17]),o($Vk,[2,18]),{9:[1,39]},{26:$Vl},{12:17,25:41,32:$V9,33:$Va,35:$Vb},o($Vk,[2,23]),o($Vk,[2,24]),o($Vm,[2,31]),o($Vm,$Vn),o($Vo,[2,25]),o($Vo,[2,26]),{1:[2,1]},{4:42,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:43,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:44,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:45,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:46,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:47,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:51,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:50,28:48,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb,36:49},{1:[2,2]},{5:[1,52],13:$Vc,14:$Vd,15:$Ve,16:$Vf,17:$Vg,18:$Vh,27:$Vi},{4:53,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},o($Vp,[2,27]),{12:54,32:$V9,33:$Va},{8:55,9:$Vj,12:31,32:$V9,33:$Va},{8:56,9:$Vj,12:31,32:$V9,33:$Va},{10:[1,57],26:$Vn},{10:[1,58],13:$Vc,14:$Vd,15:$Ve,16:$Vf,17:$Vg,18:$Vh,27:$Vi},{4:59,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},o($Vq,[2,15],{27:$Vi}),{12:17,24:60,25:61,32:$V9,33:$Va,35:$Vb},{12:17,25:62,32:$V9,33:$Va,35:$Vb},{29:[1,63]},o($Vq,[2,9],{27:$Vi}),o($Vq,[2,10],{27:$Vi}),o($Vq,[2,11],{27:$Vi}),o($Vq,[2,12],{27:$Vi}),o($Vr,[2,13],{13:$Vc,14:$Vd,15:$Ve,16:$Vf,27:$Vi}),o($Vr,[2,14],{13:$Vc,14:$Vd,15:$Ve,16:$Vf,27:$Vi}),{29:[1,64]},{29:[2,33],34:[1,65]},{26:$Vl,37:[1,66]},{13:$Vc,14:$Vd,15:$Ve,16:$Vf,17:$Vg,18:$Vh,27:$Vi,37:[1,67]},{1:[2,3]},o($Vq,[2,4],{27:$Vi}),{10:[1,68]},{4:53,7:$V0,9:$V1,10:[1,69],11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:59,7:$V0,9:$V1,10:[1,70],11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:71,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},o($Vk,[2,21]),o($Vq,[2,6],{27:$Vi}),{10:[1,72]},{10:[2,29],34:[1,73]},o($Vk,[2,20]),o([5,7,9,11,19,20,21,23,30,31,32,33,35],[2,39]),o($Vk,[2,22]),{4:51,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:50,28:74,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb,36:49},{12:17,25:75,32:$V9,33:$Va,35:$Vb,38:[1,76]},{4:77,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb,38:[1,78]},o($Vp,[2,28]),{4:79,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},{4:80,7:$V0,9:$V1,11:$V2,12:17,19:$V3,20:$V4,21:$V5,22:10,23:$V6,25:12,30:$V7,31:$V8,32:$V9,33:$Va,35:$Vb},o($Vq,[2,8],{27:$Vi}),o($Vk,[2,19]),{12:17,24:81,25:61,32:$V9,33:$Va,35:$Vb},{29:[2,34]},o($Vs,[2,35]),o($Vs,[2,36]),o($Vs,[2,37],{13:$Vc,14:$Vd,15:$Ve,16:$Vf,17:$Vg,18:$Vh,27:$Vi}),o($Vs,[2,38]),o($Vq,[2,5],{27:$Vi}),o($Vq,[2,7],{27:$Vi}),{10:[2,30]}],
 defaultActions: {20:[2,1],28:[2,2],52:[2,3],74:[2,34],81:[2,30]},
 parseError: function parseError(str, hash) {
     if (hash.recoverable) {
@@ -17552,7 +17572,7 @@ exports.to = to;
 
 LineStatus = (function() {
   function LineStatus(line) {
-    var ref;
+    var languageNames, ref;
     this.line = line;
     this.messages = [];
     this.verified = false;
@@ -17560,7 +17580,8 @@ LineStatus = (function() {
     this.sentenceParsed = this.line.sentence != null;
     this.justificationParsed = this.line.justification != null;
     if (this.line.sentenceErrors != null) {
-      this.addMessage("the sentence you wrote (" + this.line.sentenceText + ") is not a sentence of awFOL.");
+      languageNames = util.getLanguageNames();
+      this.addMessage("the sentence you wrote (" + this.line.sentenceText + ") is not a sentence or well-formed formula of " + (languageNames.join(' or ')) + ".");
     }
     if (this.line.justificationErrors != null) {
       this.addMessage("the justification your supplied (" + ((ref = this.line.justificationText) != null ? ref.trim() : void 0) + ") either mentions a rule you can't use here or doesn't make sense.");
@@ -17626,10 +17647,12 @@ LineStatus = (function() {
 
 
 },{"../fol":7,"../substitute":27,"../util":29}],19:[function(require,module,exports){
-var _, _linesCitedAreOk, _parseProof, addJustification, addLineNumbers, addSentences, addStatus, blockParser, checkItAccordsWithTheRules, checkLineAccordsWithOneOfTheseRules, dialectManager, to, verifyLine,
+var _, _linesCitedAreOk, _parseProof, addJustification, addLineNumbers, addSentences, addStatus, blockParser, checkItAccordsWithTheRules, checkLineAccordsWithOneOfTheseRules, dialectManager, to, util, verifyLine,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 _ = require('lodash');
+
+util = require('../util');
 
 blockParser = require('./block_parser');
 
@@ -17738,7 +17761,7 @@ verifyLine = function(lineOrLineNumber, proofText) {
 exports._line = verifyLine;
 
 _linesCitedAreOk = function(line) {
-  var ancestors, firstLine, found, i, lastLine, len, num, numbers, parent, ref;
+  var ancestors, firstLine, found, i, languageNames, lastLine, len, num, numbers, parent, ref;
   numbers = line.justification.numbers;
   if (!numbers) {
     return true;
@@ -17762,7 +17785,8 @@ _linesCitedAreOk = function(line) {
       return "you cannot cite line " + num + " because it is a " + (found.type.replace(/_/g, ' ')) + ".";
     }
     if (found.type === 'line' && found.status.sentenceParsed !== true) {
-      return "you cannot cite line " + num + " yet because it does not contain a correct awFOL sentence.";
+      languageNames = util.getLanguageNames();
+      return "you cannot cite line " + num + " yet because it does not contain a correct sentence of " + (languageNames.join(' or ')) + ".";
     }
     if (found.type === 'block') {
       firstLine = found.getFirstLine();
@@ -17771,7 +17795,8 @@ _linesCitedAreOk = function(line) {
         return "you cannot cite " + num + " because it finishes with an unclosed (sub)subproof (you must close it, then cite it)";
       }
       if (!((firstLine != null) && (lastLine != null) && firstLine.status.sentenceParsed && lastLine.status.sentenceParsed)) {
-        return "you cannot cite subproof " + num + " yet because it contains lines that are not correct sentence of awFOL.";
+        languageNames = util.getLanguageNames();
+        return "you cannot cite subproof " + num + " yet because it contains lines that are not correct sentence of " + (languageNames.join(' or ')) + ".";
       }
     }
   }
@@ -17811,10 +17836,10 @@ checkLineAccordsWithOneOfTheseRules = function(line, rules) {
 };
 
 checkItAccordsWithTheRules = function(line) {
-  var aRule, connective, i, intronation, j, len, len1, r, ref, ref1, ref2, ref3, ruleMap, rules, side, theRules;
+  var aRule, connective, i, intronation, j, len, len1, r, ref, ref1, ref2, ref3, ref4, ref5, ruleMap, rules, side, theRules;
   connective = line.justification.rule.connective;
-  intronation = line.justification.rule.variant.intronation;
-  side = line.justification.rule.variant.side;
+  intronation = (ref = line.justification.rule.variant) != null ? ref.intronation : void 0;
+  side = (ref1 = line.justification.rule.variant) != null ? ref1.side : void 0;
   theRules = dialectManager.getCurrentRules();
   ruleMap = theRules[connective];
   if (ruleMap == null) {
@@ -17851,23 +17876,23 @@ checkItAccordsWithTheRules = function(line) {
       return checkLineAccordsWithOneOfTheseRules(line, rules);
     }
     rules = [];
-    if (((ref = ruleMap.left) != null ? ref.type : void 0) === 'rule') {
+    if (((ref2 = ruleMap.left) != null ? ref2.type : void 0) === 'rule') {
       rules.push(ruleMap.left);
     }
     if (_.isArray(ruleMap.left)) {
-      ref1 = ruleMap.left;
-      for (i = 0, len = ref1.length; i < len; i++) {
-        r = ref1[i];
+      ref3 = ruleMap.left;
+      for (i = 0, len = ref3.length; i < len; i++) {
+        r = ref3[i];
         rules.push(r);
       }
     }
-    if (((ref2 = ruleMap.right) != null ? ref2.type : void 0) === 'rule') {
+    if (((ref4 = ruleMap.right) != null ? ref4.type : void 0) === 'rule') {
       rules.push(ruleMap.right);
     }
     if (_.isArray(ruleMap.right)) {
-      ref3 = ruleMap.right;
-      for (j = 0, len1 = ref3.length; j < len1; j++) {
-        r = ref3[j];
+      ref5 = ruleMap.right;
+      for (j = 0, len1 = ref5.length; j < len1; j++) {
+        r = ref5[j];
         rules.push(r);
       }
     }
@@ -17886,7 +17911,7 @@ checkItAccordsWithTheRules = function(line) {
 };
 
 
-},{"../dialect_manager/dialectManager":5,"./add_justification":15,"./add_line_numbers":16,"./add_sentences":17,"./add_status":18,"./block_parser":20,"./fitch_rules":21,"./forallx_rules":22,"./teller_rules":26,"lodash":9}],20:[function(require,module,exports){
+},{"../dialect_manager/dialectManager":5,"../util":29,"./add_justification":15,"./add_line_numbers":16,"./add_sentences":17,"./add_status":18,"./block_parser":20,"./fitch_rules":21,"./forallx_rules":22,"./teller_rules":26,"lodash":9}],20:[function(require,module,exports){
 var Block, _, _INDENTATION_AT_START_OF_LINE, _SPLIT_LINE_WHEN_INDENTATION_FIRST, _SPLIT_LINE_WHEN_NUMBER_FIRST, areLinesFormattedIndentationFirst, clean, extractIndentationAndContentFrom, isBlank, isDivider, parse, removeIndentationFrom, removeNumberFrom, split, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -18377,7 +18402,94 @@ rules = {
   universal: {
     elim: rule.from('all τ φ').to('φ[τ-->α]'),
     intro: rule.from(rule.match('φ[τ-->α]').isNotInAnyUndischargedPremise('α')).to('all τ φ')
-  }
+  },
+  dilemma: rule.from('φ or ψ').and('φ arrow χ').and('ψ arrow χ').to('χ'),
+  'modus-tollens': rule.from('φ arrow ψ').and('not ψ').to('not φ'),
+  'hypothetical-syllogism': rule.from('φ arrow ψ').and('ψ arrow χ').to('φ arrow χ'),
+  commutivity: [
+    rule.from('φ').to(rule.replace('φ', {
+      from: 'ψ or χ',
+      to: 'χ or ψ'
+    })), rule.from('φ').to(rule.replace('φ', {
+      to: 'ψ or χ',
+      from: 'χ or ψ'
+    })), rule.from('φ').to(rule.replace('φ', {
+      from: 'ψ and χ',
+      to: 'χ and ψ'
+    })), rule.from('φ').to(rule.replace('φ', {
+      to: 'ψ and χ',
+      from: 'χ and ψ'
+    })), rule.from('φ').to(rule.replace('φ', {
+      from: 'ψ <-> χ',
+      to: 'χ <-> ψ'
+    })), rule.from('φ').to(rule.replace('φ', {
+      to: 'ψ <-> χ',
+      from: 'χ <-> ψ'
+    }))
+  ],
+  DM: [
+    rule.from('φ').to(rule.replace('φ', {
+      from: 'not (ψ or χ)',
+      to: 'not ψ and not χ'
+    })), rule.from('φ').to(rule.replace('φ', {
+      to: 'not (ψ or χ)',
+      from: 'not ψ and not χ'
+    })), rule.from('φ').to(rule.replace('φ', {
+      from: 'not (ψ and χ)',
+      to: 'not ψ or not χ'
+    })), rule.from('φ').to(rule.replace('φ', {
+      to: 'not (ψ and χ)',
+      from: 'not ψ or not χ'
+    }))
+  ],
+  'double-negation': [
+    rule.from('φ').to(rule.replace('φ', {
+      from: 'not not ψ',
+      to: 'ψ'
+    })), rule.from('φ').to(rule.replace('φ', {
+      to: 'not not ψ',
+      from: 'ψ'
+    }))
+  ],
+  'material-conditional': [
+    rule.from('φ').to(rule.replace('φ', {
+      from: 'ψ arrow χ',
+      to: 'not ψ or χ'
+    })), rule.from('φ').to(rule.replace('φ', {
+      to: 'ψ arrow χ',
+      from: 'not ψ or χ'
+    })), rule.from('φ').to(rule.replace('φ', {
+      from: 'ψ or χ',
+      to: 'not ψ arrow χ'
+    })), rule.from('φ').to(rule.replace('φ', {
+      to: 'ψ or χ',
+      from: 'not ψ arrow χ'
+    }))
+  ],
+  'biconditional-exchange': [
+    rule.from('φ').to(rule.replace('φ', {
+      from: '(ψ -> χ) and (χ -> ψ)',
+      to: 'ψ <-> χ'
+    })), rule.from('φ').to(rule.replace('φ', {
+      to: '(ψ -> χ) and (χ -> ψ)',
+      from: 'ψ <-> χ'
+    }))
+  ],
+  'quantifier-negation': [
+    rule.from('φ').to(rule.replace('φ', {
+      from: 'not (all x) ψ',
+      to: '(exists x) not ψ'
+    })), rule.from('φ').to(rule.replace('φ', {
+      to: 'not (all x) ψ',
+      from: '(exists x) not ψ'
+    })), rule.from('φ').to(rule.replace('φ', {
+      from: 'not (exists x) ψ',
+      to: '(all x) not ψ'
+    })), rule.from('φ').to(rule.replace('φ', {
+      to: 'not (exists x) ψ',
+      from: '(all x) not ψ'
+    }))
+  ]
 };
 
 exports.rules = rules;
@@ -19067,43 +19179,73 @@ case 16: yy_.yytext = 'cases';return 21;
 break;
 case 17: yy_.yytext = 'DC';return 21; 
 break;
-case 18: yy_.yytext = 'DC';return 21; 
+case 18: yy_.yytext = 'reductio';return 21; 
 break;
-case 19: yy_.yytext = 'reductio';return 21; 
+case 19: yy_.yytext = 'DM';return 21; 
 break;
-case 20: yy_.yytext = 'DM';return 21; 
+case 20: yy_.yytext = 'contraposition';return 21; 
 break;
-case 21: yy_.yytext = 'contraposition';return 21; 
+case 21: yy_.yytext = 'C';return 21; 
 break;
-case 22: yy_.yytext = 'C';return 21; 
+case 22: yy_.yytext = 'contradiction';return 21; 
 break;
-case 23: yy_.yytext = 'CD';return 21; 
+case 23: yy_.yytext = 'not-all';return 21; 
 break;
-case 24: yy_.yytext = 'not-all';return 21; 
+case 24: yy_.yytext = 'all-not';return 21; 
 break;
-case 25: yy_.yytext = 'all-not';return 21; 
+case 25: yy_.yytext = 'exists-not';return 21; 
 break;
-case 26: yy_.yytext = 'exists-not';return 21; 
+case 26: yy_.yytext = 'not-exists';return 21; 
 break;
-case 27: yy_.yytext = 'not-exists';return 21; 
+case 27: yy_.yytext = 'dilemma';return 21; 
 break;
-case 28: yy_.yytext = 'universal';
+case 28: yy_.yytext = 'modus-tollens';return 21; 
+break;
+case 29: yy_.yytext = 'hypothetical-syllogism';return 21; 
+break;
+case 30: yy_.yytext = 'disjunctive-syllogism';return 21; 
+break;
+case 31: yy_.yytext = 'commutivity';return 21; 
+break;
+case 32: yy_.yytext = 'double-negation';return 21; 
+break;
+case 33: yy_.yytext = "material-conditional";return 21; 
+break;
+case 34: yy_.yytext = 'biconditional-exchange';return 21; 
+break;
+case 35: yy_.yytext = 'quantifier-negation';return 21; 
+break;
+case 36: yy_.yytext = 'implication';return 21; 
+break;
+case 37: yy_.yytext = 'transposition';return 21; 
+break;
+case 38: yy_.yytext = 'distribution';return 21; 
+break;
+case 39: yy_.yytext = 'association';return 21; 
+break;
+case 40: yy_.yytext = 'idempotence';return 21; 
+break;
+case 41: yy_.yytext = 'exportation';return 21; 
+break;
+case 42: yy_.yytext = 'equivalence';return 21; 
+break;
+case 43: yy_.yytext = 'universal';
       return 8; 
 break;
-case 29: yy_.yytext = 'existential';
+case 44: yy_.yytext = 'existential';
       return 8; 
 break;
-case 30: return 16; 
+case 45: return 16; 
 break;
-case 31: return 17; 
+case 46: return 17; 
 break;
-case 32: /*  Skip whitespace and commas. 
+case 47: /*  Skip whitespace and commas. 
       */ 
     
 break;
-case 33: return 5; 
+case 48: return 5; 
 break;
-case 34: 
+case 49: 
       /*  I would love to `return 'waffle';` and treat
           waffle as a category because I want to allow 
           some of the connectives to appear in waffle, e.g. 'not'.
@@ -19111,14 +19253,14 @@ case 34:
       */ 
     
 break;
-case 35: /* Ignore everything else */ 
+case 50: /* Ignore everything else */ 
 break;
-case 36:console.log(yy_.yytext);
+case 51:console.log(yy_.yytext);
 break;
 }
 },
-rules: [/^(?:([0-9][^,\s]*)(\s+and\s+)(?=[0-9]))/i,/^(?:([0-9][^,\s]*)\s+to\s+([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*?)\s*(?:-+)\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*)(?:(\s*,)*))/i,/^(?:elimination|eliminate|elim|e)/i,/^(?:introduction|introduce|intro|i)/i,/^(?:⊥|_\|_|contradiction|contra|false)/i,/^(?:or|∨|\+|ǀǀ|\|)/i,/^(?:=|identity)/i,/^(?:and|conjunction|∧|•|&)/i,/^(?:double_arrow|↔|≡|⇔|<->)/i,/^(?:arrow|->|⇒|→|⊃)/i,/^(?:not|¬|˜|~|!|negation)/i,/^(?:reit|reiteration|r)/i,/^(?:premise|assumption|p)/i,/^(?:weakening|w)/i,/^(?:argument by cases|cases|ac)/i,/^(?:denying the consequent|dc)/i,/^(?:denying the consequent|dc)/i,/^(?:reductio|rd|reductio ad absurdum)/i,/^(?:dm|de morgan|deMorgan)/i,/^(?:contraposition|cp)/i,/^(?:c|conditional)/i,/^(?:cd|contradiction)/i,/^(?:not all|not-all|~∀)/i,/^(?:all not|all-not|∀~)/i,/^(?:exists not|exists-not|∃~)/i,/^(?:not exists|not-exists|~∃)/i,/^(?:all|∀|every|universal)/i,/^(?:some|exists|∃|existential)/i,/^(?:left)/i,/^(?:right)/i,/^(?:[\s,]+)/i,/^(?:$)/i,/^(?:\w+)/i,/^(?:.)/i,/^(?:.)/i],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36],"inclusive":true}}
+rules: [/^(?:([0-9][^,\s]*)(\s+and\s+)(?=[0-9]))/i,/^(?:([0-9][^,\s]*)\s+to\s+([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*?)\s*(?:-+)\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*)(?:(\s*,)*))/i,/^(?:elimination|eliminate|elim|e)/i,/^(?:introduction|introduce|intro|i)/i,/^(?:⊥|_\|_|contradiction|contra|false)/i,/^(?:or|∨|\+|ǀǀ|\|)/i,/^(?:=|identity)/i,/^(?:and|conjunction|∧|•|&)/i,/^(?:double_arrow|↔|≡|⇔|<->)/i,/^(?:arrow|->|⇒|→|⊃)/i,/^(?:not|¬|˜|~|!|negation)/i,/^(?:reit|reiteration|r)/i,/^(?:premise|assumption|p)/i,/^(?:weakening|w)/i,/^(?:argument by cases|cases|ac)/i,/^(?:denying the consequent|dc)/i,/^(?:reductio|rd|reductio ad absurdum)/i,/^(?:dm|deMorgan|dem|de morgan)/i,/^(?:contraposition|cp)/i,/^(?:conditional|c)/i,/^(?:cd)/i,/^(?:not all|not-all|~∀)/i,/^(?:all not|all-not|∀~)/i,/^(?:exists not|exists-not|∃~)/i,/^(?:not exists|not-exists|~∃)/i,/^(?:dilemma|dil)/i,/^(?:mt|modus tollens|modus-tollens)/i,/^(?:hs|hypothetical syllogism|hypothetical-syllogism)/i,/^(?:ds|disjunctive syllogism|disjunctive-syllogism)/i,/^(?:commutivity|comm|com)/i,/^(?:dn|double-negation|double negation)/i,/^(?:mc|material-conditional|material conditional)/i,/^(?:bex|↔ex|biconditional-exchange|biconditional exchange)/i,/^(?:qn|quantifier-negation|quantifier negation)/i,/^(?:implication|impl)/i,/^(?:transposition|trans)/i,/^(?:distribution|dist)/i,/^(?:association|assoc)/i,/^(?:idempotence|idem)/i,/^(?:exportation|exp)/i,/^(?:equivalence|equiv)/i,/^(?:all|∀|every|universal)/i,/^(?:some|exists|∃|existential)/i,/^(?:left)/i,/^(?:right)/i,/^(?:[\s,]+)/i,/^(?:$)/i,/^(?:\w+)/i,/^(?:.)/i,/^(?:.)/i],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51],"inclusive":true}}
 });
 return lexer;
 })();
@@ -19327,13 +19469,15 @@ exports.parse = parse;
 
 
 },{"./add_justification":15,"./add_line_numbers":16,"./add_sentences":17,"./add_status":18,"./add_verification":19,"./block_parser":20,"lodash":9}],25:[function(require,module,exports){
-var _, _From, _matchesToString, _notImplementedYet, _parseNameIfNecessaryAndDecorate, _permutations, areAllRequirementsMet, areRequirementsMetByTheseLinesAndBlocks, checkCorrectNofLinesAndSubproofsCited, checkRequirementsMet, convertTextToRequirementIfNecessary, doAnyCandidatesMeetThisReq, doesALineAboveContainThisName, doesAPremiseHereOrAboveContainThisName, doesLineMatchPattern, fol, from, match, numberToWords, parseAndDecorateIfNecessary, parser, premise, subproof, to, util,
+var _, _From, _matchesToString, _notImplementedYet, _parseNameIfNecessaryAndDecorate, _permutations, areAllRequirementsMet, areRequirementsMetByTheseLinesAndBlocks, checkCorrectNofLinesAndSubproofsCited, checkRequirementsMet, convertTextToRequirementIfNecessary, doAnyCandidatesMeetThisReq, doesALineAboveContainThisName, doesAPremiseHereOrAboveContainThisName, doesLineMatchPattern, fol, from, match, numberToWords, parseAndDecorateIfNecessary, parser, premise, subproof, substitute, to, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
   slice = [].slice;
 
 _ = require('lodash');
 
 util = require('../util');
+
+substitute = require('../substitute');
 
 fol = require('../fol');
 
@@ -19414,6 +19558,53 @@ match = function(sentence) {
 };
 
 exports.match = match;
+
+exports.replace = function(sentence, sub) {
+  var baseCheck, checkFunctions, pattern;
+  pattern = parseAndDecorateIfNecessary(sentence);
+  sub.from = parseAndDecorateIfNecessary(sub.from);
+  sub.to = parseAndDecorateIfNecessary(sub.to);
+  baseCheck = function(line, priorMatches) {
+    var aSentence, k, len, metaVariableNames, patternAfterSubs, patternClone, ref, varName;
+    metaVariableNames = pattern.listMetaVariableNames();
+    ref = metaVariableNames.inExpression;
+    for (k = 0, len = ref.length; k < len; k++) {
+      varName = ref[k];
+      if (!(varName in priorMatches)) {
+        return false;
+      }
+    }
+    patternClone = pattern.clone().applyMatches(priorMatches);
+    aSentence = line.sentence;
+    if ((patternClone.box == null) && (aSentence.box != null)) {
+      aSentence = aSentence.clone();
+      delete aSentence.box;
+    }
+    return substitute.isOneASubstitutionInstanceOfTheOther(aSentence, patternClone, sub);
+    patternAfterSubs = substitute.doSubRecursive(patternClone, sub);
+    fol._decorate(patternAfterSubs);
+    return doesLineMatchPattern(line, patternAfterSubs, priorMatches);
+  };
+  checkFunctions = [baseCheck];
+  return {
+    check: function(line, priorMatches) {
+      var currentMatches, f, k, len, test;
+      currentMatches = priorMatches;
+      for (k = 0, len = checkFunctions.length; k < len; k++) {
+        f = checkFunctions[k];
+        test = f(line, currentMatches);
+        if (test === false) {
+          return false;
+        }
+        currentMatches = test;
+      }
+      return currentMatches;
+    },
+    toString: function() {
+      return (pattern.toString()) + "[" + (sub.from.toString()) + "-->" + (sub.to.toString()) + "]";
+    }
+  };
+};
 
 doesLineMatchPattern = function(line, pattern, priorMatches) {
   var aBox, aSentence, k, len, metaVariableNames, newMatches, patternClone, ref, test, testVerbotenName, theName, varName;
@@ -19933,7 +20124,7 @@ numberToWords = function(num, type) {
 };
 
 
-},{"../fol":7,"../util":29,"lodash":9}],26:[function(require,module,exports){
+},{"../fol":7,"../substitute":27,"../util":29,"lodash":9}],26:[function(require,module,exports){
 var dialectManager, rule, rules;
 
 dialectManager = require('../dialect_manager/dialectManager');
@@ -20013,7 +20204,7 @@ dialectManager.registerRuleSet('teller', rules);
 
 
 },{"../dialect_manager/dialectManager":5,"./rule":25}],27:[function(require,module,exports){
-var _, _subsForPNF, _subs_eliminate_redundancy, applySubstitutions, awFOL, dialectManager, doSub, doSubRecursive, from, k, match, replace, subsForPNF, subs_eliminate_redundancy, theSub, to, util, v;
+var _, _isOneASubstitutionInstanceOfTheOther, _subsForPNF, _subs_eliminate_redundancy, applySubstitutions, awFOL, dialectManager, doSub, doSubRecursive, from, isOneASubstitutionInstanceOfTheOther, isThereAWayOfApplyingTheSubstitutionToMakeTheFunctionReturnTrue, k, match, replace, subsForPNF, subs_eliminate_redundancy, theSub, to, util, v;
 
 _ = require('lodash');
 
@@ -20308,6 +20499,62 @@ applySubstitutions = function(expression) {
 
 exports.applySubstitutions = applySubstitutions;
 
+isOneASubstitutionInstanceOfTheOther = function(first, second, sub) {
+  first = util.delExtraneousProperties(util.cloneExpression(first));
+  second = util.delExtraneousProperties(util.cloneExpression(second));
+  return _isOneASubstitutionInstanceOfTheOther(first, second, sub);
+};
+
+_isOneASubstitutionInstanceOfTheOther = function(first, second, sub) {
+  var firstSubd, testParts;
+  if (util.areIdenticalExpressions(first, second)) {
+    return true;
+  }
+  testParts = function(first, second) {
+    var attr, i, len, ref;
+    ref = ['substitutions', 'from', 'to', 'box', 'term', 'boundVariable', 'termlist', 'left', 'right', 'type', 'name', 'letter', 'value'];
+    for (i = 0, len = ref.length; i < len; i++) {
+      attr = ref[i];
+      if ((first[attr] != null) || (second[attr] != null)) {
+        if (!((first[attr] != null) && (second[attr] != null))) {
+          return false;
+        }
+        if (_.isString(first[attr])) {
+          if (first[attr] !== second[attr]) {
+            return false;
+          }
+        } else {
+          if (!_isOneASubstitutionInstanceOfTheOther(first[attr], second[attr], sub)) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  };
+  if (testParts(first, second)) {
+    return true;
+  }
+  firstSubd = doSub(util.cloneExpression(first), sub);
+  if (testParts(firstSubd, second)) {
+    return true;
+  }
+  return false;
+};
+
+exports.isOneASubstitutionInstanceOfTheOther = isOneASubstitutionInstanceOfTheOther;
+
+isThereAWayOfApplyingTheSubstitutionToMakeTheFunctionReturnTrue = function(sentence, sub, test) {
+  var sentenceClone, sentenceWithSub;
+  sentenceClone = util.cloneExpression(sentence);
+  sentenceWithSub = doSub(sentenceClone, sub);
+  if (test(sentenceWithSub)) {
+    return true;
+  }
+};
+
+exports.isThereAWayOfApplyingTheSubstitutionToMakeTheFunctionReturnTrue = isThereAWayOfApplyingTheSubstitutionToMakeTheFunctionReturnTrue;
+
 
 },{"./dialect_manager/dialectManager":5,"./match":8,"./util":29,"lodash":9}],28:[function(require,module,exports){
 var _, symbols;
@@ -20329,7 +20576,9 @@ symbols = {
     'universal_quantifier': "∀",
     'universal': "∀",
     'existential_quantifier': "∃",
-    'existential': "∃"
+    'existential': "∃",
+    propLanguageName: 'FOL',
+    predLanguageName: 'FOL'
   },
   copi: {
     'not': '~',
@@ -20371,7 +20620,9 @@ symbols = {
     'not-all': '~∀',
     'all-not': '∀~',
     'exists-not': '∃~',
-    'not-exists': '~∃'
+    'not-exists': '~∃',
+    propLanguageName: 'sentence logic',
+    predLanguageName: 'predicate logic'
   },
   forallx: {
     'not': '¬',
@@ -20390,7 +20641,30 @@ symbols = {
     'existential': "∃",
     quantifiersInBrackets: false,
     predicationBracketsAndCommas: false,
-    singleLetterPredicates: true
+    singleLetterPredicates: true,
+    propLanguageName: 'SL',
+    predLanguageName: 'QL'
+  },
+  logicbook: {
+    'not': '~',
+    'false': "⊥",
+    'contradiction': "⊥",
+    'identity': "=",
+    'and': "&",
+    'arrow': "⊃",
+    'double_arrow': "≡",
+    'or': "∨",
+    'nor': "↓",
+    'nand': "↑",
+    'universal_quantifier': "∀",
+    'universal': "∀",
+    'existential_quantifier': "∃",
+    'existential': "∃",
+    quantifiersInBrackets: true,
+    predicationBracketsAndCommas: false,
+    singleLetterPredicates: true,
+    propLanguageName: 'SL',
+    predLanguageName: 'PL'
   }
 };
 
@@ -20498,7 +20772,7 @@ walkCompare = function(firstExp, otherExp, comparator, o) {
   if (o == null) {
     o = {};
   }
-  if (comparator) {
+  if (comparator != null) {
     result = comparator(firstExp, otherExp);
     if (result !== void 0) {
       return result;
@@ -21114,6 +21388,22 @@ expressionHasSub = function(expression, sub) {
 };
 
 exports.expressionHasSub = expressionHasSub;
+
+exports.getLanguageNames = function() {
+  var predLanguageName, propLanguageName, ref, ref1, res;
+  propLanguageName = (ref = dialectManager.getSymbols()) != null ? ref.propLanguageName : void 0;
+  predLanguageName = ((ref1 = dialectManager.getSymbols()) != null ? ref1.predLanguageName : void 0) || 'quantificational logic';
+  res = [predLanguageName];
+  if ((propLanguageName != null) && propLanguageName !== predLanguageName) {
+    res.unshift(propLanguageName);
+  }
+  return res;
+};
+
+exports.getPredLanguageName = function() {
+  var ref;
+  return ((ref = dialectManager.getSymbols()) != null ? ref.predLanguageName : void 0) || 'quantificational logic';
+};
 
 
 },{"./dialect_manager/dialectManager":5,"lodash":9}]},{},[4]);

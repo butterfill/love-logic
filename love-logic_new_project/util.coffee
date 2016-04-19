@@ -102,7 +102,7 @@ exports.walk = walk
 # substitutions like `ψ[α-->null]`).
 walkCompare = (firstExp, otherExp, comparator, o={}) ->
 
-  if comparator
+  if comparator?
     result = comparator(firstExp, otherExp)
     return result unless result is undefined
   
@@ -620,3 +620,14 @@ expressionHasSub = (expression, sub) ->
   return false
 exports.expressionHasSub = expressionHasSub
 
+# returns, e.g., ['FOL'] or ['SL','QL']
+exports.getLanguageNames = () ->
+  propLanguageName = dialectManager.getSymbols()?.propLanguageName
+  predLanguageName = dialectManager.getSymbols()?.predLanguageName or 'quantificational logic'
+  res = [predLanguageName]
+  if propLanguageName? and propLanguageName isnt predLanguageName
+    res.unshift(propLanguageName)
+  return res
+
+exports.getPredLanguageName = () ->
+  return dialectManager.getSymbols()?.predLanguageName or 'quantificational logic'

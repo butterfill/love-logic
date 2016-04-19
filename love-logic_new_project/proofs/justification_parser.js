@@ -678,43 +678,73 @@ case 16: yy_.yytext = 'cases';return 21;
 break;
 case 17: yy_.yytext = 'DC';return 21; 
 break;
-case 18: yy_.yytext = 'DC';return 21; 
+case 18: yy_.yytext = 'reductio';return 21; 
 break;
-case 19: yy_.yytext = 'reductio';return 21; 
+case 19: yy_.yytext = 'DM';return 21; 
 break;
-case 20: yy_.yytext = 'DM';return 21; 
+case 20: yy_.yytext = 'contraposition';return 21; 
 break;
-case 21: yy_.yytext = 'contraposition';return 21; 
+case 21: yy_.yytext = 'C';return 21; 
 break;
-case 22: yy_.yytext = 'C';return 21; 
+case 22: yy_.yytext = 'contradiction';return 21; 
 break;
-case 23: yy_.yytext = 'CD';return 21; 
+case 23: yy_.yytext = 'not-all';return 21; 
 break;
-case 24: yy_.yytext = 'not-all';return 21; 
+case 24: yy_.yytext = 'all-not';return 21; 
 break;
-case 25: yy_.yytext = 'all-not';return 21; 
+case 25: yy_.yytext = 'exists-not';return 21; 
 break;
-case 26: yy_.yytext = 'exists-not';return 21; 
+case 26: yy_.yytext = 'not-exists';return 21; 
 break;
-case 27: yy_.yytext = 'not-exists';return 21; 
+case 27: yy_.yytext = 'dilemma';return 21; 
 break;
-case 28: yy_.yytext = 'universal';
+case 28: yy_.yytext = 'modus-tollens';return 21; 
+break;
+case 29: yy_.yytext = 'hypothetical-syllogism';return 21; 
+break;
+case 30: yy_.yytext = 'disjunctive-syllogism';return 21; 
+break;
+case 31: yy_.yytext = 'commutivity';return 21; 
+break;
+case 32: yy_.yytext = 'double-negation';return 21; 
+break;
+case 33: yy_.yytext = "material-conditional";return 21; 
+break;
+case 34: yy_.yytext = 'biconditional-exchange';return 21; 
+break;
+case 35: yy_.yytext = 'quantifier-negation';return 21; 
+break;
+case 36: yy_.yytext = 'implication';return 21; 
+break;
+case 37: yy_.yytext = 'transposition';return 21; 
+break;
+case 38: yy_.yytext = 'distribution';return 21; 
+break;
+case 39: yy_.yytext = 'association';return 21; 
+break;
+case 40: yy_.yytext = 'idempotence';return 21; 
+break;
+case 41: yy_.yytext = 'exportation';return 21; 
+break;
+case 42: yy_.yytext = 'equivalence';return 21; 
+break;
+case 43: yy_.yytext = 'universal';
       return 8; 
 break;
-case 29: yy_.yytext = 'existential';
+case 44: yy_.yytext = 'existential';
       return 8; 
 break;
-case 30: return 16; 
+case 45: return 16; 
 break;
-case 31: return 17; 
+case 46: return 17; 
 break;
-case 32: /*  Skip whitespace and commas. 
+case 47: /*  Skip whitespace and commas. 
       */ 
     
 break;
-case 33: return 5; 
+case 48: return 5; 
 break;
-case 34: 
+case 49: 
       /*  I would love to `return 'waffle';` and treat
           waffle as a category because I want to allow 
           some of the connectives to appear in waffle, e.g. 'not'.
@@ -722,14 +752,14 @@ case 34:
       */ 
     
 break;
-case 35: /* Ignore everything else */ 
+case 50: /* Ignore everything else */ 
 break;
-case 36:console.log(yy_.yytext);
+case 51:console.log(yy_.yytext);
 break;
 }
 },
-rules: [/^(?:([0-9][^,\s]*)(\s+and\s+)(?=[0-9]))/i,/^(?:([0-9][^,\s]*)\s+to\s+([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*?)\s*(?:-+)\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*)(?:(\s*,)*))/i,/^(?:elimination|eliminate|elim|e)/i,/^(?:introduction|introduce|intro|i)/i,/^(?:⊥|_\|_|contradiction|contra|false)/i,/^(?:or|∨|\+|ǀǀ|\|)/i,/^(?:=|identity)/i,/^(?:and|conjunction|∧|•|&)/i,/^(?:double_arrow|↔|≡|⇔|<->)/i,/^(?:arrow|->|⇒|→|⊃)/i,/^(?:not|¬|˜|~|!|negation)/i,/^(?:reit|reiteration|r)/i,/^(?:premise|assumption|p)/i,/^(?:weakening|w)/i,/^(?:argument by cases|cases|ac)/i,/^(?:denying the consequent|dc)/i,/^(?:denying the consequent|dc)/i,/^(?:reductio|rd|reductio ad absurdum)/i,/^(?:dm|de morgan|deMorgan)/i,/^(?:contraposition|cp)/i,/^(?:c|conditional)/i,/^(?:cd|contradiction)/i,/^(?:not all|not-all|~∀)/i,/^(?:all not|all-not|∀~)/i,/^(?:exists not|exists-not|∃~)/i,/^(?:not exists|not-exists|~∃)/i,/^(?:all|∀|every|universal)/i,/^(?:some|exists|∃|existential)/i,/^(?:left)/i,/^(?:right)/i,/^(?:[\s,]+)/i,/^(?:$)/i,/^(?:\w+)/i,/^(?:.)/i,/^(?:.)/i],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36],"inclusive":true}}
+rules: [/^(?:([0-9][^,\s]*)(\s+and\s+)(?=[0-9]))/i,/^(?:([0-9][^,\s]*)\s+to\s+([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*?)\s*(?:-+)\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*)(?:(\s*,)*))/i,/^(?:elimination|eliminate|elim|e)/i,/^(?:introduction|introduce|intro|i)/i,/^(?:⊥|_\|_|contradiction|contra|false)/i,/^(?:or|∨|\+|ǀǀ|\|)/i,/^(?:=|identity)/i,/^(?:and|conjunction|∧|•|&)/i,/^(?:double_arrow|↔|≡|⇔|<->)/i,/^(?:arrow|->|⇒|→|⊃)/i,/^(?:not|¬|˜|~|!|negation)/i,/^(?:reit|reiteration|r)/i,/^(?:premise|assumption|p)/i,/^(?:weakening|w)/i,/^(?:argument by cases|cases|ac)/i,/^(?:denying the consequent|dc)/i,/^(?:reductio|rd|reductio ad absurdum)/i,/^(?:dm|deMorgan|dem|de morgan)/i,/^(?:contraposition|cp)/i,/^(?:conditional|c)/i,/^(?:cd)/i,/^(?:not all|not-all|~∀)/i,/^(?:all not|all-not|∀~)/i,/^(?:exists not|exists-not|∃~)/i,/^(?:not exists|not-exists|~∃)/i,/^(?:dilemma|dil)/i,/^(?:mt|modus tollens|modus-tollens)/i,/^(?:hs|hypothetical syllogism|hypothetical-syllogism)/i,/^(?:ds|disjunctive syllogism|disjunctive-syllogism)/i,/^(?:commutivity|comm|com)/i,/^(?:dn|double-negation|double negation)/i,/^(?:mc|material-conditional|material conditional)/i,/^(?:bex|↔ex|biconditional-exchange|biconditional exchange)/i,/^(?:qn|quantifier-negation|quantifier negation)/i,/^(?:implication|impl)/i,/^(?:transposition|trans)/i,/^(?:distribution|dist)/i,/^(?:association|assoc)/i,/^(?:idempotence|idem)/i,/^(?:exportation|exp)/i,/^(?:equivalence|equiv)/i,/^(?:all|∀|every|universal)/i,/^(?:some|exists|∃|existential)/i,/^(?:left)/i,/^(?:right)/i,/^(?:[\s,]+)/i,/^(?:$)/i,/^(?:\w+)/i,/^(?:.)/i,/^(?:.)/i],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51],"inclusive":true}}
 });
 return lexer;
 })();

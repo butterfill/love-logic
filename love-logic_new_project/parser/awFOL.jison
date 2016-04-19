@@ -258,9 +258,9 @@ substitution
         { $$ = {type:'substitution', from:$1, to:$3, symbol:$2}; }
     | term substitution_symbol null 
         { $$ = {type:'substitution', from:$1, to:null, symbol:$2}; }
-    | sentence_letter_or_expression_variable substitution_symbol e  
+    | e substitution_symbol e  
         { $$ = {type:'substitution', from:$1, to:$3, symbol:$2}; }
-    | sentence_letter_or_expression_variable substitution_symbol null
+    | e substitution_symbol null
         { $$ = {type:'substitution', from:$1, to:null, symbol:$2}; }
     ;
 
