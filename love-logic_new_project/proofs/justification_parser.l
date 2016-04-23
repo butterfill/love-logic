@@ -67,6 +67,9 @@
     { return 'elim'; }
 "introduction"|"introduce"|"intro"|"i"  
     { return 'intro'; }
+"decomposition-2"|"decomposition2"|"d-2"|"d2" { return 'decomposition2' }
+"decomposition"|"d" { return 'decomposition' }
+    
 
 "⊥"|"_|_"|"contradiction"|"contra"|"false"
     { yytext = 'contradiction';
@@ -100,7 +103,7 @@
     { yytext = 'reit';
       return 'reit'; }
 
-"premise"|"assumption"|"p"
+"premise"|"assumption"|"sm"|"p"
     { yytext = 'premise';
       return 'premise'; }
 
@@ -146,7 +149,6 @@
 "exportation"|"exp"     { yytext = 'exportation';return 'bare_rule'; }
 "equivalence"|"equiv"   { yytext = 'equivalence';return 'bare_rule'; }
 
-
 "all"|"∀"|"every"|"universal"
     { yytext = 'universal';
       return 'connective'; }
@@ -159,6 +161,10 @@
     { return 'left'; }
 "right" 
   { return 'right'; }
+
+
+
+
 
 [\s,]+                     
     { /*  Skip whitespace and commas. 

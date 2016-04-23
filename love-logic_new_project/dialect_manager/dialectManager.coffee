@@ -46,8 +46,9 @@ dialects =
     versions : 
       "0.1" : 
         symbols : 'logicbook'
-        parser : 'forallx'
+        parser : 'logicbookFOL'
         rules : 'logicbook'
+        treeRules : 'logicbook_tree'
     
 
 # default settings!
@@ -104,6 +105,7 @@ parsers =
   copi : require '../parser/copiFOL'
   teller : require '../parser/tellerFOL'
   forallx : require '../parser/forallxFOL'
+  logicbookFOL : require '../parser/logicbookFOL'
 currentParserName = undefined
 exports.registerParser = (name, parser) ->
   parsers[name] = parser

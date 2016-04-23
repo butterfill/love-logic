@@ -1,7 +1,7 @@
 dialectManager = require('../dialect_manager/dialectManager')
 
 # Rules of proof for natural deduction as presented in 
-# Magnus’ forallx (2014).  
+# Bergman et al, ‘The Logic Book’ (2014).  
 
 
 rule = require './rule'
@@ -141,10 +141,6 @@ rules =
       left : rule.from('α=β').and('φ').to('φ[α-->β]')
       right : rule.from('α=β').and('φ').to('φ[β-->α]')
 
-  
-  
-  
-  
   
   
 exports.rules = rules

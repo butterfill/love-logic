@@ -32,12 +32,72 @@ parser = undefined
 exports.setParser = (aParser) ->
   parser = aParser
 
+
+
+
+
+
+# All ways of describing a `rule` use this class 
+# (including `rule.premise` below).
+class _From
+  constructor: (requirement) ->
+    requirement = convertTextToRequirementIfNecessary(requirement)
+    @_requirements = {
+      from : ([requirement] if requirement?) or []
+      to : undefined
+    }
+
+  type : 'rule'
+
+  'and' : (requirement) ->
+    requirement = convertTextToRequirementIfNecessary(requirement)
+    @_requirements.from.push requirement
+    return @ 
+
+  to : (requirement) ->
+    if @_requirements.to
+      throw new Error "You cannot specify `.to` more than once in a single rule."
+    requirement = convertTextToRequirementIfNecessary(requirement)
+    @_requirements.to = requirement
+    return @
+
+  check : (line) ->
+    # return new LineChecker(line, @_requirements).check()
+    console.log "#{line.getRuleName()}"
+    return checkRequirementsMet(line, @_requirements)
+
+
+# `from` is the main entry point for this module.  Use it
+# like: `rule.from('φ and ψ').to('φ')`. 
+from = (requirement) ->
+  return new _From(requirement)
+exports.from = from
+
+
+# This allows you to create a rule without any `.from` clause,
+# as in `rule.to('α=α')` (for identity introduction).
+to = (requirement) ->
+  return from().to(requirement)
+exports.to = to
+
+
+
+
+
+
+
+
 # For testing only:
 _matchesToString = (priorMatches) ->
   res = ""
   for key of priorMatches
     res += "#{key} : #{fol._decorate(priorMatches[key]).toString()} ; "
   return res
+
+# for trees
+branch = (sentence) ->
+  return match(sentence).isFirstLineOfASubproof()
+exports.branch = branch
 
 # Use like rule.from( rule.match('ψ[τ-->α]').isNewName('α') ).to(...
 match = (sentence) ->
@@ -84,6 +144,16 @@ match = (sentence) ->
         nameTxt = nameClone.name
         return false if doesAPremiseHereOrAboveContainThisName(nameTxt, line)
         return priorMatches
+      checkFunctions.push newCheck
+      return @
+    
+    isFirstLineOfASubproof : () ->
+      newCheck = (line, _ignore) ->
+        block = line.parent
+        # This must be a subproof (not the main proof):
+        return false unless block.parent?
+        return false unless block.getFirstLine() is line
+        return true
       checkFunctions.push newCheck
       return @
   }
@@ -328,49 +398,6 @@ subproof = (premisePattern, conclusionPattern) ->
 exports.subproof = subproof
 
 
-
-
-# All ways of describing a `rule` use this class 
-# (including `rule.premise` below).
-class _From
-  constructor: (requirement) ->
-    requirement = convertTextToRequirementIfNecessary(requirement)
-    @_requirements = {
-      from : ([requirement] if requirement?) or []
-      to : undefined
-    }
-
-  type : 'rule'
-
-  'and' : (requirement) ->
-    requirement = convertTextToRequirementIfNecessary(requirement)
-    @_requirements.from.push requirement
-    return @ 
-
-  to : (requirement) ->
-    if @_requirements.to
-      throw new Error "You cannot specify `.to` more than once in a single rule."
-    requirement = convertTextToRequirementIfNecessary(requirement)
-    @_requirements.to = requirement
-    return @
-
-  check : (line) ->
-    # return new LineChecker(line, @_requirements).check()
-    return checkRequirementsMet(line, @_requirements)
-
-
-# `from` is the main entry point for this module.  Use it
-# like: `rule.from('φ and ψ').to('φ')`. 
-from = (requirement) ->
-  return new _From(requirement)
-exports.from = from
-
-
-# This allows you to create a rule without any `.from` clause,
-# as in `rule.to('α=α')` (for identity introduction).
-to = (requirement) ->
-  return from().to(requirement)
-exports.to = to
 
 
 

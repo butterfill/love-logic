@@ -351,7 +351,15 @@ class Block
   getLastLine : ->
     return _.last @content if @content.length>0
     return null
-    
+  
+  # Returns blocks that are children of the current block.
+  getChildren : ->
+    res = []
+    for item in @content
+      if item.type is 'block'
+        res.push(item)
+    return res
+  
   newLine : (lineObject) ->
     lineObject.parent = @
     lineObject.prev = @getLastLine()

@@ -64,6 +64,10 @@ intronation
         { $$='elim'; }
     | intro
         { $$='intro'; }
+    | decomposition
+        { $$='decomposition'; }
+    | decomposition2
+        { $$='decomposition2'; }
     ;
     
 side

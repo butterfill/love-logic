@@ -37,6 +37,8 @@ addStatus = require './add_status'
 require './fitch_rules'
 require './teller_rules'
 require './forallx_rules'
+require './logicbook_rules'
+require './logicbook_tree_rules'
 dialectManager = require('../dialect_manager/dialectManager')
 
 # This is only used for testing (so that `verifyLine` can take text).

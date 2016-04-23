@@ -110,6 +110,12 @@ symbols =
     singleLetterPredicates : true
     propLanguageName : 'SL'
     predLanguageName : 'PL'
+    # for justification in proofs:
+    association : 'Assoc'
+    premise : 'Assumption'
+    DM : 'DeM'
+    decomposition: 'D'
+    # TODO: complete!
 
 
 module.exports = symbols
