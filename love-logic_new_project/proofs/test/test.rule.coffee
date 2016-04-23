@@ -19,6 +19,7 @@ _parse = (proofText) ->
   addStatus.to block
   return block
 
+premiseRule = rule.from().to( rule.premise() )
 
 describe "`rule`", ->
   
@@ -91,7 +92,6 @@ describe "`rule`", ->
           1. A        // premise
         ''' 
         proof = _parse proof
-        premiseRule = rule.premise()
         result = premiseRule.check proof.getLine(1)
         expect(result).to.be.true
       it "allows the second line of the main proof to be a premise", ->
@@ -100,7 +100,6 @@ describe "`rule`", ->
           2. B        // premise
         ''' 
         proof = _parse proof
-        premiseRule = rule.premise()
         result = premiseRule.check proof.getLine(2)
         console.log line.status.getMessage() if result isnt true
         expect(result).to.be.true
@@ -111,17 +110,6 @@ describe "`rule`", ->
           3.   B      // premise
         ''' 
         proof = _parse proof
-        premiseRule = rule.premise()
-        result = premiseRule.check proof.getLine(3)
-        expect(result).not.to.be.true
-      it "does not allow a premise to occur after a non-premise", ->
-        proof = '''
-          1. A and B        // premise
-          2. B              // and elim 1
-          3. C              // premise
-        ''' 
-        proof = _parse proof
-        premiseRule = rule.premise()
         result = premiseRule.check proof.getLine(3)
         expect(result).not.to.be.true
       it "does not allow a premise to occur after a subproof", ->
@@ -132,7 +120,6 @@ describe "`rule`", ->
           4. C           // premise
         ''' 
         proof = _parse proof
-        premiseRule = rule.premise()
         result = premiseRule.check proof.getLine(4)
         expect(result).not.to.be.true
       it "adds a message to the `line.status` object when a line is not verified", ->
@@ -142,7 +129,6 @@ describe "`rule`", ->
           3.   B      // premise
         ''' 
         proof = _parse proof
-        premiseRule = rule.premise()
         line =  proof.getLine(3)
         result = premiseRule.check line
         expect(result).not.to.be.true
@@ -492,6 +478,66 @@ describe "`rule`", ->
       result = rule._permutations [1,2,3]
       expect(result).to.deep.equal([[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]])
   
-
+  describe ".linesContainPatterns", ->
+    it "can find a pattern", ->
+      txt = '''
+      A
+      not A
+      '''
+      proof = _parse txt
+      lines = proof.content
+      phi = fol.parse('φ')
+      notPhi = fol.parse('not φ')
+      test = rule.linesContainPatterns(lines, [phi, notPhi], {})
+      expect(test).not.to.be.false
+    it "can find a pattern (reverse order)", ->
+      txt = '''
+      not A
+      A
+      '''
+      proof = _parse txt
+      lines = proof.content
+      phi = fol.parse('φ')
+      notPhi = fol.parse('not φ')
+      test = rule.linesContainPatterns(lines, [phi, notPhi], {})
+      expect(test).not.to.be.false
+    it "can correctly fail to find a pattern", ->
+      txt = '''
+      A
+      not B
+      '''
+      proof = _parse txt
+      lines = proof.content
+      phi = fol.parse('φ')
+      notPhi = fol.parse('not φ')
+      test = rule.linesContainPatterns(lines, [phi, notPhi], {})
+      expect(test).to.be.false
+    it "can find a pattern despite distractors", ->
+      txt = '''
+      not B
+      not A
+      A
+      not B
+      '''
+      proof = _parse txt
+      lines = proof.content
+      phi = fol.parse('φ')
+      notPhi = fol.parse('not φ')
+      test = rule.linesContainPatterns(lines, [phi, notPhi], {})
+      expect(test).not.to.be.false
+    it "can find a pattern despite distractors (reverse order of patterns)", ->
+      txt = '''
+      not B
+      not A
+      A
+      not B
+      '''
+      proof = _parse txt
+      lines = proof.content
+      phi = fol.parse('φ')
+      notPhi = fol.parse('not φ')
+      test = rule.linesContainPatterns(lines, [notPhi, phi], {})
+      expect(test).not.to.be.false
+      
       
 

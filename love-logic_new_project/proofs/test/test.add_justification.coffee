@@ -161,7 +161,7 @@ describe "add_justification", ->
       block = addJustification.to BLOCK
       line = block.getLine 3
       #console.log line.getRuleName()
-      expect(line.getRuleName()).to.equal('∧ elim')
+      expect(line.getRuleName()).to.equal('∧ Elim')
       
     it "enables a line to get you the block it references", ->
       input = '''
@@ -204,4 +204,3 @@ describe "add_justification", ->
       expect(line.justification?).to.be.false
       expect(line.justificationErrors?).to.be.true
 
-    

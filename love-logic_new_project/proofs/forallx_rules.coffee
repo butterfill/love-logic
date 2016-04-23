@@ -11,7 +11,7 @@ rules =
     Rules of proof for the system of proof specified in forallx. 
   '''
   
-  premise : rule.premise()
+  premise : rule.from().to( rule.premise() )
 
   reit : rule.from('φ').to('φ')
 

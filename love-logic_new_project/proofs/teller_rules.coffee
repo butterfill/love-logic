@@ -13,7 +13,7 @@ rules =
     A Modern Formal Logic Primer (1998).
   '''
   
-  premise : rule.premise()
+  premise : rule.from().to( rule.premise() )
 
   reit : rule.from('φ').to('φ')
 

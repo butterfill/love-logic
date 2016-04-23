@@ -18,6 +18,8 @@ symbols =
     'existential' : "∃" # for proof parser
     propLanguageName : 'FOL'
     predLanguageName : 'FOL'
+    elim : ' Elim'
+    intro : ' Intro'
     
 
   copi : 
@@ -115,6 +117,8 @@ symbols =
     premise : 'Assumption'
     DM : 'DeM'
     decomposition: 'D'
+    decomposition2: 'D2'
+    tick : '✓'
     # TODO: complete!
 
 

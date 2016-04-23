@@ -30,6 +30,7 @@ addJustification = require './add_justification'
 addSentences = require './add_sentences'
 addStatus = require './add_status'
 addVerification = require './add_verification'
+dialectManager = require('../dialect_manager/dialectManager')
 
 
 # Thankyou http://stackoverflow.com/questions/10073699/pad-a-number-with-leading-zeros-in-javascript
@@ -90,6 +91,20 @@ _decorate = (proof) ->
             indentation: "#{line.indentation.trim()}---"
             sentence : ""
             justification: ""
+        if item.type is 'close_branch'
+          line = item
+          walker.result.push 
+            number:"#{walker.getAndIncLineNumber(line)}"
+            indentation: "#{line.indentation.trim()}"
+            sentence : "X"
+            justification: ""
+        if item.type is 'open_branch'
+          line = item
+          walker.result.push 
+            number:"#{walker.getAndIncLineNumber(line)}"
+            indentation: "#{line.indentation.trim()}"
+            sentence : "O"
+            justification: ""
         if item.type is 'line'
           line = item
           if line.getRuleName() is 'premise'
@@ -105,15 +120,20 @@ _decorate = (proof) ->
             indentation: "#{line.indentation}"
             sentence : "#{line.sentence}"
             justification: justification
+            ticked : line.justification?.ticked
         return undefined  # Keep walking.
     proof.walk walker
     txt = ""
     maxSentenceLength = _.max( ((x.sentence?.length + x.indentation?.length) for x in walker.result)  )
+    symbols = dialectManager.getSymbols()
+    tickSymbol = symbols.tick or '✓'
+    tickSymbol = "#{tickSymbol} "
     for line in walker.result
+      tick = (tickSymbol if line.ticked) or ''
       indentationSentence = padRight("#{line.indentation} #{line.sentence}",maxSentenceLength+1)
       if walker.needLineNumbers or o.numberLines is true
         txt += "#{line.number} "
-      txt += "#{indentationSentence}   #{line.justification}\n"
+      txt += "#{indentationSentence}   #{tick}#{line.justification}\n"
     return txt.trim()
     
 
@@ -135,7 +155,7 @@ parse = (proofText) ->
     errorMessages = []
     walker = 
       visit : (item) ->
-        return undefined unless item?.type is 'line'
+        return undefined unless item?.type in ['line', 'close_branch', 'open_branch']
         if item.status.verified is false
           lineName = item.number
           errorMsg = item.status.getMessage()

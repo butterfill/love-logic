@@ -64,7 +64,7 @@ to = (proof) ->
           allLinesOk = true
           verifyABlockWalker = 
             visit : (item) ->
-              if item.type is 'line'
+              if item.type in ['line', 'close_branch', 'open_branch']
                 result = item.verify()
                 allLinesOk = allLinesOk and result
                 return undefined # keep walking
@@ -107,10 +107,12 @@ verifyLine = (lineOrLineNumber, proofText) ->
   
   # Blank lines, comments, dividers are fine; we don't need to check those.
   # (Here we assume that the only thing we do check are things of `.type` `line`.)
-  if theLine.type isnt 'line'
+  if theLine.type not in ['line', 'close_branch', 'open_branch']
     theLine.status.verified = true
     theLine.status.addMessage("(This is a #{theLine.type.replace(/_/g,' ')})")
     return true
+  
+  # console.log "verifyLine #{theLine.number}"
   
   # We can't go on if there are errors, nor if justification is missing.
   if theLine.sentenceErrors? or 

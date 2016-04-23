@@ -17,7 +17,15 @@ justification
     ;
 
 
-j
+j   : j2
+      { $$ = $1; }
+    | tick j2
+      { $2.ticked = true; $$ = $2 }
+    | j2 tick 
+      { $1.ticked = true; $$ = $1 }
+    ;
+
+j2
     : rule_name 
         { $$ = {type: 'justification', rule:$1, location:@1}; }
     | rule_name numberlist

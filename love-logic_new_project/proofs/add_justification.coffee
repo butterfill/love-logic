@@ -24,6 +24,8 @@ cleanNumber = require('./add_line_numbers').cleanNumber
 # This will be useful later in case we have to add it to any lines
 # above a divider where no justification is given explicitly. 
 PREMISE_JUSTIFICATION = jp.parse "premise"
+CLOSE_BRANCH_JUSTIFICATION = jp.parse "close branch"
+OPEN_BRANCH_JUSTIFICATION = jp.parse "open branch"
 
 # This is the main function.
 # Add justification to the lines of `block`.
@@ -32,19 +34,25 @@ to = (block) ->
   # First pass: extract the justification and add it to the lines.
   walker =  
     visit : (item) ->
-      return undefined if item.type isnt 'line'
+      return undefined unless item.type in ['line', 'close_branch', 'open_branch']
       return undefined if item.justification? or item.justificationErrors?
       
       line = item
-      r = split line.content
-      line.justification = r.justification
+      if item.type is 'close_branch'
+        line.justification = CLOSE_BRANCH_JUSTIFICATION
+      if item.type is 'open_branch'
+        line.justification = OPEN_BRANCH_JUSTIFICATION
+      if item.type is 'line'
+        r = split line.content
+        line.justification = r.justification
+        line.content = r.rest
+        line.justificationErrors = r.justificationErrors
+        line.justificationText = r.justificationText
+        
       if line.justification?.numbers?
         line.justification.numbers = (cleanNumber(n) for n in line.justification.numbers)
-      line.content = r.rest
-      line.justificationErrors = r.justificationErrors
-      line.justificationText = r.justificationText
       
-      # Also add some functions to help later.
+      # Add some functions to help later.
       line.getRuleName = getRuleName
       line.findLine = findLine
       line.findBlock = findBlock
@@ -166,11 +174,13 @@ getRuleName = ->
   return "" unless @justification?.rule?
   symbols = dialectManager.getSymbols()
   connective = symbols[@justification.rule.connective] or @justification.rule.connective
+  spaceAfterConnective = (' ' if connective?.length isnt 1) or '' 
   # `intronation` is 'elim' or 'intro'
   intronation = @justification.rule.variant.intronation or ''
+  intronation = symbols[intronation] or intronation
   # `side` is 'left' or 'right'
   side = @justification.rule.variant.side or ''
-  return "#{connective} #{intronation} #{side}".trim()
+  return "#{connective}#{spaceAfterConnective}#{intronation} #{side}".trim()
 
 
 # TODO: the find functions should be added by `add_line_numbers`

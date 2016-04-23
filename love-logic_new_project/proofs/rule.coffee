@@ -37,8 +37,8 @@ exports.setParser = (aParser) ->
 
 
 
-# All ways of describing a `rule` use this class 
-# (including `rule.premise` below).
+# All ways of describing a `rule` do and *MUST* use this class 
+# (see `rule.premise` below for how to use this class).
 class _From
   constructor: (requirement) ->
     requirement = convertTextToRequirementIfNecessary(requirement)
@@ -63,7 +63,7 @@ class _From
 
   check : (line) ->
     # return new LineChecker(line, @_requirements).check()
-    console.log "#{line.getRuleName()}"
+    # console.log "#{line.getRuleName()}"
     return checkRequirementsMet(line, @_requirements)
 
 
@@ -102,6 +102,9 @@ exports.branch = branch
 # Use like rule.from( rule.match('ψ[τ-->α]').isNewName('α') ).to(...
 match = (sentence) ->
   pattern = parseAndDecorateIfNecessary(sentence)
+  # All check functions must return (1) false if check fails, or 
+  # the new matches involved in applying the rule if check succeeds
+  # (if there are no new matches, just return `priorMatches`)
   baseCheck = (line, priorMatches) ->
     test = doesLineMatchPattern(line, pattern, priorMatches)
     return test
@@ -148,12 +151,12 @@ match = (sentence) ->
       return @
     
     isFirstLineOfASubproof : () ->
-      newCheck = (line, _ignore) ->
+      newCheck = (line, priorMatches) ->
         block = line.parent
         # This must be a subproof (not the main proof):
         return false unless block.parent?
         return false unless block.getFirstLine() is line
-        return true
+        return priorMatches
       checkFunctions.push newCheck
       return @
   }
@@ -351,42 +354,17 @@ subproof = (premisePattern, conclusionPattern) ->
     contains : (listOfSentencesThatMustBeInSubproof...) ->
       listOfSentencesThatMustBeInSubproof = (parseAndDecorateIfNecessary(x) for x in listOfSentencesThatMustBeInSubproof)
       newCheck = (subproof, priorMatches) ->
-        # First define two helper functions:
-        # Do any of theLines match pattern
-        doesPatternMatchAnyLines = (pattern, theLines, priorMatches) ->
-          for line in theLines
-            sentence = line.sentence
-            test = sentence.findMatches(pattern, priorMatches)
-            # test = @_checkOneLine(aReq, line, priorMatches)
-            # console.log "tested req #{pattern.toString()} against #{line.sentence}, res is #{test}, newMatches contains entries for #{(x.toString() for x in _.keys(test)).join(', ')} with newMatches.ψ = #{fol._decorate(test.ψ).toString() if test.ψ}"
-            return test unless test is false
-          # We didn’t find any lines that matche pattern.
-          return false
-
-        # Are all thePatterns matched in theLines?
-        allPatternsAreMatched = (thePatterns, theLines, priorMatches) ->
-          newMatches = priorMatches
-          for pattern in thePatterns
-            test = doesPatternMatchAnyLines(pattern, theLines, newMatches)
-            return false if test is false
-            newMatches = test
-          return newMatches
-        
         # Get the lines of proof against which we will match:
         linesOfProof = []
         for item in subproof.content
           if item.type is 'line'
             unless item.isPremise()  # we aren’t allowed to match premises
               linesOfProof.push(item) 
-        # consider all permutations of `theReqs`:
-        patternsPerms = _permutations(listOfSentencesThatMustBeInSubproof)
-        for thePatterns in patternsPerms
-          test = allPatternsAreMatched(thePatterns, linesOfProof, priorMatches)
-          return test if test isnt false
-        return false
+        return linesContainPatterns(linesOfProof, listOfSentencesThatMustBeInSubproof, priorMatches)
       checkFunctions.push newCheck
       newToString = () ->
         ", where this subproof contains #{(x.toString() for x in listOfSentencesThatMustBeInSubproof).join(' and ')}"
+      toStringFunctions.push newToString
       return @
     
     toString : () ->
@@ -398,6 +376,40 @@ subproof = (premisePattern, conclusionPattern) ->
 exports.subproof = subproof
 
 
+# Attempt to find matches for each of `listOfPatterns (e.g. `['φ', 'not φ']`)
+# in `listOfLines`.  Return new matches if success; otherwise return false.
+# TODO: permuting order of lines is a bit suboptimal!
+# TODO: don’t need to permuate order of patterns if we optimise order by
+# considering whether one pattern matches another (e.g. 'φ' matches 'not φ' but
+# not conversely).
+linesContainPatterns = (listOfLines, listOfPatterns, priorMatches) ->
+  patternsPerms = _permutations(listOfPatterns)
+  linesPerms = _permutations(listOfLines)
+  for thePatterns in patternsPerms
+    for someLines in linesPerms
+      test = _allPatternsAreMatched(someLines, thePatterns, priorMatches)
+      return test if test isnt false
+  return false
+# Are all thePatterns matched in theLines?
+_allPatternsAreMatched = (listOfLines, thePatterns, priorMatches) ->
+  newMatches = priorMatches
+  for pattern in thePatterns
+    test = _doesPatternMatchAnyLines(listOfLines, pattern, newMatches)
+    return false if test is false
+    newMatches = test
+  return newMatches
+# Do any of `theLines` match `pattern`?
+_doesPatternMatchAnyLines = (listOfLines, pattern, priorMatches) ->
+  for line in listOfLines
+    sentence = line.sentence
+    test = sentence.findMatches(pattern, priorMatches)
+    # console.log "tested req #{pattern.toString()} against #{line.sentence}, res is #{test}, newMatches contains entries for #{(x.toString() for x in _.keys(test)).join(', ')} with newMatches.ψ = #{fol._decorate(test.ψ).toString() if test.ψ}"
+    return test unless test is false
+  # We didn’t find any lines that match pattern:
+  # console.log "didn’t find #{pattern} with #{_matchesToString(priorMatches)}"
+  return false
+# For testing only :
+exports.linesContainPatterns = linesContainPatterns
 
 
 
@@ -544,19 +556,14 @@ doAnyCandidatesMeetThisReq = (req, candidates, priorMatches) ->
 
 # Use `rule.premise()` when the line in question
 # must be a premise or assumption.
-# TODO: can we not just use `line.isPremise()`?
+# Use like `rule.from().to( rule.premise() )`
+# Note: we cannot just use `line.isPremise()` because we do not
+# want to allow that a subproof can have more than one premise?
+# TODO: should be used like rule.from().to( rule.premise() )
 premise = () ->
-  # We start with the empty rule (which checks that no
-  # lines are cited for us) and elaborate its check method.
-  premiseRule = from()
-  baseCheck = premiseRule.check.bind(premiseRule)
-  
-  premiseRule.check = (line) ->
-    result = baseCheck(line)
-    return result if result isnt true
-    
+  premiseRule = (line, priorMatches) ->
     # The first line of any proof or subproof can be a premise.
-    return true if not line.prev
+    return priorMatches if not line.prev
     
     # From now on we know that this is not the first line of a proof or subproof.
     
@@ -581,11 +588,34 @@ premise = () ->
     if thereIsANonPremiseAbove
       line.status.addMessage  "premises may not occur after non-premises."
       return false
-    return true
+    return priorMatches
     
-  return premiseRule
+  return {check:premiseRule}
 exports.premise = premise      
 
+phi = fol.parse('φ')
+notPhi = fol.parse('not φ')
+
+closeBranch = () ->
+  return {
+    check : (line, priorMatches) ->
+      lines = line.findAllAbove( (item) -> item.type is 'line' )
+      # console.log "lines.length = #{lines.length}"
+      test = linesContainPatterns(lines, [phi, notPhi], {})
+      return priorMatches if test isnt false
+      return false
+  }
+exports.closeBranch = closeBranch
+
+openBranch = () ->
+  return {
+    check : (line, priorMatches) ->
+      lines = line.findAllAbove( (item) -> item.type is 'line' )
+      test = linesContainPatterns(lines, [phi, notPhi], {})
+      return priorMatches if test is false
+      return false
+  }
+exports.openBranch = openBranch
 
 _notImplementedYet = (line) ->
   throw new Error "the rule `#{line.justification.rule.connective}` (or some part of it) is not implemented yet!"

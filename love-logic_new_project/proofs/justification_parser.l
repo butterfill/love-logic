@@ -67,9 +67,11 @@
     { return 'elim'; }
 "introduction"|"introduce"|"intro"|"i"  
     { return 'intro'; }
-"decomposition-2"|"decomposition2"|"d-2"|"d2" { return 'decomposition2' }
-"decomposition"|"d" { return 'decomposition' }
+"decomposition-2"|"decomposition2"|"d-2"|"d2" { return 'decomposition2'; }
+"decomposition"|"d" { return 'decomposition'; }
     
+
+"✓"|"tick" { return 'tick'; }
 
 "⊥"|"_|_"|"contradiction"|"contra"|"false"
     { yytext = 'contradiction';
@@ -103,7 +105,7 @@
     { yytext = 'reit';
       return 'reit'; }
 
-"premise"|"assumption"|"sm"|"p"
+"premise"|"assumption"|"set member"|"sm"|"p"
     { yytext = 'premise';
       return 'premise'; }
 
@@ -161,6 +163,9 @@
     { return 'left'; }
 "right" 
   { return 'right'; }
+
+"close branch"|"close-branch"   { yytext = 'close-branch';return 'bare_rule'; }
+"open branch"|"open-branch"   { yytext = 'open-branch';return 'bare_rule'; }
 
 
 

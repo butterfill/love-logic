@@ -18,20 +18,14 @@ to = (block) ->
   walker = 
     visit : (item) ->
       return undefined unless item?.type?
-      switch item.type
-        when 'block'
-          aBlock = item
-          aBlock.listErrorMessages = () ->
-            # Walk lines collecting messages.
-            throw "Not implemented yet!"
-        else
-          item.status = new LineStatus(item)
-          # This might seem a bit pointless, but the idea is that
-          # only modules concerned with checking the proof need to
-          # access `line.status`; the UI just needs to know abotu
-          # `aLine.getErrorMessage()`.
-          item.getErrorMessage = () ->
-            return item.status.getMessage()
+      if item.type isnt 'block'
+        item.status = new LineStatus(item)
+        # This might seem a bit pointless, but the idea is that
+        # only modules concerned with checking the proof need to
+        # access `line.status`; the UI just needs to know abotu
+        # `aLine.getErrorMessage()`.
+        item.getErrorMessage = () ->
+          return item.status.getMessage()
           
       
       return undefined  # Keep walking.

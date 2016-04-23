@@ -11,24 +11,30 @@ rules =
     Rules of proof for the system of proof specified in forallx. 
   '''
   
-  premise : rule.premise()
+  premise : rule.from().to( rule.premise() )
   
-  'conjunction' : 
+  'close-branch' : rule.from().to( rule.closeBranch() )
+  'open-branch' : rule.from().to( rule.openBranch() )
+  
+  'and' : 
     'decomposition' : [
-      rule.from('φ and ψ').to('φ')
-      rule.from('φ and ψ').to('ψ')
+      rule.from('φ and ψ').to('φ') #.noBranch()
+      rule.from('φ and ψ').to('ψ') #.noBranch()
     ]
   
   'arrow' : 
     'decomposition' : [
-      rule.from('φ arrow ψ').to( rule.match('not φ') )
-      rule.from('φ arrow ψ').to( rule.match('ψ') )
+      rule.from('φ arrow ψ').to( rule.branch('not φ') )
+      rule.from('φ arrow ψ').to( rule.branch('ψ') )
     ]
   
   
   'universal' :
     'decomposition' : rule.from('all τ φ').to('φ[τ-->α]')
   
+  'existential' :
+    # TODO : this is not correct!
+    'decomposition2' : rule.from('exists τ φ').to('φ[τ-->α]')
   
   
 exports.rules = rules

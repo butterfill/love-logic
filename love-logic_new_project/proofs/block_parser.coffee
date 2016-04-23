@@ -128,8 +128,9 @@ parse = (lines) ->
       block.newLine(line)
       continue
       
-    # Case 2 : divider
-    if line.type is 'divider'
+    # Case 2 : divider and other things which cannot close or
+    # open a block
+    if line.type in ['divider', 'close_branch', 'open_branch']
       block.newLine(line)
       continue
       
@@ -205,6 +206,10 @@ extractIndentationAndContentFrom = (lines) ->
       type = 'blank_line'
     if isDivider(content)
       type = 'divider'
+    if isClosedBranchMarker(content)
+      type = 'close_branch'
+    if isOpenBranchMarker(content)
+      type = 'open_branch'
     result.push( { indentation, content, idx:idx+1, type, originalText : line })
   
   # Now check for the indentation strategy (spaces or |).
@@ -325,6 +330,15 @@ isBlank = (line) ->
   return ( line.trim() is "" )  
 exports._isBlank = isBlank
 
+isClosedBranchMarker = (line) ->
+  line = removeNumberFrom line
+  line = removeIndentationFrom line
+  return ( line.trim?().toUpperCase?() is "X" )  
+isOpenBranchMarker = (line) ->
+  line = removeNumberFrom line
+  line = removeIndentationFrom line
+  return ( line.trim?().toUpperCase?() is "O" )  
+
 
 class Block
   # Only call the constructor once, for the root block.
@@ -382,6 +396,14 @@ class Block
           # Move on to previous item (even if there isn't one -- this will terminate the loop).
           current = current.prev
       return false
+
+    lineObject.findAllAbove = (matcher) ->
+      res = []
+      foundLine = @.findAbove(matcher)
+      while foundLine
+        res.push foundLine
+        foundLine = foundLine.findAbove(matcher)
+      return res
 
     @content.push(lineObject)
     return lineObject

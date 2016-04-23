@@ -8,7 +8,7 @@ rules =
     there is no possible situation with an empty domain.
   '''
   
-  premise : rule.premise()
+  premise : rule.from().to( rule.premise() )
 
   reit : rule.from('φ').to('φ')
 

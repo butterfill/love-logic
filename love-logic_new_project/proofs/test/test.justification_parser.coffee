@@ -215,3 +215,14 @@ describe "justification_parser", ->
     for [name, justification] in rulePairs
       expect(justification.rule.connective).to.equal(name[0])
       expect(justification.rule.variant.intronation).to.equal(name[1])
+
+  it "allows you to add ticks at the start of the justification", ->
+    result = jp.parse "tick exists D 1"
+    expect(result.ticked).to.be.true
+  it "allows you to add ticks at the end of the justification", ->
+    result = jp.parse "exists D 1 ✓"
+    expect(result.ticked).to.be.true
+  it "does not tick lines that are not ticked", ->
+    result = jp.parse "exists D 1"
+    expect(result.ticked?).to.be.false
+    
