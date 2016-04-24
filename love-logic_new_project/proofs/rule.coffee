@@ -35,7 +35,44 @@ exports.setParser = (aParser) ->
 
 
 
-
+exports.tickIf = 
+  allRulesAppliedInEveryBranch : ( ruleSet ) ->
+    allRulesUsedInThisBlock = (candidateLines, block, ruleSet) ->
+      rulesUsed = []
+      for l in candidateLines
+        if l.parent is block
+          for r in l.rulesChecked
+            rulesUsed.push(r)
+      rulesStillToUse = []
+      for r in ruleSet
+        rulesStillToUse.push(r) unless r in rulesUsed
+      return true if rulesStillToUse.length is 0
+      children = block.getChildren()
+      return false unless children?.length > 0
+      for childBlock in children
+        test = allRulesUsedInThisBlock(candidateLines, childBlock, rulesStillToUse)
+        return false if test is false
+      return true
+    return (line) ->
+      candidateLines = line.getLinesThatCiteMe()
+      return  allRulesUsedInThisBlock(candidateLines, line.parent, ruleSet)
+      
+  someRuleAppliedInEveryBranch : ( ruleSet ) ->
+    someRulesUsedInThisBlock = (candidateLines, block) ->
+      for l in candidateLines
+        if l.parent is block
+          for r in l.rulesChecked
+            return true if r in ruleSet
+      children = block.getChildren()
+      return false unless children?.length > 0
+      for childBlock in children
+        test = someRulesUsedInThisBlock(candidateLines, childBlock)
+        return false if test is false
+      return true
+    return (line) ->
+      candidateLines = line.getLinesThatCiteMe()
+      return  someRulesUsedInThisBlock(candidateLines, line.parent)
+      
 
 # All ways of describing a `rule` do and *MUST* use this class 
 # (see `rule.premise` below for how to use this class).

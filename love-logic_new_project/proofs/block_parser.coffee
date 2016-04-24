@@ -106,7 +106,9 @@ parse = (lines) ->
   lines = extractIndentationAndContentFrom lines
   
   firstLine = lines[0]
-  usingBars = '|' in firstLine.indentation
+  usingBars = false
+  for l in lines
+    usingBars = true if '|' in l.indentation
   topBlock = new Block(firstLine.indentation)
   block = topBlock
   

@@ -451,6 +451,52 @@ describe "block_parser", ->
       subBlock2 = block.content[3]
       expect(subBlock2.type).to.equal('block')
       expect(block.indentation.length < subBlock2.indentation.length)
+
+    it "parses a proof with numbers, multiple blocks, and indentation lines", ->
+      proofText = '''
+        1. hello
+        2. |   block start
+        3. |   block end
+        4.
+        5. |   block2 start
+        6. |   block2 end
+        7. cite block and line  // exists elim 2-3, 5-6
+      '''
+      block = bp.parse proofText
+      expect(block.getChildren().length).to.equal(2)
+      subBlock2 = block.content[3]
+      expect(subBlock2.type).to.equal('block')
+      expect(block.indentation.length < subBlock2.indentation.length)
+  
+    it "parses a proof with no numbers, multiple blocks, and indentation lines for subblocks only", ->
+      proofText = '''
+        hello
+        |   block start
+        |   block end
+        
+        |   block2 start
+        |   block2 end
+      '''
+      block = bp.parse proofText
+      expect(block.getChildren().length).to.equal(2)
+      subBlock2 = block.content[3]
+      expect(subBlock2.type).to.equal('block')
+      expect(block.indentation.length < subBlock2.indentation.length)
+    it "correctly interprets blank lines in a proof with no numbers, multiple blocks, and indentation lines for subblocks only", ->
+      proofText = '''
+        hello
+        |   block start
+        ||  subblock start
+        ||  block and subblock end
+        
+        |   block2 start
+        |   block2 end
+      '''
+      block = bp.parse proofText
+      expect(block.getChildren().length).to.equal(2)
+      subBlock2 = block.content[3]
+      expect(subBlock2.type).to.equal('block')
+      expect(block.indentation.length < subBlock2.indentation.length)
   
   describe "in some tricky cases", ->
     it "gets the content of the first line right when there are no line numbers", ->

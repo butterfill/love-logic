@@ -2,6 +2,7 @@ dialectManager = require('../dialect_manager/dialectManager')
 
 rule = require './rule'
 rule.setParser( dialectManager.getParser('awFOL') )
+# keys are the names of rules defined in the `justification_parser.l` lexer:
 rules = 
   _description : '''
     Rules of proof for classical first-order logic.  The rules assume that

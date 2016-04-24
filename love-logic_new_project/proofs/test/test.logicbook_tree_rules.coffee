@@ -50,6 +50,27 @@ describe "logicbook tree rules", ->
       X
     '''
     testProof(text, true)
+  it "verifies a simple tree with branching", ->
+    text = '''
+      A or B
+      | A             or D 1
+      
+      | B         or D 1
+    '''
+    testProof(text, true)
+  it "verifies a simple tree with branching and bits after the branches", ->
+    text = '''
+      A or B      SM
+      C and D     SM
+      | A             or D 1
+      | C         and D 2
+      | D         and D 2
+      
+      | B         or D 1
+      | C         and D 2
+      | D         and D 2
+    '''
+    testProof(text, true)
   it "allows closing a with not a=a", ->
     text = '''
       A and not a=a
@@ -193,4 +214,96 @@ describe "logicbook tree rules", ->
       || Gba                          8 existential D2
     '''
     testProof(text, true)
+  
+  it "verifies ticks in a simple case", ->
+    text = '''
+      A and not A   tick SM
+      A             and D 1
+      not A         and D 1
+    '''
+    testProof(text, true)
+  it "spots an incorrect tick in a simple case", ->
+    text = '''
+      A and not A   tick SM
+      A             and D 1
+    '''
+    testProof(text, false)
+  it "verifies ticks in a simple branching case", ->
+    text = '''
+      A arrow B     tick SM
+      | not A       arrow D 1
+      
+      | B     arrow D 1
+    '''
+    testProof(text, true)
+  it "verifies a tree with nested branching (arrow, arrow)", ->
+    text = '''
+      A arrow B     SM
+      C arrow D        SM
+      | not C           arrow D 2
+      || not A      arrow D 1
+      |
+      || B          arrow D 1
+      
+      | D           arrow D 2
+      || not A      arrow D 1
+      |
+      || B          arrow D 1
+    '''
+    testProof(text, true)
+  it "verifies a tree with nested branching (or, arrow)", ->
+    text = '''
+      A arrow B     SM
+      C or D        SM
+      | C           or D 2
+      || not A      arrow D 1
+      |
+      || B          arrow D 1
+      
+      | D           or D 2
+      || not A      arrow D 1
+      |
+      || B          arrow D 1
+    '''
+    testProof(text, true)
+  it "verifies ticks in a nested branching case", ->
+    text = '''
+      A arrow B     SM tick
+      C or D        SM
+      | C           or D 2
+      || not A      arrow D 1
+      |
+      || B          arrow D 1
+        
+      | D           or D 2
+      || not A      arrow D 1
+      |
+      || B          arrow D 1
+    '''
+    p = proof.parse(text)
+    console.log p.getChildren().length
+    testProof(text, true)
+  it "spots an error with ticks in a simple branching case", ->
+    text = '''
+      A and B     SM tick
+      C or D        SM
+      | C           or D 2
+      | A      and D 1
+      | B      and D 1
+      
+      | D           or D 2
+    '''
+    testProof(text, false)
+  it "spots an error with ticks in a nested branching case", ->
+    text = '''
+      A arrow B     SM tick
+      C or D        SM
+      | C           or D 2
+      || not A      arrow D 1
+      |
+      || B          arrow D 1
+      
+      | D           or D 2
+    '''
+    testProof(text, false)
   

@@ -85,9 +85,28 @@ to = (proof) ->
     return false if test1 is false
     
     branches = proof.getChildren()
-    return checkBranchingRules(branches)
+    test2 = checkBranchingRules(branches)
+    return false if test2 is false
+    
+    test3 = checkTicksAreCorrect(proof)
+    return false if test3 is false
+    
+    return true
     
 exports.to = to
+
+
+checkTicksAreCorrect = (proof) ->
+  walker = 
+    visit : (item) ->
+      return undefined unless item?.justification?.ticked
+      test = canLineBeTicked(item)
+      return false if test is false
+      return undefined # keep walking
+  result = proof.walk(walker)
+  return false if result is false
+  return true
+
 
 # In a tree proof, check that where a branch is created,
 # the right number of branches have been created using
@@ -139,7 +158,7 @@ exports.lineNeedsToBeTicked = lineNeedsToBeTicked
 # applied.
 canLineBeTicked = (line) ->
   theRules = dialectManager.getCurrentRules()
-  tickChecker = theRules.tickCheckers[line.type] 
+  tickChecker = theRules.tickCheckers[line.sentence.type] 
   return tickChecker(line) 
 # for testing only:
 exports.canLineBeTicked = canLineBeTicked
