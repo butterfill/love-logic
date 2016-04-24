@@ -50,14 +50,14 @@ rules =
       right : rule.from('α=β').and('φ').to('φ[β-->α]')
 
   existential :
-    elim : rule.from('exists τ φ').and( rule.subproof( rule.match('φ[τ-->α]').isNewName('α'), 'ψ') ).to('ψ[α-->null]')
+    elim : rule.from('exists τ φ').and( rule.subproof( rule.matches('φ[τ-->α]').and.isNewName('α'), 'ψ') ).to('ψ[α-->null]')
     intro : rule.from('φ[τ-->α]').to('exists τ φ')
 
   universal :
     elim : rule.from('all τ φ').to('φ[τ-->α]')
     # for Magnus and Button:
     # intro: rule.from('φ[τ-->null]').isNotInUndischargedPremises('α').to('all τ φ[α-->τ]')
-    intro: rule.from( rule.match('φ[τ-->α]').isNotInAnyUndischargedPremise('α') ).to('all τ φ')
+    intro: rule.from( rule.matches('φ[τ-->α]').and.isNotInAnyUndischargedPremise('α') ).to('all τ φ')
   
   dilemma : rule.from('φ or ψ').and('φ arrow χ').and('ψ arrow χ').to('χ')
   

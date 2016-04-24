@@ -26,7 +26,7 @@ testProof = (proofText, expected) ->
   newPrfTxt = theProof.toString({numberLines:true})
   console.log newPrfTxt
   theProof = proof.parse newPrfTxt
-  result = theProof.verify()
+  result = theProof.verifyTree()
   if expected
     if result isnt expected
       console.log theProof.listErrorMessages()
@@ -50,6 +50,14 @@ describe "logicbook tree rules", ->
       X
     '''
     testProof(text, true)
+  it "allows closing a with not a=a", ->
+    text = '''
+      A and not a=a
+      A             and D 1
+      not a=a       and D 1
+      X
+    '''
+    testProof(text, true)
   it "verifies a simple tree (includes explicitly open branch)", ->
     text = '''
       A and not B
@@ -58,7 +66,6 @@ describe "logicbook tree rules", ->
       O
     '''
     testProof(text, true)
-    
   it "does not allow closing a branch incorrectly", ->
     text = '''
       A and B
@@ -77,6 +84,97 @@ describe "logicbook tree rules", ->
       A             and D 1
       not A         and D 1
       O
+    '''
+    testProof(text, false)
+  it "does not allow incorrectly marking a branch as open (not a=a version)", ->
+    text = '''
+      A and not a=a
+      A             and D 1
+      A             and D 1
+      not a=a       and D 1
+      O
+    '''
+    testProof(text, false)
+  it "does not allow more lines after closing a branch", ->
+    text = '''
+      A and not A
+      A             and D 1
+      not A         and D 1
+      X
+      A             and D 1
+    '''
+    testProof(text, false)
+  it "does not allow a branch after closing a branch", ->
+    text = '''
+      A and not A   SM
+      A arrow B     SM
+      A             and D 1
+      not A         and D 1
+      X
+      | not A             arrow D 2
+      
+      | B             arrow D 2
+    '''
+    testProof(text, false)
+
+  it "verifies a tree with a branching rule", ->
+    text = '''
+      A arrow B     SM
+      | not A       arrow D 1
+      
+      | B     arrow D 1
+    '''
+    testProof(text, true)
+  it "verifies a closed tree with a branching rule", ->
+    text = '''
+      A arrow B   SM
+      A           SM
+      not B       SM
+      | not A             arrow D 1
+      | X
+      
+      | B     arrow D 1
+      | X
+    '''
+    testProof(text, true)
+  it "verifies an open tree with a branching rule", ->
+    text = '''
+      A arrow B   SM
+      not B       SM
+      | not A             arrow D 1
+      | O
+      
+      | B     arrow D 1
+      | X
+    '''
+    testProof(text, true)
+  it "does not allow a branching rule to be used without branching", ->
+    text = '''
+      A arrow B
+      not A             arrow D 1
+      B                 arrow D 1
+    '''
+    testProof(text, false)
+  it "does not allow a branching rule to be used with making the right number of branches", ->
+    text = '''
+      A arrow B
+      | not A             arrow D 1
+    '''
+    testProof(text, false)
+  it "does not allow a branching rule to be used with making the right kind of branches", ->
+    text = '''
+      A arrow B
+      | not A             arrow D 1
+      
+      | not A     arrow D 1
+    '''
+    testProof(text, false)
+  it "does not allow a non-branching rule to be used with branching", ->
+    text = '''
+      A and B
+      | A             and D 1
+      
+      | B             and D 1
     '''
     testProof(text, false)
     

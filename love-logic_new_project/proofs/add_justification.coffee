@@ -58,6 +58,7 @@ to = (block) ->
       line.findBlock = findBlock
       line.findLineOrBlock = findLineOrBlock
       line.getCitedLines = getCitedLines
+      line.getLinesThatCiteMe = getLinesThatCiteMe
       line.getCitedBlocks = getCitedBlocks
       line.isPremise = () ->
         return line.justification.rule.connective is PREMISE_JUSTIFICATION.rule.connective
@@ -222,6 +223,24 @@ getCitedLines = ->
     if result isnt false
       citedLines.push result
   return citedLines
+
+# To help checking tree proofs.
+# This only works for lines (not blocks).
+# This assumes that a line is only cited in the block in 
+# which it lives and in any child blocks (it is not cited from a parent block).
+getLinesThatCiteMe = ->
+  thisLine = @
+  result = []
+  walker = {}
+  walker.visit = (item) ->
+    if item.getCitedLines?
+      if thisLine in item.getCitedLines()
+        result.push(item)
+    # keep walking
+    return undefined
+  @.parent.walk(walker)
+  return result
+  
 
 getCitedBlocks = ->
   return [] if not @justification.numbers

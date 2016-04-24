@@ -46,7 +46,7 @@ class _From
       from : ([requirement] if requirement?) or []
       to : undefined
     }
-
+  
   type : 'rule'
 
   'and' : (requirement) ->
@@ -55,7 +55,7 @@ class _From
     return @ 
 
   to : (requirement) ->
-    if @_requirements.to
+    if @_requirements.to?
       throw new Error "You cannot specify `.to` more than once in a single rule."
     requirement = convertTextToRequirementIfNecessary(requirement)
     @_requirements.to = requirement
@@ -64,8 +64,12 @@ class _From
   check : (line) ->
     # return new LineChecker(line, @_requirements).check()
     # console.log "#{line.getRuleName()}"
-    return checkRequirementsMet(line, @_requirements)
-
+    test = checkRequirementsMet(line, @_requirements)
+    if test isnt false
+      line.rulesChecked ?= []
+      line.rulesChecked.push(@)
+    return test
+  
 
 # `from` is the main entry point for this module.  Use it
 # like: `rule.from('φ and ψ').to('φ')`. 
@@ -96,11 +100,11 @@ _matchesToString = (priorMatches) ->
 
 # for trees
 branch = (sentence) ->
-  return match(sentence).isFirstLineOfASubproof()
+  return matches(sentence).isFirstLineOfASubproof()
 exports.branch = branch
 
-# Use like rule.from( rule.match('ψ[τ-->α]').isNewName('α') ).to(...
-match = (sentence) ->
+# Use like rule.from( rule.matches('ψ[τ-->α]').and.isNewName('α') ).to(...
+matches = (sentence) ->
   pattern = parseAndDecorateIfNecessary(sentence)
   # All check functions must return (1) false if check fails, or 
   # the new matches involved in applying the rule if check succeeds
@@ -109,7 +113,7 @@ match = (sentence) ->
     test = doesLineMatchPattern(line, pattern, priorMatches)
     return test
   checkFunctions = [baseCheck]
-  return {
+  rulePart = {
     check : (line, priorMatches) ->
       currentMatches = priorMatches
       for f in checkFunctions
@@ -124,7 +128,7 @@ match = (sentence) ->
     
     toString : () ->
       return pattern.toString()
-
+    
     # Add a requirement to the match: `name` must not occur on
     # any line above in the proof (except in a closed subproof).
     isNewName : (name) ->
@@ -150,7 +154,8 @@ match = (sentence) ->
       checkFunctions.push newCheck
       return @
     
-    isFirstLineOfASubproof : () ->
+    # Use like `matches('phi').and.branches()
+    branches : () ->
       newCheck = (line, priorMatches) ->
         block = line.parent
         # This must be a subproof (not the main proof):
@@ -159,8 +164,20 @@ match = (sentence) ->
         return priorMatches
       checkFunctions.push newCheck
       return @
+      
+    # Use like `matches('phi').and.doesntBranch()
+    doesntBranch : () ->
+      newCheck = (line, priorMatches) ->
+        block = line.parent
+        # Fine unless we are the first line of a subproof:
+        return false if block?.getFirstLine() is line
+        return priorMatches
+      checkFunctions.push newCheck
+      return @
   }
-exports.match = match
+  rulePart.and = rulePart
+  return rulePart
+exports.matches = matches
 
 
 # Supports rules of replacement (see Magnus or Bergmann et al).
@@ -302,7 +319,7 @@ doesAPremiseHereOrAboveContainThisName = (theName, aLine) ->
   return aLine.findAbove( test ) 
 
 convertTextToRequirementIfNecessary = (requirement) ->
-  return match(requirement) if _.isString(requirement)
+  return matches(requirement) if _.isString(requirement)
   return requirement 
   
 
@@ -595,14 +612,23 @@ exports.premise = premise
 
 phi = fol.parse('φ')
 notPhi = fol.parse('not φ')
+notAIsA = fol.parse('not α=α')
 
 closeBranch = () ->
   return {
     check : (line, priorMatches) ->
+      # Nothing can come after the closure of a branch!
+      if line.next?
+        line.status.addMessage "You can only close on the final line of a branch."
+        return false 
       lines = line.findAllAbove( (item) -> item.type is 'line' )
       # console.log "lines.length = #{lines.length}"
       test = linesContainPatterns(lines, [phi, notPhi], {})
       return priorMatches if test isnt false
+      test2 = linesContainPatterns(lines, [notAIsA], {})
+      return priorMatches if test2 isnt false
+      # Failed to close:
+      line.status.addMessage "You can only close a branch if it contains either a sentence like ‘¬α=α’, or two sentences like ‘φ’ and ¬‘φ’."
       return false
   }
 exports.closeBranch = closeBranch
@@ -610,9 +636,15 @@ exports.closeBranch = closeBranch
 openBranch = () ->
   return {
     check : (line, priorMatches) ->
+      # Nothing can come after marking a branch open!
+      if line.next?
+        line.status.addMessage "You can only put a ‘branch open’ marker on the final line of a branch."
+        return false 
       lines = line.findAllAbove( (item) -> item.type is 'line' )
       test = linesContainPatterns(lines, [phi, notPhi], {})
-      return priorMatches if test is false
+      test2 = linesContainPatterns(lines, [notAIsA], {})
+      return priorMatches if ((test is false) and (test2 is false))
+      line.status.addMessage "You can only mark a branch open if it contains neither a sentence like ‘¬α=α’, nor two sentences like ‘φ’ and ¬‘φ’."
       return false
   }
 exports.openBranch = openBranch

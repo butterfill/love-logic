@@ -347,7 +347,8 @@ class Block
   constructor : (@indentation, @parent, @prev) ->
     @type = 'block'
     @content = []
-    
+    if @prev?
+      @prev.next = @
     # This is just to help with testing (makes sense of circular references).
     if not @parent?
       @_depth = 1
@@ -376,7 +377,10 @@ class Block
   
   newLine : (lineObject) ->
     lineObject.parent = @
-    lineObject.prev = @getLastLine()
+    prevLine = @getLastLine()
+    lineObject.prev = prevLine
+    if prevLine?
+      prevLine.next = lineObject
     lineObject.lineNumberInSource = lineObject.idx
 
     # Work up the proof, starting at the line or subproof before the current line,
@@ -404,7 +408,7 @@ class Block
         res.push foundLine
         foundLine = foundLine.findAbove(matcher)
       return res
-
+      
     @content.push(lineObject)
     return lineObject
     

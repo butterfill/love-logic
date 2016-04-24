@@ -17868,7 +17868,8 @@ if (typeof module !== 'undefined' && require.main === module) {
 }
 }).call(this,require('_process'))
 },{"_process":3,"fs":1,"path":2}],16:[function(require,module,exports){
-var PREMISE_JUSTIFICATION, _, _FIND_JUSTIFICATION, _FIND_WHITESPACE_JUSTIFICATION, _isPremise, cleanNumber, dialectManager, findBlock, findLine, findLineOrBlock, getCitedBlocks, getCitedLines, getRuleName, jp, split, to;
+var CLOSE_BRANCH_JUSTIFICATION, OPEN_BRANCH_JUSTIFICATION, PREMISE_JUSTIFICATION, _, _FIND_JUSTIFICATION, _FIND_WHITESPACE_JUSTIFICATION, _isPremise, cleanNumber, dialectManager, findBlock, findLine, findLineOrBlock, getCitedBlocks, getCitedLines, getLinesThatCiteMe, getRuleName, jp, split, to,
+  indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 _ = require('lodash');
 
@@ -17880,40 +17881,53 @@ cleanNumber = require('./add_line_numbers').cleanNumber;
 
 PREMISE_JUSTIFICATION = jp.parse("premise");
 
+CLOSE_BRANCH_JUSTIFICATION = jp.parse("close branch");
+
+OPEN_BRANCH_JUSTIFICATION = jp.parse("open branch");
+
 to = function(block) {
   var walker;
   walker = {
     visit: function(item) {
-      var line, n, r, ref;
-      if (item.type !== 'line') {
+      var line, n, r, ref, ref1;
+      if ((ref = item.type) !== 'line' && ref !== 'close_branch' && ref !== 'open_branch') {
         return void 0;
       }
       if ((item.justification != null) || (item.justificationErrors != null)) {
         return void 0;
       }
       line = item;
-      r = split(line.content);
-      line.justification = r.justification;
-      if (((ref = line.justification) != null ? ref.numbers : void 0) != null) {
+      if (item.type === 'close_branch') {
+        line.justification = CLOSE_BRANCH_JUSTIFICATION;
+      }
+      if (item.type === 'open_branch') {
+        line.justification = OPEN_BRANCH_JUSTIFICATION;
+      }
+      if (item.type === 'line') {
+        r = split(line.content);
+        line.justification = r.justification;
+        line.content = r.rest;
+        line.justificationErrors = r.justificationErrors;
+        line.justificationText = r.justificationText;
+      }
+      if (((ref1 = line.justification) != null ? ref1.numbers : void 0) != null) {
         line.justification.numbers = (function() {
-          var i, len, ref1, results;
-          ref1 = line.justification.numbers;
+          var i, len, ref2, results;
+          ref2 = line.justification.numbers;
           results = [];
-          for (i = 0, len = ref1.length; i < len; i++) {
-            n = ref1[i];
+          for (i = 0, len = ref2.length; i < len; i++) {
+            n = ref2[i];
             results.push(cleanNumber(n));
           }
           return results;
         })();
       }
-      line.content = r.rest;
-      line.justificationErrors = r.justificationErrors;
-      line.justificationText = r.justificationText;
       line.getRuleName = getRuleName;
       line.findLine = findLine;
       line.findBlock = findBlock;
       line.findLineOrBlock = findLineOrBlock;
       line.getCitedLines = getCitedLines;
+      line.getLinesThatCiteMe = getLinesThatCiteMe;
       line.getCitedBlocks = getCitedBlocks;
       line.isPremise = function() {
         return line.justification.rule.connective === PREMISE_JUSTIFICATION.rule.connective;
@@ -18061,15 +18075,17 @@ _isPremise = function(line) {
 exports._isPremise = _isPremise;
 
 getRuleName = function() {
-  var connective, intronation, ref, side, symbols;
+  var connective, intronation, ref, side, spaceAfterConnective, symbols;
   if (((ref = this.justification) != null ? ref.rule : void 0) == null) {
     return "";
   }
   symbols = dialectManager.getSymbols();
   connective = symbols[this.justification.rule.connective] || this.justification.rule.connective;
+  spaceAfterConnective = ((connective != null ? connective.length : void 0) !== 1 ? ' ' : void 0) || '';
   intronation = this.justification.rule.variant.intronation || '';
+  intronation = symbols[intronation] || intronation;
   side = this.justification.rule.variant.side || '';
-  return (connective + " " + intronation + " " + side).trim();
+  return ("" + connective + spaceAfterConnective + intronation + " " + side).trim();
 };
 
 findLine = function(targetNumber) {
@@ -18123,6 +18139,23 @@ getCitedLines = function() {
     }
   }
   return citedLines;
+};
+
+getLinesThatCiteMe = function() {
+  var result, thisLine, walker;
+  thisLine = this;
+  result = [];
+  walker = {};
+  walker.visit = function(item) {
+    if (item.getCitedLines != null) {
+      if (indexOf.call(item.getCitedLines(), thisLine) >= 0) {
+        result.push(item);
+      }
+    }
+    return void 0;
+  };
+  this.parent.walk(walker);
+  return result;
 };
 
 getCitedBlocks = function() {
@@ -18292,22 +18325,14 @@ to = function(block) {
   var walker;
   walker = {
     visit: function(item) {
-      var aBlock;
       if ((item != null ? item.type : void 0) == null) {
         return void 0;
       }
-      switch (item.type) {
-        case 'block':
-          aBlock = item;
-          aBlock.listErrorMessages = function() {
-            throw "Not implemented yet!";
-          };
-          break;
-        default:
-          item.status = new LineStatus(item);
-          item.getErrorMessage = function() {
-            return item.status.getMessage();
-          };
+      if (item.type !== 'block') {
+        item.status = new LineStatus(item);
+        item.getErrorMessage = function() {
+          return item.status.getMessage();
+        };
       }
       return void 0;
     }
@@ -18395,7 +18420,7 @@ LineStatus = (function() {
 
 
 },{"../fol":7,"../substitute":30,"../util":32}],20:[function(require,module,exports){
-var _, _linesCitedAreOk, _parseProof, addJustification, addLineNumbers, addSentences, addStatus, blockParser, checkItAccordsWithTheRules, checkLineAccordsWithOneOfTheseRules, dialectManager, to, util, verifyLine,
+var _, _linesCitedAreOk, _parseProof, addJustification, addLineNumbers, addSentences, addStatus, blockParser, canLineBeTicked, checkBranchingRules, checkItAccordsWithTheRules, checkLineAccordsWithOneOfTheseRules, dialectManager, to, util, verifyLine,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 _ = require('lodash');
@@ -18449,8 +18474,8 @@ to = function(proof) {
           allLinesOk = true;
           verifyABlockWalker = {
             visit: function(item) {
-              var result;
-              if (item.type === 'line') {
+              var ref, result;
+              if ((ref = item.type) === 'line' || ref === 'close_branch' || ref === 'open_branch') {
                 result = item.verify();
                 allLinesOk = allLinesOk && result;
                 return void 0;
@@ -18469,13 +18494,61 @@ to = function(proof) {
       return void 0;
     }
   };
-  return proof.walk(walker);
+  proof.walk(walker);
+  return proof.verifyTree = function() {
+    var branches, test1;
+    test1 = proof.verify();
+    if (test1 === false) {
+      return false;
+    }
+    branches = proof.getChildren();
+    return checkBranchingRules(branches);
+  };
 };
 
 exports.to = to;
 
+checkBranchingRules = function(branches) {
+  var b, i, j, len, len1, ref, ref1, ref2, ref3, ref4, ref5, ref6, rule, ruleSet, rulesUsed, test;
+  if (!((branches != null ? branches.length : void 0) > 0)) {
+    return true;
+  }
+  for (i = 0, len = branches.length; i < len; i++) {
+    b = branches[i];
+    test = checkBranchingRules(b);
+    if (test === false) {
+      return false;
+    }
+  }
+  ruleSet = (ref = branches[0].getFirstLine()) != null ? (ref1 = ref.rulesChecked) != null ? (ref2 = ref1[0]) != null ? ref2.ruleSet : void 0 : void 0 : void 0;
+  if (ruleSet == null) {
+    throw new Error("Could not get ruleSet at line " + ((ref3 = branches[0].getFirstLine()) != null ? ref3.number : void 0) + ".");
+  }
+  rulesUsed = [];
+  for (j = 0, len1 = branches.length; j < len1; j++) {
+    b = branches[j];
+    rule = (ref4 = b.getFirstLine()) != null ? (ref5 = ref4.rulesChecked) != null ? ref5[0] : void 0 : void 0;
+    if (rule == null) {
+      throw new Error("Could not get rule at line " + ((ref6 = b.getFirstLine()) != null ? ref6.number : void 0) + ".");
+    }
+    if (indexOf.call(rulesUsed, rule) >= 0) {
+      return false;
+    }
+    if (rule.ruleSet !== ruleSet) {
+      return false;
+    }
+    rulesUsed.push(rule);
+  }
+  if (rulesUsed.length < ruleSet.length) {
+    return false;
+  }
+  return true;
+};
+
+canLineBeTicked = function(line) {};
+
 verifyLine = function(lineOrLineNumber, proofText) {
-  var areLinesCitedOk, errorMessage, lineNumber, proof, result, theLine;
+  var areLinesCitedOk, errorMessage, lineNumber, proof, ref, result, theLine;
   if (_.isString(proofText)) {
     proofText = _parseProof(proofText);
   }
@@ -18490,7 +18563,7 @@ verifyLine = function(lineOrLineNumber, proofText) {
     }
   }
   theLine.status.verificationAttempted = true;
-  if (theLine.type !== 'line') {
+  if ((ref = theLine.type) !== 'line' && ref !== 'close_branch' && ref !== 'open_branch') {
     theLine.status.verified = true;
     theLine.status.addMessage("(This is a " + (theLine.type.replace(/_/g, ' ')) + ")");
     return true;
@@ -18664,7 +18737,7 @@ checkItAccordsWithTheRules = function(line) {
 
 
 },{"../dialect_manager/dialectManager":5,"../util":32,"./add_justification":16,"./add_line_numbers":17,"./add_sentences":18,"./add_status":19,"./block_parser":21,"./fitch_rules":22,"./forallx_rules":23,"./logicbook_rules":25,"./logicbook_tree_rules":26,"./teller_rules":29,"lodash":9}],21:[function(require,module,exports){
-var Block, _, _INDENTATION_AT_START_OF_LINE, _SPLIT_LINE_WHEN_INDENTATION_FIRST, _SPLIT_LINE_WHEN_NUMBER_FIRST, areLinesFormattedIndentationFirst, clean, extractIndentationAndContentFrom, isBlank, isDivider, parse, removeIndentationFrom, removeNumberFrom, split, util,
+var Block, _, _INDENTATION_AT_START_OF_LINE, _SPLIT_LINE_WHEN_INDENTATION_FIRST, _SPLIT_LINE_WHEN_NUMBER_FIRST, areLinesFormattedIndentationFirst, clean, extractIndentationAndContentFrom, isBlank, isClosedBranchMarker, isDivider, isOpenBranchMarker, parse, removeIndentationFrom, removeNumberFrom, split, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 _ = require('lodash');
@@ -18672,7 +18745,7 @@ _ = require('lodash');
 util = require('../util');
 
 parse = function(lines) {
-  var blankLines, block, firstLine, j, k, l, len, len1, len2, len3, line, n, nextLineIndentation, o, parentBlock, previousBlock, topBlock, usingBars;
+  var blankLines, block, firstLine, j, k, l, len, len1, len2, len3, line, n, nextLineIndentation, o, parentBlock, previousBlock, ref, topBlock, usingBars;
   if (_.isString(lines)) {
     lines = lines.split('\n');
   }
@@ -18700,7 +18773,7 @@ parse = function(lines) {
       block.newLine(line);
       continue;
     }
-    if (line.type === 'divider') {
+    if ((ref = line.type) === 'divider' || ref === 'close_branch' || ref === 'open_branch') {
       block.newLine(line);
       continue;
     }
@@ -18771,6 +18844,12 @@ extractIndentationAndContentFrom = function(lines) {
     }
     if (isDivider(content)) {
       type = 'divider';
+    }
+    if (isClosedBranchMarker(content)) {
+      type = 'close_branch';
+    }
+    if (isOpenBranchMarker(content)) {
+      type = 'open_branch';
     }
     result.push({
       indentation: indentation,
@@ -18893,6 +18972,20 @@ isBlank = function(line) {
 
 exports._isBlank = isBlank;
 
+isClosedBranchMarker = function(line) {
+  var base;
+  line = removeNumberFrom(line);
+  line = removeIndentationFrom(line);
+  return (typeof line.trim === "function" ? typeof (base = line.trim()).toUpperCase === "function" ? base.toUpperCase() : void 0 : void 0) === "X";
+};
+
+isOpenBranchMarker = function(line) {
+  var base;
+  line = removeNumberFrom(line);
+  line = removeIndentationFrom(line);
+  return (typeof line.trim === "function" ? typeof (base = line.trim()).toUpperCase === "function" ? base.toUpperCase() : void 0 : void 0) === "O";
+};
+
 Block = (function() {
   function Block(indentation1, parent, prev) {
     this.indentation = indentation1;
@@ -18935,8 +19028,13 @@ Block = (function() {
   };
 
   Block.prototype.newLine = function(lineObject) {
+    var prevLine;
     lineObject.parent = this;
-    lineObject.prev = this.getLastLine();
+    prevLine = this.getLastLine();
+    lineObject.prev = prevLine;
+    if (prevLine != null) {
+      prevLine.next = lineObject;
+    }
     lineObject.lineNumberInSource = lineObject.idx;
     lineObject.findAbove = function(matcher) {
       var current;
@@ -18952,6 +19050,16 @@ Block = (function() {
         }
       }
       return false;
+    };
+    lineObject.findAllAbove = function(matcher) {
+      var foundLine, res;
+      res = [];
+      foundLine = this.findAbove(matcher);
+      while (foundLine) {
+        res.push(foundLine);
+        foundLine = foundLine.findAbove(matcher);
+      }
+      return res;
     };
     this.content.push(lineObject);
     return lineObject;
@@ -19048,7 +19156,7 @@ rule.setParser(dialectManager.getParser('awFOL'));
 
 rules = {
   _description: 'Rules of proof for classical first-order logic.  The rules assume that\nthere is no possible situation with an empty domain.',
-  premise: rule.premise(),
+  premise: rule.from().to(rule.premise()),
   reit: rule.from('φ').to('φ'),
   'and': {
     elim: {
@@ -19119,7 +19227,7 @@ rule.setParser(dialectManager.getParser('awFOL'));
 
 rules = {
   _description: 'Rules of proof for the system of proof specified in forallx. ',
-  premise: rule.premise(),
+  premise: rule.from().to(rule.premise()),
   reit: rule.from('φ').to('φ'),
   'and': {
     elim: {
@@ -19161,12 +19269,12 @@ rules = {
     }
   },
   existential: {
-    elim: rule.from('exists τ φ').and(rule.subproof(rule.match('φ[τ-->α]').isNewName('α'), 'ψ')).to('ψ[α-->null]'),
+    elim: rule.from('exists τ φ').and(rule.subproof(rule.matches('φ[τ-->α]').and.isNewName('α'), 'ψ')).to('ψ[α-->null]'),
     intro: rule.from('φ[τ-->α]').to('exists τ φ')
   },
   universal: {
     elim: rule.from('all τ φ').to('φ[τ-->α]'),
-    intro: rule.from(rule.match('φ[τ-->α]').isNotInAnyUndischargedPremise('α')).to('all τ φ')
+    intro: rule.from(rule.matches('φ[τ-->α]').and.isNotInAnyUndischargedPremise('α')).to('all τ φ')
   },
   dilemma: rule.from('φ or ψ').and('φ arrow χ').and('ψ arrow χ').to('χ'),
   'modus-tollens': rule.from('φ arrow ψ').and('not ψ').to('not φ'),
@@ -19338,12 +19446,12 @@ dialectManager.registerRuleSet('forallx', rules);
   }
 */
 var justification_parser = (function(){
-var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,5],$V1=[1,10],$V2=[1,11],$V3=[1,12],$V4=[1,13],$V5=[1,14],$V6=[1,15],$V7=[1,9],$V8=[1,16],$V9=[1,17],$Va=[1,18],$Vb=[5,20],$Vc=[5,8,14,15,16,17,18,19,21,22,23],$Vd=[5,8,18,19,20],$Ve=[5,8,14,15,16,17,20];
+var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,7],$V1=[1,12],$V2=[1,13],$V3=[1,14],$V4=[1,15],$V5=[1,16],$V6=[1,17],$V7=[1,11],$V8=[1,18],$V9=[1,19],$Va=[1,20],$Vb=[5,7],$Vc=[5,7,22],$Vd=[5,7,10,16,17,18,19,20,21,23,24,25],$Ve=[5,7,10,20,21,22],$Vf=[5,7,10,16,17,18,19,22];
 var parser = {trace: function trace() { },
 yy: {},
-symbols_: {"error":2,"justification":3,"j":4,"EOF":5,"rule_name":6,"numberlist":7,"connective":8,"intronation":9,"rule_name_option0":10,"rule_name_option1":11,"side":12,"rule_name_group0":13,"elim":14,"intro":15,"decomposition":16,"decomposition2":17,"left":18,"right":19,"number":20,"reit":21,"premise":22,"bare_rule":23,"$accept":0,"$end":1},
-terminals_: {2:"error",5:"EOF",8:"connective",14:"elim",15:"intro",16:"decomposition",17:"decomposition2",18:"left",19:"right",20:"number",21:"reit",22:"premise",23:"bare_rule"},
-productions_: [0,[3,2],[4,1],[4,2],[4,2],[6,3],[6,3],[6,3],[6,3],[6,3],[6,3],[6,1],[9,1],[9,1],[9,1],[9,1],[12,1],[12,1],[7,1],[7,2],[10,0],[10,1],[11,0],[11,1],[13,1],[13,1],[13,1]],
+symbols_: {"error":2,"justification":3,"j":4,"EOF":5,"j2":6,"tick":7,"rule_name":8,"numberlist":9,"connective":10,"intronation":11,"rule_name_option0":12,"rule_name_option1":13,"side":14,"rule_name_group0":15,"elim":16,"intro":17,"decomposition":18,"decomposition2":19,"left":20,"right":21,"number":22,"reit":23,"premise":24,"bare_rule":25,"$accept":0,"$end":1},
+terminals_: {2:"error",5:"EOF",7:"tick",10:"connective",16:"elim",17:"intro",18:"decomposition",19:"decomposition2",20:"left",21:"right",22:"number",23:"reit",24:"premise",25:"bare_rule"},
+productions_: [0,[3,2],[4,1],[4,2],[4,2],[6,1],[6,2],[6,2],[8,3],[8,3],[8,3],[8,3],[8,3],[8,3],[8,1],[11,1],[11,1],[11,1],[11,1],[14,1],[14,1],[9,1],[9,2],[12,0],[12,1],[13,0],[13,1],[15,1],[15,1],[15,1]],
 performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate /* action[1] */, $$ /* vstack */, _$ /* lstack */) {
 /* this == yyval */
 
@@ -19353,75 +19461,84 @@ case 1:
  return $$[$0-1]; 
 break;
 case 2:
- this.$ = {type: 'justification', rule:$$[$0], location:_$[$0]}; 
+ this.$ = $$[$0]; 
 break;
 case 3:
- this.$ = {type: 'justification', rule:$$[$0-1], location:_$[$0-1], numbers:$$[$0] }; 
+ $$[$0].ticked = true; this.$ = $$[$0] 
 break;
 case 4:
- this.$ = {type: 'justification', rule:$$[$0], location:_$[$0], numbers:$$[$0-1]}; 
+ $$[$0-1].ticked = true; this.$ = $$[$0-1] 
 break;
 case 5:
+ this.$ = {type: 'justification', rule:$$[$0], location:_$[$0]}; 
+break;
+case 6:
+ this.$ = {type: 'justification', rule:$$[$0-1], location:_$[$0-1], numbers:$$[$0] }; 
+break;
+case 7:
+ this.$ = {type: 'justification', rule:$$[$0], location:_$[$0], numbers:$$[$0-1]}; 
+break;
+case 8:
  this.$= { type: 'rule', connective:$$[$0-2], 
               variant:{type:'variant', intronation:$$[$0-1], side:$$[$0] }
             }; 
 break;
-case 6:
+case 9:
  this.$= { type: 'rule', connective:$$[$0-1], 
               variant:{type:'variant', intronation:$$[$0-2], side:$$[$0] }
             }; 
 break;
-case 7:
+case 10:
  this.$= { type: 'rule', connective:$$[$0-1], 
               variant:{type:'variant', intronation:$$[$0], side:$$[$0-2] }
             }; 
 break;
-case 8:
+case 11:
  this.$= { type: 'rule', connective:$$[$0-2], 
               variant:{type:'variant', intronation:$$[$0], side:$$[$0-1] }
             }; 
 break;
-case 9:
+case 12:
  this.$= { type: 'rule', connective:$$[$0], 
               variant:{type:'variant', intronation:$$[$0-1], side:$$[$0-2] }
             }; 
 break;
-case 10:
+case 13:
  this.$= { type: 'rule', connective:$$[$0], 
               variant:{type:'variant', intronation:$$[$0-2], side:$$[$0-1] }
             }; 
 break;
-case 11:
+case 14:
  this.$= {type: 'rule', connective:$$[$0], variant:{type:'variant', intronation:null, side: null }}; 
 break;
-case 12:
+case 15:
  this.$='elim'; 
 break;
-case 13:
+case 16:
  this.$='intro'; 
 break;
-case 14:
+case 17:
  this.$='decomposition'; 
 break;
-case 15:
+case 18:
  this.$='decomposition2'; 
 break;
-case 16:
+case 19:
  this.$='left'; 
 break;
-case 17:
+case 20:
  this.$='right'; 
 break;
-case 18:
+case 21:
  this.$ = [$$[$0]]; 
 break;
-case 19:
+case 22:
  this.$ = [$$[$0-1]].concat($$[$0]); 
 break;
 }
 },
-table: [{3:1,4:2,6:3,7:4,8:$V0,9:6,12:7,13:8,14:$V1,15:$V2,16:$V3,17:$V4,18:$V5,19:$V6,20:$V7,21:$V8,22:$V9,23:$Va},{1:[3]},{5:[1,19]},{5:[2,2],7:20,20:$V7},{6:21,8:$V0,9:6,12:7,13:8,14:$V1,15:$V2,16:$V3,17:$V4,18:$V5,19:$V6,21:$V8,22:$V9,23:$Va},{9:22,12:23,14:$V1,15:$V2,16:$V3,17:$V4,18:$V5,19:$V6},{8:[1,24],12:25,18:$V5,19:$V6},{8:[1,26],9:27,14:$V1,15:$V2,16:$V3,17:$V4},o($Vb,[2,11]),o($Vc,[2,18],{7:28,20:$V7}),o($Vd,[2,12]),o($Vd,[2,13]),o($Vd,[2,14]),o($Vd,[2,15]),o($Ve,[2,16]),o($Ve,[2,17]),o($Vb,[2,24]),o($Vb,[2,25]),o($Vb,[2,26]),{1:[2,1]},{5:[2,3]},{5:[2,4]},o($Vb,[2,20],{10:29,12:30,18:$V5,19:$V6}),{9:31,14:$V1,15:$V2,16:$V3,17:$V4},o($Vb,[2,22],{11:32,12:33,18:$V5,19:$V6}),{8:[1,34]},{9:35,14:$V1,15:$V2,16:$V3,17:$V4},{8:[1,36]},o($Vc,[2,19]),o($Vb,[2,5]),o($Vb,[2,21]),o($Vb,[2,8]),o($Vb,[2,6]),o($Vb,[2,23]),o($Vb,[2,10]),o($Vb,[2,7]),o($Vb,[2,9])],
-defaultActions: {19:[2,1],20:[2,3],21:[2,4]},
+table: [{3:1,4:2,6:3,7:[1,4],8:5,9:6,10:$V0,11:8,14:9,15:10,16:$V1,17:$V2,18:$V3,19:$V4,20:$V5,21:$V6,22:$V7,23:$V8,24:$V9,25:$Va},{1:[3]},{5:[1,21]},{5:[2,2],7:[1,22]},{6:23,8:5,9:6,10:$V0,11:8,14:9,15:10,16:$V1,17:$V2,18:$V3,19:$V4,20:$V5,21:$V6,22:$V7,23:$V8,24:$V9,25:$Va},o($Vb,[2,5],{9:24,22:$V7}),{8:25,10:$V0,11:8,14:9,15:10,16:$V1,17:$V2,18:$V3,19:$V4,20:$V5,21:$V6,23:$V8,24:$V9,25:$Va},{11:26,14:27,16:$V1,17:$V2,18:$V3,19:$V4,20:$V5,21:$V6},{10:[1,28],14:29,20:$V5,21:$V6},{10:[1,30],11:31,16:$V1,17:$V2,18:$V3,19:$V4},o($Vc,[2,14]),o($Vd,[2,21],{9:32,22:$V7}),o($Ve,[2,15]),o($Ve,[2,16]),o($Ve,[2,17]),o($Ve,[2,18]),o($Vf,[2,19]),o($Vf,[2,20]),o($Vc,[2,27]),o($Vc,[2,28]),o($Vc,[2,29]),{1:[2,1]},{5:[2,4]},{5:[2,3]},o($Vb,[2,6]),o($Vb,[2,7]),o($Vc,[2,23],{12:33,14:34,20:$V5,21:$V6}),{11:35,16:$V1,17:$V2,18:$V3,19:$V4},o($Vc,[2,25],{13:36,14:37,20:$V5,21:$V6}),{10:[1,38]},{11:39,16:$V1,17:$V2,18:$V3,19:$V4},{10:[1,40]},o($Vd,[2,22]),o($Vc,[2,8]),o($Vc,[2,24]),o($Vc,[2,11]),o($Vc,[2,9]),o($Vc,[2,26]),o($Vc,[2,13]),o($Vc,[2,10]),o($Vc,[2,12])],
+defaultActions: {21:[2,1],22:[2,4],23:[2,3]},
 parseError: function parseError(str, hash) {
     if (hash.recoverable) {
         this.trace(str);
@@ -19900,127 +20017,133 @@ options: {"flex":true,"case-insensitive":true},
 performAction: function anonymous(yy,yy_,$avoiding_name_collisions,YY_START) {
 var YYSTATE=YY_START;
 switch($avoiding_name_collisions) {
-case 0: yy_.yytext = yy.lexer.matches[1];  return 20; 
+case 0: yy_.yytext = yy.lexer.matches[1];  return 22; 
 break;
 case 1: yy_.yytext = yy.lexer.matches[1]+"-"+yy.lexer.matches[2];  
-      return 20; 
+      return 22; 
     
 break;
 case 2: yy_.yytext = yy.lexer.matches[1]+"-"+yy.lexer.matches[2];  
-      return 20; 
+      return 22; 
     
 break;
 case 3: yy_.yytext = yy.lexer.matches[1];
-      return 20; 
-break;
-case 4: return 14; 
-break;
-case 5: return 15; 
-break;
-case 6: return 17 
-break;
-case 7: return 16 
-break;
-case 8: yy_.yytext = 'contradiction';
-      return 8; 
-break;
-case 9: yy_.yytext = 'or';
-      return 8; 
-break;
-case 10: yy_.yytext = 'identity';
-      return 8; 
-break;
-case 11: yy_.yytext = 'and';
-      return 8; 
-break;
-case 12: yy_.yytext = 'double_arrow';
-      return 8; 
-break;
-case 13: yy_.yytext = 'arrow';
-      return 8; 
-break;
-case 14: yy_.yytext = 'not';
-      return 8; 
-break;
-case 15: yy_.yytext = 'reit';
-      return 21; 
-break;
-case 16: yy_.yytext = 'premise';
       return 22; 
 break;
-case 17: yy_.yytext = 'weakening';return 23; 
+case 4: return 16; 
 break;
-case 18: yy_.yytext = 'cases';return 23; 
+case 5: return 17; 
 break;
-case 19: yy_.yytext = 'DC';return 23; 
+case 6: return 19; 
 break;
-case 20: yy_.yytext = 'reductio';return 23; 
+case 7: return 18; 
 break;
-case 21: yy_.yytext = 'DM';return 23; 
+case 8: return 7; 
 break;
-case 22: yy_.yytext = 'contraposition';return 23; 
+case 9: yy_.yytext = 'contradiction';
+      return 10; 
 break;
-case 23: yy_.yytext = 'C';return 23; 
+case 10: yy_.yytext = 'or';
+      return 10; 
 break;
-case 24: yy_.yytext = 'contradiction';return 23; 
+case 11: yy_.yytext = 'identity';
+      return 10; 
 break;
-case 25: yy_.yytext = 'not-all';return 23; 
+case 12: yy_.yytext = 'and';
+      return 10; 
 break;
-case 26: yy_.yytext = 'all-not';return 23; 
+case 13: yy_.yytext = 'double_arrow';
+      return 10; 
 break;
-case 27: yy_.yytext = 'exists-not';return 23; 
+case 14: yy_.yytext = 'arrow';
+      return 10; 
 break;
-case 28: yy_.yytext = 'not-exists';return 23; 
+case 15: yy_.yytext = 'not';
+      return 10; 
 break;
-case 29: yy_.yytext = 'dilemma';return 23; 
+case 16: yy_.yytext = 'reit';
+      return 23; 
 break;
-case 30: yy_.yytext = 'modus-tollens';return 23; 
+case 17: yy_.yytext = 'premise';
+      return 24; 
 break;
-case 31: yy_.yytext = 'hypothetical-syllogism';return 23; 
+case 18: yy_.yytext = 'weakening';return 25; 
 break;
-case 32: yy_.yytext = 'disjunctive-syllogism';return 23; 
+case 19: yy_.yytext = 'cases';return 25; 
 break;
-case 33: yy_.yytext = 'commutivity';return 23; 
+case 20: yy_.yytext = 'DC';return 25; 
 break;
-case 34: yy_.yytext = 'double-negation';return 23; 
+case 21: yy_.yytext = 'reductio';return 25; 
 break;
-case 35: yy_.yytext = "material-conditional";return 23; 
+case 22: yy_.yytext = 'DM';return 25; 
 break;
-case 36: yy_.yytext = 'biconditional-exchange';return 23; 
+case 23: yy_.yytext = 'contraposition';return 25; 
 break;
-case 37: yy_.yytext = 'quantifier-negation';return 23; 
+case 24: yy_.yytext = 'C';return 25; 
 break;
-case 38: yy_.yytext = 'implication';return 23; 
+case 25: yy_.yytext = 'contradiction';return 25; 
 break;
-case 39: yy_.yytext = 'transposition';return 23; 
+case 26: yy_.yytext = 'not-all';return 25; 
 break;
-case 40: yy_.yytext = 'distribution';return 23; 
+case 27: yy_.yytext = 'all-not';return 25; 
 break;
-case 41: yy_.yytext = 'association';return 23; 
+case 28: yy_.yytext = 'exists-not';return 25; 
 break;
-case 42: yy_.yytext = 'idempotence';return 23; 
+case 29: yy_.yytext = 'not-exists';return 25; 
 break;
-case 43: yy_.yytext = 'exportation';return 23; 
+case 30: yy_.yytext = 'dilemma';return 25; 
 break;
-case 44: yy_.yytext = 'equivalence';return 23; 
+case 31: yy_.yytext = 'modus-tollens';return 25; 
 break;
-case 45: yy_.yytext = 'universal';
-      return 8; 
+case 32: yy_.yytext = 'hypothetical-syllogism';return 25; 
 break;
-case 46: yy_.yytext = 'existential';
-      return 8; 
+case 33: yy_.yytext = 'disjunctive-syllogism';return 25; 
 break;
-case 47: return 18; 
+case 34: yy_.yytext = 'commutivity';return 25; 
 break;
-case 48: return 19; 
+case 35: yy_.yytext = 'double-negation';return 25; 
 break;
-case 49: /*  Skip whitespace and commas. 
+case 36: yy_.yytext = "material-conditional";return 25; 
+break;
+case 37: yy_.yytext = 'biconditional-exchange';return 25; 
+break;
+case 38: yy_.yytext = 'quantifier-negation';return 25; 
+break;
+case 39: yy_.yytext = 'implication';return 25; 
+break;
+case 40: yy_.yytext = 'transposition';return 25; 
+break;
+case 41: yy_.yytext = 'distribution';return 25; 
+break;
+case 42: yy_.yytext = 'association';return 25; 
+break;
+case 43: yy_.yytext = 'idempotence';return 25; 
+break;
+case 44: yy_.yytext = 'exportation';return 25; 
+break;
+case 45: yy_.yytext = 'equivalence';return 25; 
+break;
+case 46: yy_.yytext = 'universal';
+      return 10; 
+break;
+case 47: yy_.yytext = 'existential';
+      return 10; 
+break;
+case 48: return 20; 
+break;
+case 49: return 21; 
+break;
+case 50: yy_.yytext = 'close-branch';return 25; 
+break;
+case 51: yy_.yytext = 'open-branch';return 25; 
+break;
+case 52: /*  Skip whitespace and commas. 
       */ 
     
 break;
-case 50: return 5; 
+case 53: return 5; 
 break;
-case 51: 
+case 54: 
       /*  I would love to `return 'waffle';` and treat
           waffle as a category because I want to allow 
           some of the connectives to appear in waffle, e.g. 'not'.
@@ -20028,14 +20151,14 @@ case 51:
       */ 
     
 break;
-case 52: /* Ignore everything else */ 
+case 55: /* Ignore everything else */ 
 break;
-case 53:console.log(yy_.yytext);
+case 56:console.log(yy_.yytext);
 break;
 }
 },
-rules: [/^(?:([0-9][^,\s]*)(\s+and\s+)(?=[0-9]))/i,/^(?:([0-9][^,\s]*)\s+to\s+([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*?)\s*(?:-+)\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*)(?:(\s*,)*))/i,/^(?:elimination|eliminate|elim|e)/i,/^(?:introduction|introduce|intro|i)/i,/^(?:decomposition-2|decomposition2|d-2|d2)/i,/^(?:decomposition|d)/i,/^(?:⊥|_\|_|contradiction|contra|false)/i,/^(?:or|∨|\+|ǀǀ|\|)/i,/^(?:=|identity)/i,/^(?:and|conjunction|∧|•|&)/i,/^(?:double_arrow|↔|≡|⇔|<->)/i,/^(?:arrow|->|⇒|→|⊃)/i,/^(?:not|¬|˜|~|!|negation)/i,/^(?:reit|reiteration|r)/i,/^(?:premise|assumption|sm|p)/i,/^(?:weakening|w)/i,/^(?:argument by cases|cases|ac)/i,/^(?:denying the consequent|dc)/i,/^(?:reductio|rd|reductio ad absurdum)/i,/^(?:dm|deMorgan|dem|de morgan)/i,/^(?:contraposition|cp)/i,/^(?:conditional|c)/i,/^(?:cd)/i,/^(?:not all|not-all|~∀)/i,/^(?:all not|all-not|∀~)/i,/^(?:exists not|exists-not|∃~)/i,/^(?:not exists|not-exists|~∃)/i,/^(?:dilemma|dil)/i,/^(?:mt|modus tollens|modus-tollens)/i,/^(?:hs|hypothetical syllogism|hypothetical-syllogism)/i,/^(?:ds|disjunctive syllogism|disjunctive-syllogism)/i,/^(?:commutivity|comm|com)/i,/^(?:dn|double-negation|double negation)/i,/^(?:mc|material-conditional|material conditional)/i,/^(?:bex|↔ex|biconditional-exchange|biconditional exchange)/i,/^(?:qn|quantifier-negation|quantifier negation)/i,/^(?:implication|impl)/i,/^(?:transposition|trans)/i,/^(?:distribution|dist)/i,/^(?:association|assoc)/i,/^(?:idempotence|idem)/i,/^(?:exportation|exp)/i,/^(?:equivalence|equiv)/i,/^(?:all|∀|every|universal)/i,/^(?:some|exists|∃|existential)/i,/^(?:left)/i,/^(?:right)/i,/^(?:[\s,]+)/i,/^(?:$)/i,/^(?:\w+)/i,/^(?:.)/i,/^(?:.)/i],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53],"inclusive":true}}
+rules: [/^(?:([0-9][^,\s]*)(\s+and\s+)(?=[0-9]))/i,/^(?:([0-9][^,\s]*)\s+to\s+([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*?)\s*(?:-+)\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*)(?:(\s*,)*))/i,/^(?:elimination|eliminate|elim|e)/i,/^(?:introduction|introduce|intro|i)/i,/^(?:decomposition-2|decomposition2|d-2|d2)/i,/^(?:decomposition|d)/i,/^(?:✓|tick)/i,/^(?:⊥|_\|_|contradiction|contra|false)/i,/^(?:or|∨|\+|ǀǀ|\|)/i,/^(?:=|identity)/i,/^(?:and|conjunction|∧|•|&)/i,/^(?:double_arrow|↔|≡|⇔|<->)/i,/^(?:arrow|->|⇒|→|⊃)/i,/^(?:not|¬|˜|~|!|negation)/i,/^(?:reit|reiteration|r)/i,/^(?:premise|assumption|set member|sm|p)/i,/^(?:weakening|w)/i,/^(?:argument by cases|cases|ac)/i,/^(?:denying the consequent|dc)/i,/^(?:reductio|rd|reductio ad absurdum)/i,/^(?:dm|deMorgan|dem|de morgan)/i,/^(?:contraposition|cp)/i,/^(?:conditional|c)/i,/^(?:cd)/i,/^(?:not all|not-all|~∀)/i,/^(?:all not|all-not|∀~)/i,/^(?:exists not|exists-not|∃~)/i,/^(?:not exists|not-exists|~∃)/i,/^(?:dilemma|dil)/i,/^(?:mt|modus tollens|modus-tollens)/i,/^(?:hs|hypothetical syllogism|hypothetical-syllogism)/i,/^(?:ds|disjunctive syllogism|disjunctive-syllogism)/i,/^(?:commutivity|comm|com)/i,/^(?:dn|double-negation|double negation)/i,/^(?:mc|material-conditional|material conditional)/i,/^(?:bex|↔ex|biconditional-exchange|biconditional exchange)/i,/^(?:qn|quantifier-negation|quantifier negation)/i,/^(?:implication|impl)/i,/^(?:transposition|trans)/i,/^(?:distribution|dist)/i,/^(?:association|assoc)/i,/^(?:idempotence|idem)/i,/^(?:exportation|exp)/i,/^(?:equivalence|equiv)/i,/^(?:all|∀|every|universal)/i,/^(?:some|exists|∃|existential)/i,/^(?:left)/i,/^(?:right)/i,/^(?:close branch|close-branch)/i,/^(?:open branch|open-branch)/i,/^(?:[\s,]+)/i,/^(?:$)/i,/^(?:\w+)/i,/^(?:.)/i,/^(?:.)/i],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56],"inclusive":true}}
 });
 return lexer;
 })();
@@ -20076,7 +20199,7 @@ rule.setParser(dialectManager.getParser('awFOL'));
 
 rules = {
   _description: 'Rules of proof for the system of proof specified in forallx. ',
-  premise: rule.premise(),
+  premise: rule.from().to(rule.premise()),
   reit: rule.from('φ').to('φ'),
   'and': {
     elim: {
@@ -20238,10 +20361,10 @@ rules = {
   ],
   universal: {
     elim: rule.from('all τ φ').to('φ[τ-->α]'),
-    intro: rule.from(rule.match('φ[τ-->α]').isNotInAnyUndischargedPremise('α')).to('all τ φ')
+    intro: rule.from(rule.matches('φ[τ-->α]').and.isNotInAnyUndischargedPremise('α')).to('all τ φ')
   },
   existential: {
-    elim: rule.from('exists τ φ').and(rule.subproof(rule.match('φ[τ-->α]').isNewName('α'), 'ψ')).to('ψ[α-->null]'),
+    elim: rule.from('exists τ φ').and(rule.subproof(rule.matches('φ[τ-->α]').and.isNewName('α'), 'ψ')).to('ψ[α-->null]'),
     intro: rule.from('φ[τ-->α]').to('exists τ φ')
   },
   'quantifier-negation': [
@@ -20274,35 +20397,71 @@ dialectManager.registerRuleSet('logicbook', rules);
 
 
 },{"../dialect_manager/dialectManager":5,"./rule":28}],26:[function(require,module,exports){
-var dialectManager, rule, rules;
+var _, _decorateRulesForTrees, dialectManager, rule, rules;
 
 dialectManager = require('../dialect_manager/dialectManager');
+
+_ = require('lodash');
 
 rule = require('./rule');
 
 rule.setParser(dialectManager.getParser('awFOL'));
 
 rules = {
-  _description: 'Rules of proof for the system of proof specified in forallx. ',
-  premise: rule.premise(),
-  'conjunction': {
-    'decomposition': [rule.from('φ and ψ').to('φ'), rule.from('φ and ψ').to('ψ')]
+  _description: 'Rules of proof for tree proofs as presented in Bergman et al, ‘The Logic Book’ (2014).  ',
+  premise: rule.from().to(rule.premise()),
+  'close-branch': rule.from().to(rule.closeBranch()),
+  'open-branch': rule.from().to(rule.openBranch()),
+  'and': {
+    decomposition: [rule.from('φ and ψ').to(rule.matches('φ').and.doesntBranch()), rule.from('φ and ψ').to(rule.matches('ψ').and.doesntBranch())]
   },
-  'arrow': {
-    'decomposition': [rule.from('φ arrow ψ').to(rule.match('not φ')), rule.from('φ arrow ψ').to(rule.match('ψ'))]
+  arrow: {
+    decomposition: [rule.from('φ arrow ψ').to(rule.matches('not φ').and.branches()), rule.from('φ arrow ψ').to(rule.matches('ψ').and.branches())]
   },
-  'universal': {
-    'decomposition': rule.from('all τ φ').to('φ[τ-->α]')
+  universal: {
+    decomposition: rule.from('all τ φ').to(rule.matches('φ[τ-->α]').and.doesntBranch())
+  },
+  existential: {
+    decomposition2: rule.from('exists τ φ').to(rule.matches('φ[τ-->α]').and.branches())
   }
 };
+
+_decorateRulesForTrees = function(rules) {
+  var i, key, len, listOfRules, results;
+  results = [];
+  for (key in rules) {
+    if (rules[key].type === 'rule') {
+      rule = rules[key];
+      if (rule.ruleSet == null) {
+        rule.ruleSet = [rule];
+      }
+      continue;
+    }
+    if (_.isArray(rules[key])) {
+      listOfRules = rules[key];
+      for (i = 0, len = listOfRules.length; i < len; i++) {
+        rule = listOfRules[i];
+        rule.ruleSet = listOfRules;
+      }
+    }
+    if (_.isObject(rules[key])) {
+      results.push(_decorateRulesForTrees(rules[key]));
+    } else {
+      results.push(void 0);
+    }
+  }
+  return results;
+};
+
+_decorateRulesForTrees(rules);
 
 exports.rules = rules;
 
 dialectManager.registerRuleSet('logicbook_tree', rules);
 
 
-},{"../dialect_manager/dialectManager":5,"./rule":28}],27:[function(require,module,exports){
-var _, _decorate, addJustification, addLineNumbers, addSentences, addStatus, addVerification, blockParser, padRight, parse;
+},{"../dialect_manager/dialectManager":5,"./rule":28,"lodash":9}],27:[function(require,module,exports){
+var _, _decorate, addJustification, addLineNumbers, addSentences, addStatus, addVerification, blockParser, dialectManager, padRight, parse;
 
 _ = require('lodash');
 
@@ -20318,6 +20477,8 @@ addStatus = require('./add_status');
 
 addVerification = require('./add_verification');
 
+dialectManager = require('../dialect_manager/dialectManager');
+
 padRight = function(n, len) {
   if (!_.isString(n)) {
     n = "" + n;
@@ -20330,7 +20491,7 @@ padRight = function(n, len) {
 
 _decorate = function(proof) {
   return proof.toString = function(o) {
-    var i, indentationSentence, len1, line, maxSentenceLength, ref, txt, walker, x;
+    var i, indentationSentence, len1, line, maxSentenceLength, ref, symbols, tick, tickSymbol, txt, walker, x;
     if (o == null) {
       o = {};
     }
@@ -20354,7 +20515,7 @@ _decorate = function(proof) {
         return padRight(walker.lineNumber, 3);
       },
       visit: function(item) {
-        var block, justification, line, prevLine, ref, ref1, ref2, ref3, ref4;
+        var block, justification, line, prevLine, ref, ref1, ref2, ref3, ref4, ref5;
         if (item.type !== 'divider') {
           if (((ref = walker.lookBackTwo[0]) != null ? ref.type : void 0) === 'block' && ((ref1 = walker.lookBackTwo[1]) != null ? ref1.type : void 0) === 'line') {
             block = walker.lookBackTwo[0];
@@ -20393,6 +20554,24 @@ _decorate = function(proof) {
             justification: ""
           });
         }
+        if (item.type === 'close_branch') {
+          line = item;
+          walker.result.push({
+            number: "" + (walker.getAndIncLineNumber(line)),
+            indentation: "" + (line.indentation.trim()),
+            sentence: "X",
+            justification: ""
+          });
+        }
+        if (item.type === 'open_branch') {
+          line = item;
+          walker.result.push({
+            number: "" + (walker.getAndIncLineNumber(line)),
+            indentation: "" + (line.indentation.trim()),
+            sentence: "O",
+            justification: ""
+          });
+        }
         if (item.type === 'line') {
           line = item;
           if (line.getRuleName() === 'premise') {
@@ -20408,7 +20587,8 @@ _decorate = function(proof) {
             number: "" + (walker.getAndIncLineNumber(line)),
             indentation: "" + line.indentation,
             sentence: "" + line.sentence,
-            justification: justification
+            justification: justification,
+            ticked: (ref5 = line.justification) != null ? ref5.ticked : void 0
           });
         }
         return void 0;
@@ -20426,14 +20606,18 @@ _decorate = function(proof) {
       }
       return results;
     })());
+    symbols = dialectManager.getSymbols();
+    tickSymbol = symbols.tick || '✓';
+    tickSymbol = tickSymbol + " ";
     ref = walker.result;
     for (i = 0, len1 = ref.length; i < len1; i++) {
       line = ref[i];
+      tick = (line.ticked ? tickSymbol : void 0) || '';
       indentationSentence = padRight(line.indentation + " " + line.sentence, maxSentenceLength + 1);
       if (walker.needLineNumbers || o.numberLines === true) {
         txt += line.number + " ";
       }
-      txt += indentationSentence + "   " + line.justification + "\n";
+      txt += indentationSentence + "   " + tick + line.justification + "\n";
     }
     return txt.trim();
   };
@@ -20458,8 +20642,8 @@ parse = function(proofText) {
     errorMessages = [];
     walker = {
       visit: function(item) {
-        var errorMsg, lineName;
-        if ((item != null ? item.type : void 0) !== 'line') {
+        var errorMsg, lineName, ref;
+        if ((ref = item != null ? item.type : void 0) !== 'line' && ref !== 'close_branch' && ref !== 'open_branch') {
           return void 0;
         }
         if (item.status.verified === false) {
@@ -20479,8 +20663,8 @@ parse = function(proofText) {
 exports.parse = parse;
 
 
-},{"./add_justification":16,"./add_line_numbers":17,"./add_sentences":18,"./add_status":19,"./add_verification":20,"./block_parser":21,"lodash":9}],28:[function(require,module,exports){
-var _, _From, _matchesToString, _notImplementedYet, _parseNameIfNecessaryAndDecorate, _permutations, areAllRequirementsMet, areRequirementsMetByTheseLinesAndBlocks, branch, checkCorrectNofLinesAndSubproofsCited, checkRequirementsMet, convertTextToRequirementIfNecessary, doAnyCandidatesMeetThisReq, doesALineAboveContainThisName, doesAPremiseHereOrAboveContainThisName, doesLineMatchPattern, fol, from, match, numberToWords, parseAndDecorateIfNecessary, parser, premise, subproof, substitute, to, util,
+},{"../dialect_manager/dialectManager":5,"./add_justification":16,"./add_line_numbers":17,"./add_sentences":18,"./add_status":19,"./add_verification":20,"./block_parser":21,"lodash":9}],28:[function(require,module,exports){
+var _, _From, _allPatternsAreMatched, _doesPatternMatchAnyLines, _matchesToString, _notImplementedYet, _parseNameIfNecessaryAndDecorate, _permutations, areAllRequirementsMet, areRequirementsMetByTheseLinesAndBlocks, branch, checkCorrectNofLinesAndSubproofsCited, checkRequirementsMet, closeBranch, convertTextToRequirementIfNecessary, doAnyCandidatesMeetThisReq, doesALineAboveContainThisName, doesAPremiseHereOrAboveContainThisName, doesLineMatchPattern, fol, from, linesContainPatterns, matches, notPhi, numberToWords, openBranch, parseAndDecorateIfNecessary, parser, phi, premise, subproof, substitute, to, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
   slice = [].slice;
 
@@ -20525,8 +20709,15 @@ _From = (function() {
   };
 
   _From.prototype.check = function(line) {
-    console.log("" + (line.getRuleName()));
-    return checkRequirementsMet(line, this._requirements);
+    var test;
+    test = checkRequirementsMet(line, this._requirements);
+    if (test !== false) {
+      if (line.rulesChecked == null) {
+        line.rulesChecked = [];
+      }
+      line.rulesChecked.push(this);
+    }
+    return test;
   };
 
   return _From;
@@ -20555,13 +20746,13 @@ _matchesToString = function(priorMatches) {
 };
 
 branch = function(sentence) {
-  return match(sentence).isFirstLineOfASubproof();
+  return matches(sentence).isFirstLineOfASubproof();
 };
 
 exports.branch = branch;
 
-match = function(sentence) {
-  var baseCheck, checkFunctions, pattern;
+matches = function(sentence) {
+  var baseCheck, checkFunctions, pattern, rulePart;
   pattern = parseAndDecorateIfNecessary(sentence);
   baseCheck = function(line, priorMatches) {
     var test;
@@ -20569,7 +20760,7 @@ match = function(sentence) {
     return test;
   };
   checkFunctions = [baseCheck];
-  return {
+  rulePart = {
     check: function(line, priorMatches) {
       var currentMatches, f, k, len, test;
       currentMatches = priorMatches;
@@ -20618,9 +20809,9 @@ match = function(sentence) {
       checkFunctions.push(newCheck);
       return this;
     },
-    isFirstLineOfASubproof: function() {
+    branches: function() {
       var newCheck;
-      newCheck = function(line, _ignore) {
+      newCheck = function(line, priorMatches) {
         var block;
         block = line.parent;
         if (block.parent == null) {
@@ -20629,15 +20820,30 @@ match = function(sentence) {
         if (block.getFirstLine() !== line) {
           return false;
         }
-        return true;
+        return priorMatches;
+      };
+      checkFunctions.push(newCheck);
+      return this;
+    },
+    doesntBranch: function() {
+      var newCheck;
+      newCheck = function(line, priorMatches) {
+        var block;
+        block = line.parent;
+        if ((block != null ? block.getFirstLine() : void 0) === line) {
+          return false;
+        }
+        return priorMatches;
       };
       checkFunctions.push(newCheck);
       return this;
     }
   };
+  rulePart.and = rulePart;
+  return rulePart;
 };
 
-exports.match = match;
+exports.matches = matches;
 
 exports.replace = function(sentence, sub) {
   var baseCheck, checkFunctions, pattern;
@@ -20766,7 +20972,7 @@ doesAPremiseHereOrAboveContainThisName = function(theName, aLine) {
 
 convertTextToRequirementIfNecessary = function(requirement) {
   if (_.isString(requirement)) {
-    return match(requirement);
+    return matches(requirement);
   }
   return requirement;
 };
@@ -20835,32 +21041,7 @@ subproof = function(premisePattern, conclusionPattern) {
         return results;
       })();
       newCheck = function(subproof, priorMatches) {
-        var allPatternsAreMatched, doesPatternMatchAnyLines, item, k, len, len1, linesOfProof, m, patternsPerms, ref, test, thePatterns;
-        doesPatternMatchAnyLines = function(pattern, theLines, priorMatches) {
-          var k, len, line, sentence, test;
-          for (k = 0, len = theLines.length; k < len; k++) {
-            line = theLines[k];
-            sentence = line.sentence;
-            test = sentence.findMatches(pattern, priorMatches);
-            if (test !== false) {
-              return test;
-            }
-          }
-          return false;
-        };
-        allPatternsAreMatched = function(thePatterns, theLines, priorMatches) {
-          var k, len, newMatches, pattern, test;
-          newMatches = priorMatches;
-          for (k = 0, len = thePatterns.length; k < len; k++) {
-            pattern = thePatterns[k];
-            test = doesPatternMatchAnyLines(pattern, theLines, newMatches);
-            if (test === false) {
-              return false;
-            }
-            newMatches = test;
-          }
-          return newMatches;
-        };
+        var item, k, len, linesOfProof, ref;
         linesOfProof = [];
         ref = subproof.content;
         for (k = 0, len = ref.length; k < len; k++) {
@@ -20871,15 +21052,7 @@ subproof = function(premisePattern, conclusionPattern) {
             }
           }
         }
-        patternsPerms = _permutations(listOfSentencesThatMustBeInSubproof);
-        for (m = 0, len1 = patternsPerms.length; m < len1; m++) {
-          thePatterns = patternsPerms[m];
-          test = allPatternsAreMatched(thePatterns, linesOfProof, priorMatches);
-          if (test !== false) {
-            return test;
-          }
-        }
-        return false;
+        return linesContainPatterns(linesOfProof, listOfSentencesThatMustBeInSubproof, priorMatches);
       };
       checkFunctions.push(newCheck);
       newToString = function() {
@@ -20893,6 +21066,7 @@ subproof = function(premisePattern, conclusionPattern) {
           return results;
         })()).join(' and '));
       };
+      toStringFunctions.push(newToString);
       return this;
     },
     toString: function() {
@@ -20908,6 +21082,52 @@ subproof = function(premisePattern, conclusionPattern) {
 };
 
 exports.subproof = subproof;
+
+linesContainPatterns = function(listOfLines, listOfPatterns, priorMatches) {
+  var k, len, len1, linesPerms, m, patternsPerms, someLines, test, thePatterns;
+  patternsPerms = _permutations(listOfPatterns);
+  linesPerms = _permutations(listOfLines);
+  for (k = 0, len = patternsPerms.length; k < len; k++) {
+    thePatterns = patternsPerms[k];
+    for (m = 0, len1 = linesPerms.length; m < len1; m++) {
+      someLines = linesPerms[m];
+      test = _allPatternsAreMatched(someLines, thePatterns, priorMatches);
+      if (test !== false) {
+        return test;
+      }
+    }
+  }
+  return false;
+};
+
+_allPatternsAreMatched = function(listOfLines, thePatterns, priorMatches) {
+  var k, len, newMatches, pattern, test;
+  newMatches = priorMatches;
+  for (k = 0, len = thePatterns.length; k < len; k++) {
+    pattern = thePatterns[k];
+    test = _doesPatternMatchAnyLines(listOfLines, pattern, newMatches);
+    if (test === false) {
+      return false;
+    }
+    newMatches = test;
+  }
+  return newMatches;
+};
+
+_doesPatternMatchAnyLines = function(listOfLines, pattern, priorMatches) {
+  var k, len, line, sentence, test;
+  for (k = 0, len = listOfLines.length; k < len; k++) {
+    line = listOfLines[k];
+    sentence = line.sentence;
+    test = sentence.findMatches(pattern, priorMatches);
+    if (test !== false) {
+      return test;
+    }
+  }
+  return false;
+};
+
+exports.linesContainPatterns = linesContainPatterns;
 
 checkRequirementsMet = function(line, theReqs) {
   var citedBlockOrdering, citedBlocks, citedBlocksPerms, citedLineOrdering, citedLines, citedLinesPerms, k, l, len, len1, len2, len3, m, msg, n, o, preliminaryTest, r, ref, ref1, ruleName, test;
@@ -21058,17 +21278,11 @@ doAnyCandidatesMeetThisReq = function(req, candidates, priorMatches) {
 };
 
 premise = function() {
-  var baseCheck, premiseRule;
-  premiseRule = from();
-  baseCheck = premiseRule.check.bind(premiseRule);
-  premiseRule.check = function(line) {
-    var isNeitherAPremiseNorASubproof, lineIsInASubproof, result, thereIsANonPremiseAbove;
-    result = baseCheck(line);
-    if (result !== true) {
-      return result;
-    }
+  var premiseRule;
+  premiseRule = function(line, priorMatches) {
+    var isNeitherAPremiseNorASubproof, lineIsInASubproof, thereIsANonPremiseAbove;
     if (!line.prev) {
-      return true;
+      return priorMatches;
     }
     lineIsInASubproof = line.parent.parent != null;
     if (lineIsInASubproof) {
@@ -21096,12 +21310,54 @@ premise = function() {
       line.status.addMessage("premises may not occur after non-premises.");
       return false;
     }
-    return true;
+    return priorMatches;
   };
-  return premiseRule;
+  return {
+    check: premiseRule
+  };
 };
 
 exports.premise = premise;
+
+phi = fol.parse('φ');
+
+notPhi = fol.parse('not φ');
+
+closeBranch = function() {
+  return {
+    check: function(line, priorMatches) {
+      var lines, test;
+      lines = line.findAllAbove(function(item) {
+        return item.type === 'line';
+      });
+      test = linesContainPatterns(lines, [phi, notPhi], {});
+      if (test !== false) {
+        return priorMatches;
+      }
+      return false;
+    }
+  };
+};
+
+exports.closeBranch = closeBranch;
+
+openBranch = function() {
+  return {
+    check: function(line, priorMatches) {
+      var lines, test;
+      lines = line.findAllAbove(function(item) {
+        return item.type === 'line';
+      });
+      test = linesContainPatterns(lines, [phi, notPhi], {});
+      if (test === false) {
+        return priorMatches;
+      }
+      return false;
+    }
+  };
+};
+
+exports.openBranch = openBranch;
 
 _notImplementedYet = function(line) {
   throw new Error("the rule `" + line.justification.rule.connective + "` (or some part of it) is not implemented yet!");
@@ -21169,7 +21425,7 @@ rule.setParser(dialectManager.getParser('teller'));
 
 rules = {
   _description: 'Rules of proof for classical first-order logic as presented in Paul Teller,\nA Modern Formal Logic Primer (1998).',
-  premise: rule.premise(),
+  premise: rule.from().to(rule.premise()),
   reit: rule.from('φ').to('φ'),
   'and': {
     elim: {
@@ -21612,7 +21868,9 @@ symbols = {
     'existential_quantifier': "∃",
     'existential': "∃",
     propLanguageName: 'FOL',
-    predLanguageName: 'FOL'
+    predLanguageName: 'FOL',
+    elim: ' Elim',
+    intro: ' Intro'
   },
   copi: {
     'not': '~',
@@ -21702,7 +21960,9 @@ symbols = {
     association: 'Assoc',
     premise: 'Assumption',
     DM: 'DeM',
-    decomposition: 'D'
+    decomposition: 'D',
+    decomposition2: 'D2',
+    tick: '✓'
   }
 };
 

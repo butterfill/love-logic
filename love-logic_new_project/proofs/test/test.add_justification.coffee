@@ -204,3 +204,32 @@ describe "add_justification", ->
       expect(line.justification?).to.be.false
       expect(line.justificationErrors?).to.be.true
 
+    it "getLinesThatCiteMe works", ->
+      proof = _parse '''
+        1. A and B          // premise
+        2. C and D          // premise
+        3. A     //   and elim 1
+        4. C      // and elim 2
+        5. B      // and elim 1
+        6. C      // and elim 2
+      '''
+      line = proof.getLine(1)
+      expect(line.getLinesThatCiteMe().length).to.equal(2)
+      expect(line.getLinesThatCiteMe()[1]).to.equal(proof.getLine(5))
+
+    it "getLinesThatCiteMe finds citing lines in subproofs", ->
+      proof = _parse '''
+        1. A and B          // premise
+        2. A     //   and elim 1
+        3. | C
+        4. |---
+        5. || D
+        6. ||---
+        7. || B      // and elim 1
+      '''
+      line = proof.getLine(1)
+      expect(line.getLinesThatCiteMe().length).to.equal(2)
+      expect(line.getLinesThatCiteMe()[1]).to.equal(proof.getLine(7))
+
+
+

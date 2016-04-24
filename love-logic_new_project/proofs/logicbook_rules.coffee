@@ -122,10 +122,10 @@ rules =
     # intro: rule.from('φ[τ-->null]').isNotInUndischargedPremises('α').to('all τ φ[α-->τ]')
     # If this doesn’t work, allow there to be multiple `.to` clauses (all of
     # which must be satisfied).
-    intro: rule.from( rule.match('φ[τ-->α]').isNotInAnyUndischargedPremise('α') ).to('all τ φ')
+    intro: rule.from( rule.matches('φ[τ-->α]').and.isNotInAnyUndischargedPremise('α') ).to('all τ φ')
   
   existential :
-    elim : rule.from('exists τ φ').and( rule.subproof( rule.match('φ[τ-->α]').isNewName('α'), 'ψ') ).to('ψ[α-->null]')
+    elim : rule.from('exists τ φ').and( rule.subproof( rule.matches('φ[τ-->α]').and.isNewName('α'), 'ψ') ).to('ψ[α-->null]')
     intro : rule.from('φ[τ-->α]').to('exists τ φ')
   
   'quantifier-negation' : [

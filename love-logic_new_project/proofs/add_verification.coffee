@@ -79,9 +79,71 @@ to = (proof) ->
       return undefined
 
   proof.walk walker
+  
+  proof.verifyTree = () ->
+    test1 = proof.verify()
+    return false if test1 is false
+    
+    branches = proof.getChildren()
+    return checkBranchingRules(branches)
+    
 exports.to = to
 
+# In a tree proof, check that where a branch is created,
+# the right number of branches have been created using
+# the right rules.
+checkBranchingRules = (branches) ->
+  return true unless branches?.length > 0
+  for b in branches
+    test = checkBranchingRules(b)
+    return false if test is false
+  
+  ruleSet = branches[0].getFirstLine()?.rulesChecked?[0]?.ruleSet
+  unless ruleSet?
+    throw new Error "Could not get ruleSet at line #{branches[0].getFirstLine()?.number}."
+  rulesUsed = []
+  for b in branches
+    rule = b.getFirstLine()?.rulesChecked?[0]
+    unless rule? 
+      throw new Error "Could not get rule at line #{b.getFirstLine()?.number}."
+    if rule in rulesUsed
+      # You cannot use the same rule twice in branching:
+      # (TODO: modify for existential decomposition2)
+      return false
+    if rule.ruleSet isnt ruleSet
+      # You cannot combine rules from different ruleSets in branching
+      return false
+    rulesUsed.push(rule)
+  if rulesUsed.length < ruleSet.length
+    # All rules in a `RuleSet` must be used in branching
+    return false
+  return true
 
+# For tree proofs.  A line containing, e.g., ‘A or B’ or ‘a=b’ needs
+# to be ticked; but one containing ‘not A’ does not need 
+# to be ticked.
+lineNeedsToBeTicked = (line) ->
+  return false unless line.sentence?
+  # a=b needs ticking:
+  return true if sentence.type is 'identity'
+  # If sentence.left? is false, we have a predicate or sentence letter
+  return false unless sentence.left?
+  if sentence.type is 'not'
+    return false unless sentence.left.left?
+  return true
+# for testing only:
+exports.lineNeedsToBeTicked = lineNeedsToBeTicked
+
+# For tree proofs.  A line can be ticked if 
+# all rules that can be applied to it have been
+# applied.
+canLineBeTicked = (line) ->
+  theRules = dialectManager.getCurrentRules()
+  tickChecker = theRules.tickCheckers[line.type] 
+  return tickChecker(line) 
+# for testing only:
+exports.canLineBeTicked = canLineBeTicked
+  
 # Verifies whether the line at `lineOrLineNumber` is correct, 
 # returning error messages if not.
 # If `lineOrLineNumber`  is not of `.type` `line`, this function confirms 

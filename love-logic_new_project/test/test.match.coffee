@@ -345,7 +345,7 @@ describe "match (module)", ->
       match.find expression, pattern
       expect(expression).to.deep.equal(expressionClone)
 
-    it "should find match(∀τ(φ → ψ))[α-->τ] against ∀x(F(x) → G(x))", ->
+    it "should match (∀τ(φ → ψ))[α-->τ] against ∀x(F(x) → G(x))", ->
       pattern = fol.parse '(∀τ(φ → ψ))[α-->τ]'
       expression = fol.parse '∀x(F(x) → G(x))'
       oldMatches = 
