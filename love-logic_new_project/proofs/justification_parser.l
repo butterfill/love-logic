@@ -152,7 +152,13 @@
 "equivalence"|"equiv"   { yytext = 'equivalence';return 'connective'; }
 
 
-"negated biconditional"|"negated-biconditional"|"not <->"|"~ <->"|"~<->"|"not<->"|"~↔"|"~≡"|"~ ↔"|"~ ≡"|"¬↔"|"¬≡"|"¬ ↔"|"¬ ≡"   { yytext = 'not_double_arrow';return 'connective'; }
+"negated biconditional"|"negated-biconditional"|"not <->"|"~ <->"|"~<->"|"not<->"|"~↔"|"~≡"|"~ ↔"|"~ ≡"|"¬↔"|"¬≡"|"¬ ↔"|"¬ ≡"   
+          { yytext = 'not_double_arrow';return 'connective'; }
+("negated"|"not"|"~"|"¬"|"!")(\s)?("and"|"conjunction"|"∧"|"•"|"&")  { yytext = 'not_and';return 'connective'; }
+
+("negated"|"not"|"~"|"¬"|"!")(\s)?("disjunction"|"or"|"∨"|"|")  { yytext = 'not_or';return 'connective'; }
+
+("negated"|"not"|"~"|"¬"|"!")(\s)?("conditional"|"arrow"|"->"|"⇒"|"→"|"⊃")  { yytext = 'not_arrow';return 'connective'; }
 
 
 
