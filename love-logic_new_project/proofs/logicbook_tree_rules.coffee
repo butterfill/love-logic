@@ -49,6 +49,7 @@ rules =
     decomposition : [
       rule.from('not (φ and ψ)').to( rule.matches('not φ').and.branches() )
       rule.from('not (φ and ψ)').to( rule.matches('not ψ').and.branches() )
+      rule.from('φ').to( rule.matches('ψ') )
     ]  
   
   not_or :
@@ -79,6 +80,12 @@ rules =
     decomposition : rule.from('exists τ φ').to( rule.matches('φ[τ-->α]').and.isNewName('α').and.doesntBranch() )
     decomposition2 : rule.from('exists τ φ').to( rule.matches('φ[τ-->α]').and.branches() ).where( rule.ruleIsAppliedToEveryExistingConstantAndANewConstant('α') )
   
+  'not-all' : 
+    decomposition : rule.from('not all τ φ').to( rule.matches('exists τ not φ').and.doesntBranch() )
+    
+  'not-exists' : 
+    decomposition : rule.from('not exists τ φ').to( rule.matches('all τ not φ').and.doesntBranch() )
+  
   identity : 
     decomposition : rule.from('α=β').and('φ').to( rule.matches('φ[α-->β]').and.doesntBranch() )
   
@@ -89,7 +96,7 @@ rules.tickCheckers =
   'or' : rule.tickIf.someRuleAppliedInEveryBranch( rules.or.decomposition )
   arrow : rule.tickIf.someRuleAppliedInEveryBranch( rules.arrow.decomposition )
   double_arrow : rule.tickIf.someRuleAppliedInEveryBranch( [rules.double_arrow.decomposition[1], rules.double_arrow.decomposition[3]] )
-  # universal_quantifier : rule.tickIf.ruleAppliedToEveryExistingConstant
+  universal_quantifier : rule.tickIf.ruleAppliedAtLeastOnceAndAppliedToEveryExistingConstant( rules.universal.decomposition )
   existential_quantifier : rule.tickIf.someRuleAppliedInEveryBranch( [rules.existential.decomposition2] )
   # identity : rule.tickIf.ruleAppliedToEverySentenceInEveryBranch( rule.identity.decomposition )
   'not' :
@@ -98,8 +105,8 @@ rules.tickCheckers =
     'or' : rule.tickIf.allRulesAppliedInEveryBranch( rules.not_or.decomposition )
     arrow : rule.tickIf.allRulesAppliedInEveryBranch( rules.not_arrow.decomposition )
     double_arrow : rule.tickIf.someRuleAppliedInEveryBranch( [rules.not_double_arrow.decomposition[1], rules.not_double_arrow.decomposition[3]] )
-    # universal_quantifier : rule.tickIf.allRulesAppliedInEveryBranch( rules.not_all.decomposition )
-    # existential_quantifier : rule.tickIf.allRulesAppliedInEveryBranch( rules.not_exists.decomposition )
+    universal_quantifier : rule.tickIf.allRulesAppliedInEveryBranch( rules['not-all'].decomposition )
+    existential_quantifier : rule.tickIf.allRulesAppliedInEveryBranch( rules['not-exists'].decomposition )
   
 
 # Add the `.ruleSet` property to each rule.

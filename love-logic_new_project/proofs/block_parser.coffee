@@ -426,10 +426,10 @@ class Block
     result = walker.visit(@)
     return result if result?
     for item in @content
-      result = walker.visit(item)
-      return result if result?
       if item.type is 'block'
         result = item.walk(walker)
+      else
+        result = walker.visit(item)
       # Stop walking as soon as `walker.walk` gives us a result.
       return result if result?
     return undefined
@@ -448,6 +448,31 @@ class Block
     if not result?
       throw new Error "Could not get line number #{lineNumber}"
     return result
+  
+  # For tree proofs:
+  getLeaves : () ->
+    leaves = []
+    walker = visit:(item)->
+      return undefined unless item.type is 'block'
+      block=item
+      # No leaves if the block has children:
+      return undefined if block.getChildren().length > 0
+      lastLine = block.getLastLine()
+      leaves.push(lastLine)
+      return undefined # keep walking
+    @walk(walker)
+    return leaves
+  areAllBranchesClosed : () ->
+    leaves = @getLeaves()
+    leafTypes = _.uniq(l.type for l in leaves)
+    return false unless leafTypes.length is 1
+    return ('close_branch' in leafTypes)
+  areAllBranchesClosedOrOpen : () ->
+    leaves = @getLeaves()
+    leafTypes = _.uniq(l.type for l in leaves)
+    otherLeafTypes = _.difference(leafTypes, ['close_branch', 'open_branch'])
+    return (otherLeafTypes.length is 0)
+
   
   toString : () ->
     # return util.inspect @

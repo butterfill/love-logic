@@ -5,6 +5,7 @@ _ = require 'lodash'
 chai = require('chai')
 assert = chai.assert
 expect = chai.expect
+should = require('chai').should() 
 
 bp = require '../block_parser'
 
@@ -605,3 +606,92 @@ describe "block_parser", ->
       subBlock = block.content[1]
       expect(subBlock.type).to.equal('block')
       expect(subBlock.content.length).to.equal(3)
+      
+  describe ".getLeaves ", ->
+    it "gets two leaves", ->
+      txt = '''
+        A
+        | B
+        
+        | C
+      '''
+      block = bp.parse txt
+      leaves = block.getLeaves()
+      # console.log (l.content for l in leaves)
+      leaves.length.should.equal(2)
+      leafContents = (l.content for l in leaves)
+      ('B' in leafContents).should.be.true
+      ('C' in leafContents).should.be.true
+      
+    it "gets nested leaves", ->
+      txt = '''
+        A
+        | B
+        
+        | C
+        || D
+        |
+        || E
+      '''
+      block = bp.parse txt
+      leaves = block.getLeaves()
+      # console.log (l.content for l in leaves)
+      leaves.length.should.equal(3)
+      leafContents = (l.content for l in leaves)
+      ('E' in leafContents).should.be.true
+      ('D' in leafContents).should.be.true
+      ('B' in leafContents).should.be.true
+      
+  describe "open and closed branches ", ->
+    it "can tell you when all branches are closed", ->
+      txt = '''
+      A
+      | B
+      | X
+      
+      | C
+      | X
+      '''
+      block = bp.parse txt
+      block.areAllBranchesClosed().should.be.true
+    it "can tell you when not all branches are closed", ->
+      txt = '''
+      A
+      | B
+      | X
+      
+      | C
+      '''
+      block = bp.parse txt
+      block.areAllBranchesClosed().should.be.false
+    it "can tell you when all branches are marked open or closed", ->
+      txt = '''
+      A
+      | B
+      | X
+      
+      | C
+      | O
+      
+      | D
+      | | E
+      | | F
+      | | X
+      '''
+      block = bp.parse txt
+      block.areAllBranchesClosedOrOpen().should.be.true
+    it "can tell you when not all branches are marked open or closed", ->
+      txt = '''
+      A
+      | B
+      | X
+      
+      | C
+      | O
+      
+      | D
+      | | E
+      | | F
+      '''
+      block = bp.parse txt
+      block.areAllBranchesClosedOrOpen().should.be.false

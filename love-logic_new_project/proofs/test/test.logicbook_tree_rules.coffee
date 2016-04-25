@@ -609,6 +609,14 @@ describe "logicbook tree rules", ->
       testProof(text, true)
     
   describe "the simple not... rules", ->
+    it "verifies ~&D", ->
+      text = '''
+        not (A & B)      SM
+        |not A             ~& D 1
+        
+        |not B           ~ & D 1
+      '''
+      testProof(text, true)
     it "verifies ~&D ticked", ->
       text = '''
         not (A & B)     tick SM
@@ -627,8 +635,29 @@ describe "logicbook tree rules", ->
     it "verifies ~ arrow D ticked", ->
       text = '''
         not (A arrow B)     tick SM
-        not A             ~ arrow D 1
-        B                 ~ arrow D 1
+        A             ~ arrow D 1
+        not B                 ~ arrow D 1
+      '''
+      testProof(text, true)
+    it "verifies ~ all D ticked", ->
+      text = '''
+        not (all x) Fx     tick SM
+        (exists x) not Fx    not all D 1
       '''
       testProof(text, true)
             
+    it "verifies ~ exists D ticked", ->
+      text = '''
+        not (exists x) Fx     tick SM
+        (all x) not Fx    not exists D 1
+      '''
+      testProof(text, true)
+            
+  describe "identity decomposition", ->
+    it "verifies =D", ->
+      text = '''
+        Fa      SM
+        a=b     SM
+        Fb      = D 1,2 
+      '''
+      testProof(text, true)

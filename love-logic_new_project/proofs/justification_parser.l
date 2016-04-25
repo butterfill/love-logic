@@ -121,10 +121,12 @@
 "contraposition"|"cp"             { yytext = 'contraposition';return 'connective'; }
 "conditional"|"c"                 { yytext = 'C';return 'connective'; }
 "cd"                              { yytext = 'contradiction';return 'connective'; }
-"not all"|"not-all"|"~∀"          { yytext = 'not-all';return 'connective'; }
+/* not all: */
+("negated"|"not_"|"not-"|"not"|"~"|"¬"|"!")(\s)?("all"|"∀"|"every"|"universal")  { yytext = 'not-all' ;return 'connective'; }
 "all not"|"all-not"|"∀~"          { yytext = 'all-not';return 'connective'; }
 "exists not"|"exists-not"|"∃~"    { yytext = 'exists-not';return 'connective'; }
-"not exists"|"not-exists"|"~∃"    { yytext = 'not-exists';return 'connective'; }
+/* not exists: */
+("negated"|"not_"|"not-"|"not"|"~"|"¬"|"!")(\s)?("some"|"exists"|"∃"|"existential")  { yytext = 'not-exists' ;return 'connective'; }
 
 "dilemma"|"dil"                    { yytext = 'dilemma';return 'connective'; }
 "mt"|"modus tollens"|"modus-tollens"               
@@ -134,7 +136,7 @@
 "ds"|"disjunctive syllogism"|"disjunctive-syllogism"      
                       { yytext = 'disjunctive-syllogism';return 'connective'; }
 "commutivity"|"comm"|"com"  { yytext = 'commutivity';return 'connective'; }
-"dn"|"double-negation"|"double negation"|"negated negation"|"negated-negation"|"~~"|"¬¬"|"not not"
+"dn"|"double-negation"|"double negation"|"negated negation"|"negated-negation"|"~~"|"~ ~"|"¬¬"|"¬ ¬"|"not not"
                       { yytext = 'double-negation';return 'connective'; }
 "mc"|"material-conditional"|"material conditional"
                       { yytext = "material-conditional";return 'connective'; }
@@ -152,13 +154,15 @@
 "equivalence"|"equiv"   { yytext = 'equivalence';return 'connective'; }
 
 
-"negated biconditional"|"negated-biconditional"|"not <->"|"~ <->"|"~<->"|"not<->"|"~↔"|"~≡"|"~ ↔"|"~ ≡"|"¬↔"|"¬≡"|"¬ ↔"|"¬ ≡"   
+"not_double_arrow"|"negated biconditional"|"negated-biconditional"|"not <->"|"~ <->"|"~<->"|"not<->"|"~↔"|"~≡"|"~ ↔"|"~ ≡"|"¬↔"|"¬≡"|"¬ ↔"|"¬ ≡"   
           { yytext = 'not_double_arrow';return 'connective'; }
-("negated"|"not"|"~"|"¬"|"!")(\s)?("and"|"conjunction"|"∧"|"•"|"&")  { yytext = 'not_and';return 'connective'; }
+("negated"|"not_"|"not"|"~"|"¬"|"!")(\s)?("and"|"conjunction"|"∧"|"•"|"&")  { yytext = 'not_and';return 'connective'; }
 
-("negated"|"not"|"~"|"¬"|"!")(\s)?("disjunction"|"or"|"∨"|"|")  { yytext = 'not_or';return 'connective'; }
+("negated"|"not_"|"not"|"~"|"¬"|"!")(\s)?("disjunction"|"or"|"∨"|"|")  { yytext = 'not_or';return 'connective'; }
 
-("negated"|"not"|"~"|"¬"|"!")(\s)?("conditional"|"arrow"|"->"|"⇒"|"→"|"⊃")  { yytext = 'not_arrow';return 'connective'; }
+("negated"|"not_"|"not"|"~"|"¬"|"!")(\s)?("conditional"|"arrow"|"->"|"⇒"|"→"|"⊃")  { yytext = 'not_arrow' ;return 'connective'; }
+
+
 
 
 

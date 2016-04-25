@@ -34,46 +34,53 @@ exports.setParser = (aParser) ->
 
 
 
+tickIf = {}
+exports.tickIf = tickIf
+_allRulesUsedInThisBlock = (candidateLines, block, ruleSet) ->
+  rulesUsed = []
+  for l in candidateLines
+    if l.parent is block
+      for ruleAndMatches in l.rulesChecked
+        r = ruleAndMatches.rule
+        rulesUsed.push(r)
+  rulesStillToUse = []
+  for r in ruleSet
+    rulesStillToUse.push(r) unless r in rulesUsed
+  return true if rulesStillToUse.length is 0
+  children = block.getChildren()
+  return false unless children?.length > 0
+  for childBlock in children
+    test = _allRulesUsedInThisBlock(candidateLines, childBlock, rulesStillToUse)
+    return false if test is false
+  return true
+tickIf.allRulesAppliedInEveryBranch = ( ruleSet ) ->
+  return (line) ->
+    candidateLines = line.getLinesThatCiteMe()
+    return _allRulesUsedInThisBlock(candidateLines, line.parent, ruleSet)
 
-exports.tickIf = 
-  allRulesAppliedInEveryBranch : ( ruleSet ) ->
-    allRulesUsedInThisBlock = (candidateLines, block, ruleSet) ->
-      rulesUsed = []
-      for l in candidateLines
-        if l.parent is block
-          for ruleAndMatches in l.rulesChecked
-            r = ruleAndMatches.rule
-            rulesUsed.push(r)
-      rulesStillToUse = []
-      for r in ruleSet
-        rulesStillToUse.push(r) unless r in rulesUsed
-      return true if rulesStillToUse.length is 0
-      children = block.getChildren()
-      return false unless children?.length > 0
-      for childBlock in children
-        test = allRulesUsedInThisBlock(candidateLines, childBlock, rulesStillToUse)
-        return false if test is false
-      return true
-    return (line) ->
-      candidateLines = line.getLinesThatCiteMe()
-      return  allRulesUsedInThisBlock(candidateLines, line.parent, ruleSet)
-      
-  someRuleAppliedInEveryBranch : ( ruleSet ) ->
-    someRulesUsedInThisBlock = (candidateLines, block) ->
-      for l in candidateLines
-        if l.parent is block
-          for ruleAndMatches in l.rulesChecked
-            r = ruleAndMatches.rule
-            return true if r in ruleSet
-      children = block.getChildren()
-      return false unless children?.length > 0
-      for childBlock in children
-        test = someRulesUsedInThisBlock(candidateLines, childBlock)
-        return false if test is false
-      return true
-    return (line) ->
-      candidateLines = line.getLinesThatCiteMe()
-      return  someRulesUsedInThisBlock(candidateLines, line.parent)
+_someRulesUsedInThisBlock = (candidateLines, block, ruleSet) ->
+  for l in candidateLines
+    if l.parent is block
+      for ruleAndMatches in l.rulesChecked
+        r = ruleAndMatches.rule
+        return true if r in ruleSet
+  children = block.getChildren()
+  return false unless children?.length > 0
+  for childBlock in children
+    test = _someRulesUsedInThisBlock(candidateLines, childBlock, ruleSet)
+    return false if test is false
+  return true
+tickIf.someRuleAppliedInEveryBranch = ( ruleSet ) ->
+  return (line) ->
+    candidateLines = line.getLinesThatCiteMe()
+    return _someRulesUsedInThisBlock(candidateLines, line.parent, ruleSet)
+
+tickIf.ruleAppliedAtLeastOnceAndAppliedToEveryExistingConstant = ( rule ) ->
+  return (line) -> 
+    # Is the rule applied at least once?:
+    test1 = tickIf.someRuleAppliedInEveryBranch([rule])
+    result1 = test1(line)
+    return false unless result1
       
 
 # All ways of describing a `rule` do and *MUST* use this class 
@@ -779,9 +786,13 @@ openBranch = () ->
       lines = line.findAllAbove( (item) -> item.type is 'line' )
       test = linesContainPatterns(lines, [phi, notPhi], {})
       test2 = linesContainPatterns(lines, [notAIsA], {})
-      return priorMatches if ((test is false) and (test2 is false))
-      line.status.addMessage "You can only mark a branch open if it contains neither a sentence like ‘¬α=α’, nor two sentences like ‘φ’ and ¬‘φ’."
-      return false
+      unless ((test is false) and (test2 is false))
+        line.status.addMessage "You can only mark a branch open if it contains neither a sentence like ‘¬α=α’, nor two sentences like ‘φ’ and ¬‘φ’."
+        return false
+      # Basic tests passed.
+      # TODO: Must now check that the branch is complete
+      return priorMatches
+      
   }
 exports.openBranch = openBranch
 

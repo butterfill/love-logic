@@ -47,7 +47,8 @@ class LineStatus
       languageNames = util.getLanguageNames()
       @addMessage "the sentence you wrote (#{@line.sentenceText}) is not a sentence or well-formed formula of #{languageNames.join(' or ')}."
     if @line.justificationErrors?
-      @addMessage "the justification your supplied (#{@line.justificationText?.trim()}) either mentions a rule you can't use here or doesn't make sense."
+      # console.log @line.justificationErrors
+      @addMessage "the justification you supplied (#{@line.justificationText?.trim()}) either mentions a rule you can't use here or doesn't make sense."
     if @line.type is 'line' and not @line.justification? and not @line.justificationErrors?
       @addMessage "you supplied no justification for this line."
       

@@ -119,8 +119,12 @@ symbols =
     decomposition: 'D'
     decomposition2: 'D2'
     tick : '✓'
-    'not_double_arrow' : '~ ≡'
-    # TODO: complete!
+    'double-negation' : '~ ~'
+    not_double_arrow : '~ ≡'
+    not_and : '~ &'
+    not_or : "~ ∨"
+    not_arrow : "~ ⊃"
+    
 
 
 module.exports = symbols

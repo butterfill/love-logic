@@ -709,13 +709,13 @@ case 24: yy_.yytext = 'C';return 10;
 break;
 case 25: yy_.yytext = 'contradiction';return 10; 
 break;
-case 26: yy_.yytext = 'not-all';return 10; 
+case 26: yy_.yytext = 'not-all' ;return 10; 
 break;
 case 27: yy_.yytext = 'all-not';return 10; 
 break;
 case 28: yy_.yytext = 'exists-not';return 10; 
 break;
-case 29: yy_.yytext = 'not-exists';return 10; 
+case 29: yy_.yytext = 'not-exists' ;return 10; 
 break;
 case 30: yy_.yytext = 'dilemma';return 10; 
 break;
@@ -753,27 +753,31 @@ case 46: yy_.yytext = 'not_double_arrow';return 10;
 break;
 case 47: yy_.yytext = 'not_and';return 10; 
 break;
-case 48: yy_.yytext = 'universal';
+case 48: yy_.yytext = 'not_or';return 10; 
+break;
+case 49: yy_.yytext = 'not_arrow' ;return 10; 
+break;
+case 50: yy_.yytext = 'universal';
       return 10; 
 break;
-case 49: yy_.yytext = 'existential';
+case 51: yy_.yytext = 'existential';
       return 10; 
 break;
-case 50: return 20; 
+case 52: return 20; 
 break;
-case 51: return 21; 
+case 53: return 21; 
 break;
-case 52: yy_.yytext = 'close-branch';return 10; 
+case 54: yy_.yytext = 'close-branch';return 10; 
 break;
-case 53: yy_.yytext = 'open-branch';return 10; 
+case 55: yy_.yytext = 'open-branch';return 10; 
 break;
-case 54: /*  Skip whitespace and commas. 
+case 56: /*  Skip whitespace and commas. 
       */ 
     
 break;
-case 55: return 5; 
+case 57: return 5; 
 break;
-case 56: 
+case 58: 
       /*  I would love to `return 'waffle';` and treat
           waffle as a category because I want to allow 
           some of the connectives to appear in waffle, e.g. 'not'.
@@ -781,14 +785,14 @@ case 56:
       */ 
     
 break;
-case 57: /* Ignore everything else */ 
+case 59: /* Ignore everything else */ 
 break;
-case 58:console.log(yy_.yytext);
+case 60:console.log(yy_.yytext);
 break;
 }
 },
-rules: [/^(?:([0-9][^,\s]*)(\s+and\s+)(?=[0-9]))/i,/^(?:([0-9][^,\s]*)\s+to\s+([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*?)\s*(?:-+)\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*)(?:(\s*,)*))/i,/^(?:elimination|eliminate|elim|e)/i,/^(?:introduction|introduce|intro|i)/i,/^(?:decomposition-2|decomposition2|d-2|d2)/i,/^(?:decomposition|d)/i,/^(?:✓|tick)/i,/^(?:⊥|_\|_|contradiction|contra|false)/i,/^(?:or|∨|\+|ǀǀ|\|)/i,/^(?:=|identity)/i,/^(?:and|conjunction|∧|•|&)/i,/^(?:double_arrow|↔|≡|⇔|<->)/i,/^(?:arrow|->|⇒|→|⊃)/i,/^(?:not|¬|˜|~|!|negation)/i,/^(?:reit|reiteration|r)/i,/^(?:premise|assumption|set member|sm|p)/i,/^(?:weakening|w)/i,/^(?:argument by cases|cases|ac)/i,/^(?:denying the consequent|dc)/i,/^(?:reductio|rd|reductio ad absurdum)/i,/^(?:dm|deMorgan|dem|de morgan)/i,/^(?:contraposition|cp)/i,/^(?:conditional|c)/i,/^(?:cd)/i,/^(?:not all|not-all|~∀)/i,/^(?:all not|all-not|∀~)/i,/^(?:exists not|exists-not|∃~)/i,/^(?:not exists|not-exists|~∃)/i,/^(?:dilemma|dil)/i,/^(?:mt|modus tollens|modus-tollens)/i,/^(?:hs|hypothetical syllogism|hypothetical-syllogism)/i,/^(?:ds|disjunctive syllogism|disjunctive-syllogism)/i,/^(?:commutivity|comm|com)/i,/^(?:dn|double-negation|double negation|negated negation|negated-negation|~~|¬¬|not not)/i,/^(?:mc|material-conditional|material conditional)/i,/^(?:bex|↔ex|biconditional-exchange|biconditional exchange)/i,/^(?:qn|quantifier-negation|quantifier negation)/i,/^(?:implication|impl)/i,/^(?:transposition|trans)/i,/^(?:distribution|dist)/i,/^(?:association|assoc)/i,/^(?:idempotence|idem)/i,/^(?:exportation|exp)/i,/^(?:equivalence|equiv)/i,/^(?:negated biconditional|negated-biconditional|not <->|~ <->|~<->|not<->|~↔|~≡|~ ↔|~ ≡|¬↔|¬≡|¬ ↔|¬ ≡)/i,/^(?:(negated|not|~|¬|!)(\s)?(and|conjunction|∧|•|&))/i,/^(?:all|∀|every|universal)/i,/^(?:some|exists|∃|existential)/i,/^(?:left)/i,/^(?:right)/i,/^(?:close branch|close-branch)/i,/^(?:open branch|open-branch)/i,/^(?:[\s,]+)/i,/^(?:$)/i,/^(?:\w+)/i,/^(?:.)/i,/^(?:.)/i],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58],"inclusive":true}}
+rules: [/^(?:([0-9][^,\s]*)(\s+and\s+)(?=[0-9]))/i,/^(?:([0-9][^,\s]*)\s+to\s+([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*?)\s*(?:-+)\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*)(?:(\s*,)*))/i,/^(?:elimination|eliminate|elim|e)/i,/^(?:introduction|introduce|intro|i)/i,/^(?:decomposition-2|decomposition2|d-2|d2)/i,/^(?:decomposition|d)/i,/^(?:✓|tick)/i,/^(?:⊥|_\|_|contradiction|contra|false)/i,/^(?:or|∨|\+|ǀǀ|\|)/i,/^(?:=|identity)/i,/^(?:and|conjunction|∧|•|&)/i,/^(?:double_arrow|↔|≡|⇔|<->)/i,/^(?:arrow|->|⇒|→|⊃)/i,/^(?:not|¬|˜|~|!|negation)/i,/^(?:reit|reiteration|r)/i,/^(?:premise|assumption|set member|sm|p)/i,/^(?:weakening|w)/i,/^(?:argument by cases|cases|ac)/i,/^(?:denying the consequent|dc)/i,/^(?:reductio|rd|reductio ad absurdum)/i,/^(?:dm|deMorgan|dem|de morgan)/i,/^(?:contraposition|cp)/i,/^(?:conditional|c)/i,/^(?:cd)/i,/^(?:(negated|not_|not-|not|~|¬|!)(\s)?(all|∀|every|universal))/i,/^(?:all not|all-not|∀~)/i,/^(?:exists not|exists-not|∃~)/i,/^(?:(negated|not_|not-|not|~|¬|!)(\s)?(some|exists|∃|existential))/i,/^(?:dilemma|dil)/i,/^(?:mt|modus tollens|modus-tollens)/i,/^(?:hs|hypothetical syllogism|hypothetical-syllogism)/i,/^(?:ds|disjunctive syllogism|disjunctive-syllogism)/i,/^(?:commutivity|comm|com)/i,/^(?:dn|double-negation|double negation|negated negation|negated-negation|~~|~ ~|¬¬|¬ ¬|not not)/i,/^(?:mc|material-conditional|material conditional)/i,/^(?:bex|↔ex|biconditional-exchange|biconditional exchange)/i,/^(?:qn|quantifier-negation|quantifier negation)/i,/^(?:implication|impl)/i,/^(?:transposition|trans)/i,/^(?:distribution|dist)/i,/^(?:association|assoc)/i,/^(?:idempotence|idem)/i,/^(?:exportation|exp)/i,/^(?:equivalence|equiv)/i,/^(?:not_double_arrow|negated biconditional|negated-biconditional|not <->|~ <->|~<->|not<->|~↔|~≡|~ ↔|~ ≡|¬↔|¬≡|¬ ↔|¬ ≡)/i,/^(?:(negated|not_|not|~|¬|!)(\s)?(and|conjunction|∧|•|&))/i,/^(?:(negated|not_|not|~|¬|!)(\s)?(disjunction|or|∨|\|))/i,/^(?:(negated|not_|not|~|¬|!)(\s)?(conditional|arrow|->|⇒|→|⊃))/i,/^(?:all|∀|every|universal)/i,/^(?:some|exists|∃|existential)/i,/^(?:left)/i,/^(?:right)/i,/^(?:close branch|close-branch)/i,/^(?:open branch|open-branch)/i,/^(?:[\s,]+)/i,/^(?:$)/i,/^(?:\w+)/i,/^(?:.)/i,/^(?:.)/i],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60],"inclusive":true}}
 });
 return lexer;
 })();
