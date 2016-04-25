@@ -83,10 +83,15 @@ to = (proof) ->
   proof.verifyTree = () ->
     test1 = proof.verify()
     return false if test1 is false
+    console.log "verify done"
+    
+    return false if anythingOtherThanABranchOccursAfterABranch(proof)
+    console.log "anythingOtherThanABranchOccursAfterABranch done"
     
     branches = proof.getChildren()
     test2 = checkBranchingRules(branches)
     return false if test2 is false
+    console.log "checkBranchingRules done"
     
     test3 = checkTicksAreCorrect(proof)
     return false if test3 is false
@@ -95,6 +100,21 @@ to = (proof) ->
     
 exports.to = to
 
+
+anythingOtherThanABranchOccursAfterABranch = (proof) ->
+  branches = proof.getChildren()
+  # If there are no branches, nothing can occur after them:
+  return false unless branches?.length > 0
+  # Check all the branches:
+  for b in branches
+    return true if anythingOtherThanABranchOccursAfterABranch(b)
+  # Finally, check the lines of this block:
+  foundBranch = false
+  for item in proof.content
+    foundBranch = true if item.type is 'block'
+    if foundBranch and not (item.type in ['block', 'blank_line'])
+      return true
+  return false
 
 checkTicksAreCorrect = (proof) ->
   walker = 
@@ -117,25 +137,52 @@ checkBranchingRules = (branches) ->
     test = checkBranchingRules(b)
     return false if test is false
   
-  ruleSet = branches[0].getFirstLine()?.rulesChecked?[0]?.ruleSet
+  ruleSet = branches[0].getFirstLine()?.rulesChecked?[0]?.rule.ruleSet
   unless ruleSet?
     throw new Error "Could not get ruleSet at line #{branches[0].getFirstLine()?.number}."
   rulesUsed = []
   for b in branches
-    rule = b.getFirstLine()?.rulesChecked?[0]
+    line = b.getFirstLine()
+    console.log "at line #{line?.number}."
+    rule = line?.rulesChecked?[0].rule
     unless rule? 
       throw new Error "Could not get rule at line #{b.getFirstLine()?.number}."
     if rule in rulesUsed
-      # You cannot use the same rule twice in branching:
-      # (TODO: modify for existential decomposition2)
-      return false
+      # You cannot use the same rule twice in branching ...
+      # ... provided there is more than one rule.
+      # (This is a kludge for rules like `existential D 2`; there is 
+      # just one rule that is applied a variable number of times
+      # depending on facts about the proof in which it occurs.)
+      if ruleSet.length > 1
+        # Further exception : when other rules could have verified
+        # this line (as happens with or decomposition applied to `A or A`), 
+        # it is ok to use the same rule twice.
+        itIsOkToUseTheSameRuleTwiceHere = false
+        for r in ruleSet
+          unless r in rulesUsed
+            if r.check(line)
+              itIsOkToUseTheSameRuleTwiceHere = true
+              rulesUsed.push(r)
+        unless itIsOkToUseTheSameRuleTwiceHere
+          line.status.addMessage("you cannot use the same rule twice in branching")
+          console.log "you cannot use the same rule twice in branching"
+          return false
     if rule.ruleSet isnt ruleSet
       # You cannot combine rules from different ruleSets in branching
       return false
     rulesUsed.push(rule)
   if rulesUsed.length < ruleSet.length
-    # All rules in a `RuleSet` must be used in branching
-    return false
+    # All rules in a `RuleSet` must be used in branching ...
+    # ... provided there is more than one rule.
+    # (This is a kludge for rules like `existential D 2`; for this rule,
+    # a guarantee that the correct branches are made is provided via a 
+    # `.where` clause in the rule definition.)
+    if ruleSet.length > 1
+      # May need to exclude some non-branching rules (because the rules
+      # for, e.g., `<->` include a mix of branching and non-branching rules).
+      nofBranchingRules = (r for r in ruleSet when r.isBranchingRule).length
+      if rulesUsed.length < nofBranchingRules
+        return false
   return true
 
 # For tree proofs.  A line containing, e.g., ‘A or B’ or ‘a=b’ needs
@@ -158,7 +205,13 @@ exports.lineNeedsToBeTicked = lineNeedsToBeTicked
 # applied.
 canLineBeTicked = (line) ->
   theRules = dialectManager.getCurrentRules()
-  tickChecker = theRules.tickCheckers[line.sentence.type] 
+  sentence = line.sentence
+  tickChecker = theRules.tickCheckers[sentence.type] 
+  unless _.isFunction(tickChecker)
+    # We need to go one level further into the tickChecker object.
+    # This is for rules like `not and decomposition`
+    sentence = sentence.left
+    tickChecker = tickChecker[sentence.type] 
   return tickChecker(line) 
 # for testing only:
 exports.canLineBeTicked = canLineBeTicked

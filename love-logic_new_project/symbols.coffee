@@ -119,6 +119,7 @@ symbols =
     decomposition: 'D'
     decomposition2: 'D2'
     tick : '✓'
+    'not_double_arrow' : '~ ≡'
     # TODO: complete!
 
 

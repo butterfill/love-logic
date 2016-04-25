@@ -41,7 +41,8 @@ exports.tickIf =
       rulesUsed = []
       for l in candidateLines
         if l.parent is block
-          for r in l.rulesChecked
+          for ruleAndMatches in l.rulesChecked
+            r = ruleAndMatches.rule
             rulesUsed.push(r)
       rulesStillToUse = []
       for r in ruleSet
@@ -61,7 +62,8 @@ exports.tickIf =
     someRulesUsedInThisBlock = (candidateLines, block) ->
       for l in candidateLines
         if l.parent is block
-          for r in l.rulesChecked
+          for ruleAndMatches in l.rulesChecked
+            r = ruleAndMatches.rule
             return true if r in ruleSet
       children = block.getChildren()
       return false unless children?.length > 0
@@ -83,6 +85,8 @@ class _From
       from : ([requirement] if requirement?) or []
       to : undefined
     }
+    @whereReqs = []
+    @andAlso = @
   
   type : 'rule'
 
@@ -96,16 +100,30 @@ class _From
       throw new Error "You cannot specify `.to` more than once in a single rule."
     requirement = convertTextToRequirementIfNecessary(requirement)
     @_requirements.to = requirement
+    if requirement.isBranchingRule
+      @isBranchingRule = true
     return @
 
+  where : (requirement) ->
+    @whereReqs.push requirement
+    return @ 
+
   check : (line) ->
-    # return new LineChecker(line, @_requirements).check()
-    # console.log "#{line.getRuleName()}"
+    # First test `.from` and `.to` requirements
     test = checkRequirementsMet(line, @_requirements)
-    if test isnt false
-      line.rulesChecked ?= []
-      line.rulesChecked.push(@)
-    return test
+    return false if test is false
+    # Store info about the rule and matches in the line
+    # (this is useful for tree proofs):
+    currentMatches = test
+    # Test the `.where` requirements
+    for req in @whereReqs
+      test = req.check(line, currentMatches, @)
+      return false if test is false
+      currentMatches = test
+    # All tests passed:
+    line.rulesChecked ?= []
+    line.rulesChecked.push({rule:@, matches:currentMatches})
+    return true
   
 
 # `from` is the main entry point for this module.  Use it
@@ -122,10 +140,80 @@ to = (requirement) ->
 exports.to = to
 
 
+# A `.where` check function
+exports.previousLineMatches = (pattern) ->
+  if _.isString(pattern)
+    pattern = fol.parse(pattern)
+  return check:(line, priorMatches, rule)->
+    previousLine = line.prev
+    # The line immediately above may be a divider or blank:
+    while not previousLine.sentence? and previousLine.prev?
+      previousLine = previousLine.prev
+    return false unless previousLine?.sentence?
+    # console.log previousLine.sentence.toString()
+    # console.log pattern.toString()
+    # console.log "#{_matchesToString(priorMatches)}"
+    return doesLineMatchPattern(previousLine, pattern, priorMatches)
+  
 
+exports.previousLineCitesSameLines = () ->
+  return check:(line, priorMatches, rule)->
+    previousLine = line.prev
+    # The line immediately above may be a divider or blank:
+    while not previousLine.sentence? and previousLine.prev?
+      previousLine = previousLine.prev
+    # They must cite the same number of lines:
+    return false unless line.getCitedLines().length is previousLine.getCitedLines().length
+    # They must cite the same lines:
+    linesCitedByBoth = _.intersection( line.getCitedLines(), previousLine.getCitedLines() )
+    return linesCitedByBoth.length is line.getCitedLines().length
 
-
-
+# A `.where` check function.
+# Use like `rule.from('exists τ φ').to( rule.matches('φ[τ-->α]').and.branches() ).where( rule.ruleIsAppliedToEveryExistingConstantAndANewConstant('α') )`
+exports.ruleIsAppliedToEveryExistingConstantAndANewConstant = (termMetaVarName) ->
+  return check:(line, priorMatches, rule)->
+    # Have all siblings been checked already?
+    # The test passes if not.
+    sisterBranches = line.parent.parent.getChildren()
+    siblings = (x.getFirstLine() for x in sisterBranches)
+    for sib in siblings
+      # ignore this line:
+      continue if sib is line
+      return priorMatches unless sib.rulesChecked?.length > 0
+      rules = (x.rule for x in sib.rulesChecked)
+      return priorMatches unless rule in rules
+      
+    # Get a list of all names ocurring in the branch above:
+    namesInBranch = []
+    walker = (item) ->
+      if item.sentence?
+        namesInBranch.push(item.sentence.getNames())
+      return undefined # keep walking
+    line.findAbove(walker)
+    namesInBranch = _.uniq(_.flatten(namesInBranch))
+    
+    # Get a list of names matched in applying the rule:
+    namesMatchedInApplyingTheRule = []
+    for sib in siblings
+      rulesChecked = sib.rulesChecked or [{rule, matches:priorMatches}]
+      for ruleAndMatch in rulesChecked
+        if ruleAndMatch.rule is rule
+          theMatches = ruleAndMatch.matches
+          nameMatch = theMatches[termMetaVarName]
+          namesMatchedInApplyingTheRule.push(nameMatch.name)
+    
+    for name in namesInBranch
+      unless name in namesMatchedInApplyingTheRule
+        line.status.addMessage("you don’t have a branch for the name ‘#{name}’")
+        return false 
+    # One of the names to which the rule is applied must be a name
+    # that doesn’t feature anywhere above:
+    for name in namesMatchedInApplyingTheRule
+      if not (name in namesInBranch)
+        return priorMatches 
+    line.status.addMessage("you don’t branch for a new name")
+    return false
+  
 
 
 # For testing only:
@@ -193,11 +281,16 @@ matches = (sentence) ->
     
     # Use like `matches('phi').and.branches()
     branches : () ->
+      @isBranchingRule = true
       newCheck = (line, priorMatches) ->
         block = line.parent
         # This must be a subproof (not the main proof):
-        return false unless block.parent?
-        return false unless block.getFirstLine() is line
+        unless block.parent?
+          line.status.addMessage('to use this rule you must branch')
+          return false
+        unless block.getFirstLine() is line
+          line.status.addMessage('to use this rule you must branch')
+          return false 
         return priorMatches
       checkFunctions.push newCheck
       return @
@@ -207,7 +300,9 @@ matches = (sentence) ->
       newCheck = (line, priorMatches) ->
         block = line.parent
         # Fine unless we are the first line of a subproof:
-        return false if block?.getFirstLine() is line
+        if block?.getFirstLine() is line
+          line.status.addMessage('you cannot use this rule to branch')
+          return false
         return priorMatches
       checkFunctions.push newCheck
       return @
@@ -466,7 +561,7 @@ _doesPatternMatchAnyLines = (listOfLines, pattern, priorMatches) ->
 exports.linesContainPatterns = linesContainPatterns
 
 
-
+# Return false if not; matches made if yes.
 checkRequirementsMet = (line, theReqs) ->
   preliminaryTest = checkCorrectNofLinesAndSubproofsCited(line, theReqs)
   return false unless preliminaryTest
@@ -495,7 +590,9 @@ checkRequirementsMet = (line, theReqs) ->
   for citedLineOrdering in citedLinesPerms
     for citedBlockOrdering in citedBlocksPerms
       test = areRequirementsMetByTheseLinesAndBlocks(theReqs, line, citedLineOrdering, citedBlockOrdering)
-      return true if test isnt false
+      if test isnt false
+        theMatches = test
+        return theMatches
   
   # The rule was not used correctly so update status message:
   
@@ -538,7 +635,9 @@ areRequirementsMetByTheseLinesAndBlocks = (theReqs, line, citedLineOrdering, cit
   checkListPermutations = _permutations(checkList)
   for thingsToCheck in checkListPermutations
     test = areAllRequirementsMet(thingsToCheck)
-    return true if test isnt false
+    if test isnt false
+      theMatches = test
+      return theMatches
 
   return false
 
@@ -592,7 +691,7 @@ areAllRequirementsMet = (thingsToCheck) ->
     {newMatches, matchedLineOrBlock} = test
     currentMatches = newMatches
     matchedLinesAndBlocks.push(matchedLineOrBlock)
-  return true
+  return currentMatches
 
 # Returns false or the new matches made in meeting the requirement.
 doAnyCandidatesMeetThisReq = (req, candidates, priorMatches) ->

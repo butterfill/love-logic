@@ -1,7 +1,8 @@
 chai = require 'chai' 
 expect = chai.expect
+assert = chai.assert
+should = require('chai').should() 
 _ = require 'lodash'
-
 
 fol = require '../../fol'
 bp = require '../block_parser'
@@ -538,6 +539,54 @@ describe "`rule`", ->
       notPhi = fol.parse('not φ')
       test = rule.linesContainPatterns(lines, [notPhi, phi], {})
       expect(test).not.to.be.false
+  
+  describe "features for tree proofs", ->
+    it "rules record which rule and what matches on the lines checked", ->
+      proof = _parse '''
+        1. A           // premise
+        2. B
+        3. A and B     // and intro 1,2
+      '''
+      andIntro = rule.from('φ').and('ψ').to('φ and ψ')
+      line = proof.getLine(3)
+      result = andIntro.check(line)
+      expect(result).to.be.true
+      ruleAndMatch = line.rulesChecked[0]
+      expect(ruleAndMatch.rule).to.equal(andIntro)
+      a = [ruleAndMatch.matches.φ.letter, ruleAndMatch.matches.ψ.letter]
+      assert('A' in a)
+      assert('B' in a)
+      expect(a.length).to.equal(2)
+    it "rules record which rule and what matches on the lines checked (term metavariable matches)", ->
+      proof = _parse '''
+        1. a=a        // = intro
+      '''
+      line = proof.getLine(1)
+      result = rule.from().to('α=α').check(line)
+      expect(result).to.be.true
+      matches = line.rulesChecked[0].matches
+      expect(matches.α.name).to.equal('a')
+      
+  describe ".where clauses", ->
+    it "can cause a rule check to fail", ->
+      proof = _parse '''
+        1. a=a        // = intro
+      '''
+      line = proof.getLine(1)
+      idIntro = rule.from().to('α=α')
+      idIntro.check(line).should.not.be.false
+      idIntroWhere = idIntro.where({check:->false})
+      idIntroWhere.check(line).should.be.false
+    it "does not necessarily cause a rule check to fail", ->
+      proof = _parse '''
+        1. a=a        // = intro
+      '''
+      line = proof.getLine(1)
+      idIntroWhere = rule.from().to('α=α').where({check:->true})
+      idIntroWhere.check(line).should.not.be.false
+      
+      
+
       
       
 

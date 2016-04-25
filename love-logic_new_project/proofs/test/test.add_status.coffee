@@ -122,10 +122,11 @@ describe "add_status", ->
     it "adds a message when a line has faulty justification", ->
       proof = _parse '''
         1. A      // premise
-        2. A and B  // alii asdyiuy ^(&*$
+        2. A and B  // alii asdyiuy
       '''
       line = proof.getLine(2)
       expect(line.status.verified).to.be.false
+      console.log line.status.getMessage()
       expect(line.status.getMessage().search('justification')).not.to.equal(-1)
 
 

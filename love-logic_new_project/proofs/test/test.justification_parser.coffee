@@ -225,4 +225,7 @@ describe "justification_parser", ->
   it "does not tick lines that are not ticked", ->
     result = jp.parse "exists D 1"
     expect(result.ticked?).to.be.false
-    
+  
+  it "correctly gets double negation as ~~", ->
+    result = jp.parse "~~ D 1"
+    expect(result.rule.connective).to.equal('double-negation')

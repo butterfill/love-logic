@@ -113,43 +113,49 @@
    Otherwise the parser will not recognise the rules.
 */
 
-"weakening"|"w"                     { yytext = 'weakening';return 'bare_rule'; }
-"argument by cases"|"cases"|"ac"    { yytext = 'cases';return 'bare_rule'; }
-"denying the consequent"|"dc"       { yytext = 'DC';return 'bare_rule'; }
-"reductio"|"rd"|"reductio ad absurdum" { yytext = 'reductio';return 'bare_rule'; }
-"dm"|"deMorgan"|"dem"|"de morgan"         { yytext = 'DM';return 'bare_rule'; }
-"contraposition"|"cp"             { yytext = 'contraposition';return 'bare_rule'; }
-"conditional"|"c"                 { yytext = 'C';return 'bare_rule'; }
-"cd"                              { yytext = 'contradiction';return 'bare_rule'; }
-"not all"|"not-all"|"~∀"          { yytext = 'not-all';return 'bare_rule'; }
-"all not"|"all-not"|"∀~"          { yytext = 'all-not';return 'bare_rule'; }
-"exists not"|"exists-not"|"∃~"    { yytext = 'exists-not';return 'bare_rule'; }
-"not exists"|"not-exists"|"~∃"    { yytext = 'not-exists';return 'bare_rule'; }
+"weakening"|"w"                     { yytext = 'weakening';return 'connective'; }
+"argument by cases"|"cases"|"ac"    { yytext = 'cases';return 'connective'; }
+"denying the consequent"|"dc"       { yytext = 'DC';return 'connective'; }
+"reductio"|"rd"|"reductio ad absurdum" { yytext = 'reductio';return 'connective'; }
+"dm"|"deMorgan"|"dem"|"de morgan"         { yytext = 'DM';return 'connective'; }
+"contraposition"|"cp"             { yytext = 'contraposition';return 'connective'; }
+"conditional"|"c"                 { yytext = 'C';return 'connective'; }
+"cd"                              { yytext = 'contradiction';return 'connective'; }
+"not all"|"not-all"|"~∀"          { yytext = 'not-all';return 'connective'; }
+"all not"|"all-not"|"∀~"          { yytext = 'all-not';return 'connective'; }
+"exists not"|"exists-not"|"∃~"    { yytext = 'exists-not';return 'connective'; }
+"not exists"|"not-exists"|"~∃"    { yytext = 'not-exists';return 'connective'; }
 
-"dilemma"|"dil"                    { yytext = 'dilemma';return 'bare_rule'; }
+"dilemma"|"dil"                    { yytext = 'dilemma';return 'connective'; }
 "mt"|"modus tollens"|"modus-tollens"               
-                      { yytext = 'modus-tollens';return 'bare_rule'; }
+                      { yytext = 'modus-tollens';return 'connective'; }
 "hs"|"hypothetical syllogism"|"hypothetical-syllogism"      
-                      { yytext = 'hypothetical-syllogism';return 'bare_rule'; }
+                      { yytext = 'hypothetical-syllogism';return 'connective'; }
 "ds"|"disjunctive syllogism"|"disjunctive-syllogism"      
-                      { yytext = 'disjunctive-syllogism';return 'bare_rule'; }
-"commutivity"|"comm"|"com"  { yytext = 'commutivity';return 'bare_rule'; }
-"dn"|"double-negation"|"double negation"
-                      { yytext = 'double-negation';return 'bare_rule'; }
+                      { yytext = 'disjunctive-syllogism';return 'connective'; }
+"commutivity"|"comm"|"com"  { yytext = 'commutivity';return 'connective'; }
+"dn"|"double-negation"|"double negation"|"negated negation"|"negated-negation"|"~~"|"¬¬"|"not not"
+                      { yytext = 'double-negation';return 'connective'; }
 "mc"|"material-conditional"|"material conditional"
-                      { yytext = "material-conditional";return 'bare_rule'; }
+                      { yytext = "material-conditional";return 'connective'; }
 "bex"|"↔ex"|"biconditional-exchange"|"biconditional exchange"
-                      { yytext = 'biconditional-exchange';return 'bare_rule'; }
+                      { yytext = 'biconditional-exchange';return 'connective'; }
 "qn"|"quantifier-negation"|"quantifier negation"         
-                      { yytext = 'quantifier-negation';return 'bare_rule'; }
+                      { yytext = 'quantifier-negation';return 'connective'; }
 
-"implication"|"impl"    { yytext = 'implication';return 'bare_rule'; }
-"transposition"|"trans" { yytext = 'transposition';return 'bare_rule'; }
-"distribution"|"dist"   { yytext = 'distribution';return 'bare_rule'; }
-"association"|"assoc"   { yytext = 'association';return 'bare_rule'; }
-"idempotence"|"idem"    { yytext = 'idempotence';return 'bare_rule'; }
-"exportation"|"exp"     { yytext = 'exportation';return 'bare_rule'; }
-"equivalence"|"equiv"   { yytext = 'equivalence';return 'bare_rule'; }
+"implication"|"impl"    { yytext = 'implication';return 'connective'; }
+"transposition"|"trans" { yytext = 'transposition';return 'connective'; }
+"distribution"|"dist"   { yytext = 'distribution';return 'connective'; }
+"association"|"assoc"   { yytext = 'association';return 'connective'; }
+"idempotence"|"idem"    { yytext = 'idempotence';return 'connective'; }
+"exportation"|"exp"     { yytext = 'exportation';return 'connective'; }
+"equivalence"|"equiv"   { yytext = 'equivalence';return 'connective'; }
+
+
+"negated biconditional"|"negated-biconditional"|"not <->"|"~ <->"|"~<->"|"not<->"|"~↔"|"~≡"|"~ ↔"|"~ ≡"|"¬↔"|"¬≡"|"¬ ↔"|"¬ ≡"   { yytext = 'not_double_arrow';return 'connective'; }
+
+
+
 
 "all"|"∀"|"every"|"universal"
     { yytext = 'universal';
@@ -164,8 +170,8 @@
 "right" 
   { return 'right'; }
 
-"close branch"|"close-branch"   { yytext = 'close-branch';return 'bare_rule'; }
-"open branch"|"open-branch"   { yytext = 'open-branch';return 'bare_rule'; }
+"close branch"|"close-branch"   { yytext = 'close-branch';return 'connective'; }
+"open branch"|"open-branch"   { yytext = 'open-branch';return 'connective'; }
 
 
 

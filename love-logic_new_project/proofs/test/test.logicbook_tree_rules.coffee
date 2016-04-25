@@ -1,3 +1,7 @@
+# This serves as test of the tree verification too 
+# (since this was the first set of rules for trees
+# to be written).
+
 chai = require 'chai' 
 expect = chai.expect
 _ = require 'lodash'
@@ -169,6 +173,7 @@ describe "logicbook tree rules", ->
       | X
     '''
     testProof(text, true)
+
   it "does not allow a branching rule to be used without branching", ->
     text = '''
       A arrow B
@@ -176,7 +181,7 @@ describe "logicbook tree rules", ->
       B                 arrow D 1
     '''
     testProof(text, false)
-  it "does not allow a branching rule to be used with making the right number of branches", ->
+  it "does not allow a branching rule to be used without making the right number of branches", ->
     text = '''
       A arrow B
       | not A             arrow D 1
@@ -198,20 +203,20 @@ describe "logicbook tree rules", ->
       | B             and D 1
     '''
     testProof(text, false)
-    
-  it "verifies a tree proof with exists D2", ->
+  it "can cope with applying branching rules to sentences like `A or A` where the disjuncts are identical", ->
+    # preliminary test:
     text = '''
-      (all x) (Fx arrow (exists y) Gyx)   SM
-      (all x) Fx                        SM
-      Fa                              2 universal D
-      Fa arrow (exists y) Gya           tick 1 universal D
-      | not Fa                        4 -> D
-      | X
-
-      | (exists y) Gya                  4 -> D
-      || Gaa                          8 existential D2
-      |
-      || Gba                          8 existential D2
+      A or B    SM
+      | A             or D 1
+      
+      | A             or D 1
+    '''
+    testProof(text, false)
+    text = '''
+      A or A    SM
+      | A             or D 1
+      
+      | A             or D 1
     '''
     testProof(text, true)
   
@@ -306,4 +311,264 @@ describe "logicbook tree rules", ->
       | D           or D 2
     '''
     testProof(text, false)
+
+  it "does not allow further lines after a branch", ->
+    # First check that the supposedly correct form of the proof works:
+    text = '''
+      A and B       SM 
+      C or D        SM
+      | C           or D 2
+      
+      | D           or D 2
+      | A           and D 1
+    '''
+    testProof(text, true)
+    # Now make the change which should cause it to be incorrect:
+    text = '''
+      A and B       SM 
+      C or D        SM
+      | C           or D 2
+      
+      | D           or D 2
+      A             and D 1
+    '''
+    testProof(text, false)
+
+  it "does not allow further lines after a nested branch", ->
+    text = '''
+      A and B       SM 
+      C or D        SM
+      E arrow F     SM
+      | C           or D 2
+      
+      | D           or D 2
+      || not E      arrow D 3
+      |
+      || F          arrow D 3
+      || A           and D 1
+    '''
+    testProof(text, true)
+    text = '''
+      A and B       SM 
+      C or D        SM
+      E arrow F     SM
+      | C           or D 2
+      
+      | D           or D 2
+      || not E      arrow D 3
+      |
+      || F          arrow D 3
+      | A           and D 1
+    '''
+    testProof(text, false)
+
+    
+  it "verifies a tree proof with exists D2", ->
+    text = '''
+      (exists x) Gx    SM
+      Fa               SM
+      Fb               SM
+      | Ga                          1 exists D2
+      
+      | Gb                          1 exists D2
+      
+      | Gc                          1 exists D2
+    '''
+    testProof(text, true)
   
+  it "identifies a mistake in a tree proof with exists D2 (no branch for a new constant)", ->
+    text = '''
+      (exists x) Gx    SM
+      Fa               SM
+      Fb               SM
+      | Ga                          1 exists D2
+      
+      | Gb                          1 exists D2
+    '''
+    testProof(text, false)
+  it "identifies another mistake in a tree proof with exists D2 (no branch for an existing constant)", ->
+    text = '''
+      (exists x) Gx    SM
+      Fa               SM
+      Fb               SM
+      | Ga                          1 exists D2
+      
+      | Gc                          1 exists D2
+    '''
+    testProof(text, false)
+  
+  it "verifies a more complex tree proof with exists D2", ->
+    text = '''
+      (all x) (Fx arrow (exists y) Gyx)   SM
+      (all x) Fx                        SM
+      Fa                              2 universal D
+      Fa arrow (exists y) Gya           tick 1 universal D
+      | not Fa                        4 -> D
+      | X
+
+      | (exists y) Gya                  4 -> D
+      || Gaa                          8 existential D2
+      |
+      || Gba                          8 existential D2
+    '''
+    testProof(text, true)
+  it "verifies a tick  with exists D2", ->
+    text = '''
+      (exists x) Gx   tick SM
+      Fa               SM
+      Fb               SM
+      | Ga                          1 exists D2
+      
+      | Gb                          1 exists D2
+      
+      | Gc                          1 exists D2
+    '''
+    testProof(text, true)
+  it "verifies a tick with exists D2 (another case)", ->
+    text = '''
+      (exists x) Gx   tick SM
+      Fa or Fb         SM
+      | Fa          or D 2
+      || Ga                          1 exists D2
+      |
+      || Gb                          1 exists D2
+      |
+      || Gc                          1 exists D2
+      
+      | Fb          or D 2
+      || Ga                          1 exists D2
+      |
+      || Gb                          1 exists D2
+      |
+      || Gc                          1 exists D2
+      
+    '''
+    testProof(text, true)
+  it "verifies a tick with exists D2 even where different branches contain different names", ->
+    # preliminary test:
+    text = '''
+      (exists x) Gx   SM
+      Fa or Fa         SM
+      (all x) Fx       SM
+      | Fa          or D 2
+      | Fb          all D 3
+      
+      | Fa          or D 2
+      | Fd          all D 3
+    '''
+    testProof(text, true)
+  
+    text = '''
+      (exists x) Gx   tick SM
+      Fa or Fa         SM
+      (all x) Fx       SM
+      | Fa          or D 2
+      | Fb          all D 3
+      || Ga                          1 exists D2
+      |
+      || Gb                          1 exists D2
+      |
+      || Gc                          1 exists D2
+      
+      | Fa          or D 2
+      | Fd          all D 3
+      || Ga                          1 exists D2
+      |
+      || Gd                          1 exists D2
+      |
+      || Gc                          1 exists D2
+      
+    '''
+    testProof(text, true)
+  
+  describe "various rules", ->
+    it "verifies not not D", ->
+      text = '''
+        not not A     SM
+        A             dn D 1
+      '''
+      testProof(text, true)
+    it "verifies not not D tick", ->
+      text = '''
+        not not A     tick SM
+        A             dn D 1
+      '''
+      testProof(text, true)
+    it "spots a mistake with not not D tick", ->
+      text = '''
+        not not A     tick SM
+        not not B     tick SM
+        A             dn D 1
+      '''
+      testProof(text, false)
+    it "verifies <->D", ->
+      text = '''
+        A<->B     SM
+        |A             <-> D 1
+        |B             <-> D 1
+        
+        |not A             <-> D 1
+        |not B             <-> D 1
+      '''
+      testProof(text, true)
+    it "spots a mistake with <->D", ->
+      text = '''
+        A<->B     SM
+        A             <-> D 1
+      '''
+      testProof(text, false)
+    it "spots another mistake with <->D", ->
+      text = '''
+        A<->B     SM
+        B             <-> D 1
+      '''
+      testProof(text, false)
+    it "verifies <->D tick", ->
+      text = '''
+        A<->B     tick SM
+        |A             <-> D 1
+        |B             <-> D 1
+        
+        |not A             <-> D 1
+        |not B             <-> D 1
+      '''
+      testProof(text, true)      
+    it "allows partial use of <->D ", ->
+      text = '''
+        A<->B         SM
+        |A             <-> D 1
+        |B             <-> D 1
+        
+        |not A             <-> D 1
+      '''
+      testProof(text, true)      
+    it "spots a mistake with <->D tick", ->
+      text = '''
+        A<->B     tick SM
+        |A             <-> D 1
+        |B             <-> D 1
+        
+        |not A             <-> D 1
+      '''
+      testProof(text, false)      
+    it "verifies not<->D", ->
+      text = '''
+        not (A<->B)     SM
+        |A             ~<-> D 1
+        |not B             not <-> D 1
+        
+        |not A             negated biconditional D 1
+        |B             ~ <-> D 1
+      '''
+      testProof(text, true)
+    it "verifies not<->D ticked", ->
+      text = '''
+        not (A<->B)     tick SM
+        |A             ~<-> D 1
+        |not B             not <-> D 1
+        
+        |not A             negated biconditional D 1
+        |B             ~ <-> D 1
+      '''
+      testProof(text, true)
+            

@@ -59,9 +59,10 @@ rule_name
       { $$= { type: 'rule', connective:$connective, 
               variant:{type:'variant', intronation:$intronation, side:$side }
             }; }
-
+    | connective
+      { $$= {type: 'rule', connective:$1, variant:{type:'variant', intronation:null, side: null }}; }
     /* reit and premise are special cases : they can't take a variant */
-    | (reit|premise|bare_rule)
+    | (reit|premise)
       { $$= {type: 'rule', connective:$1, variant:{type:'variant', intronation:null, side: null }}; }
 
     ;

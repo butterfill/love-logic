@@ -72,12 +72,12 @@
   }
 */
 var justification_parser = (function(){
-var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,7],$V1=[1,12],$V2=[1,13],$V3=[1,14],$V4=[1,15],$V5=[1,16],$V6=[1,17],$V7=[1,11],$V8=[1,18],$V9=[1,19],$Va=[1,20],$Vb=[5,7],$Vc=[5,7,22],$Vd=[5,7,10,16,17,18,19,20,21,23,24,25],$Ve=[5,7,10,20,21,22],$Vf=[5,7,10,16,17,18,19,22];
+var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,7],$V1=[1,12],$V2=[1,13],$V3=[1,14],$V4=[1,15],$V5=[1,16],$V6=[1,17],$V7=[1,11],$V8=[1,18],$V9=[1,19],$Va=[5,7],$Vb=[5,7,22],$Vc=[5,7,10,16,17,18,19,20,21,23,24],$Vd=[5,7,10,20,21,22],$Ve=[5,7,10,16,17,18,19,22];
 var parser = {trace: function trace() { },
 yy: {},
-symbols_: {"error":2,"justification":3,"j":4,"EOF":5,"j2":6,"tick":7,"rule_name":8,"numberlist":9,"connective":10,"intronation":11,"rule_name_option0":12,"rule_name_option1":13,"side":14,"rule_name_group0":15,"elim":16,"intro":17,"decomposition":18,"decomposition2":19,"left":20,"right":21,"number":22,"reit":23,"premise":24,"bare_rule":25,"$accept":0,"$end":1},
-terminals_: {2:"error",5:"EOF",7:"tick",10:"connective",16:"elim",17:"intro",18:"decomposition",19:"decomposition2",20:"left",21:"right",22:"number",23:"reit",24:"premise",25:"bare_rule"},
-productions_: [0,[3,2],[4,1],[4,2],[4,2],[6,1],[6,2],[6,2],[8,3],[8,3],[8,3],[8,3],[8,3],[8,3],[8,1],[11,1],[11,1],[11,1],[11,1],[14,1],[14,1],[9,1],[9,2],[12,0],[12,1],[13,0],[13,1],[15,1],[15,1],[15,1]],
+symbols_: {"error":2,"justification":3,"j":4,"EOF":5,"j2":6,"tick":7,"rule_name":8,"numberlist":9,"connective":10,"intronation":11,"rule_name_option0":12,"rule_name_option1":13,"side":14,"rule_name_group0":15,"elim":16,"intro":17,"decomposition":18,"decomposition2":19,"left":20,"right":21,"number":22,"reit":23,"premise":24,"$accept":0,"$end":1},
+terminals_: {2:"error",5:"EOF",7:"tick",10:"connective",16:"elim",17:"intro",18:"decomposition",19:"decomposition2",20:"left",21:"right",22:"number",23:"reit",24:"premise"},
+productions_: [0,[3,2],[4,1],[4,2],[4,2],[6,1],[6,2],[6,2],[8,3],[8,3],[8,3],[8,3],[8,3],[8,3],[8,1],[8,1],[11,1],[11,1],[11,1],[11,1],[14,1],[14,1],[9,1],[9,2],[12,0],[12,1],[13,0],[13,1],[15,1],[15,1]],
 performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate /* action[1] */, $$ /* vstack */, _$ /* lstack */) {
 /* this == yyval */
 
@@ -134,37 +134,37 @@ case 13:
               variant:{type:'variant', intronation:$$[$0-2], side:$$[$0-1] }
             }; 
 break;
-case 14:
+case 14: case 15:
  this.$= {type: 'rule', connective:$$[$0], variant:{type:'variant', intronation:null, side: null }}; 
 break;
-case 15:
+case 16:
  this.$='elim'; 
 break;
-case 16:
+case 17:
  this.$='intro'; 
 break;
-case 17:
+case 18:
  this.$='decomposition'; 
 break;
-case 18:
+case 19:
  this.$='decomposition2'; 
 break;
-case 19:
+case 20:
  this.$='left'; 
 break;
-case 20:
+case 21:
  this.$='right'; 
 break;
-case 21:
+case 22:
  this.$ = [$$[$0]]; 
 break;
-case 22:
+case 23:
  this.$ = [$$[$0-1]].concat($$[$0]); 
 break;
 }
 },
-table: [{3:1,4:2,6:3,7:[1,4],8:5,9:6,10:$V0,11:8,14:9,15:10,16:$V1,17:$V2,18:$V3,19:$V4,20:$V5,21:$V6,22:$V7,23:$V8,24:$V9,25:$Va},{1:[3]},{5:[1,21]},{5:[2,2],7:[1,22]},{6:23,8:5,9:6,10:$V0,11:8,14:9,15:10,16:$V1,17:$V2,18:$V3,19:$V4,20:$V5,21:$V6,22:$V7,23:$V8,24:$V9,25:$Va},o($Vb,[2,5],{9:24,22:$V7}),{8:25,10:$V0,11:8,14:9,15:10,16:$V1,17:$V2,18:$V3,19:$V4,20:$V5,21:$V6,23:$V8,24:$V9,25:$Va},{11:26,14:27,16:$V1,17:$V2,18:$V3,19:$V4,20:$V5,21:$V6},{10:[1,28],14:29,20:$V5,21:$V6},{10:[1,30],11:31,16:$V1,17:$V2,18:$V3,19:$V4},o($Vc,[2,14]),o($Vd,[2,21],{9:32,22:$V7}),o($Ve,[2,15]),o($Ve,[2,16]),o($Ve,[2,17]),o($Ve,[2,18]),o($Vf,[2,19]),o($Vf,[2,20]),o($Vc,[2,27]),o($Vc,[2,28]),o($Vc,[2,29]),{1:[2,1]},{5:[2,4]},{5:[2,3]},o($Vb,[2,6]),o($Vb,[2,7]),o($Vc,[2,23],{12:33,14:34,20:$V5,21:$V6}),{11:35,16:$V1,17:$V2,18:$V3,19:$V4},o($Vc,[2,25],{13:36,14:37,20:$V5,21:$V6}),{10:[1,38]},{11:39,16:$V1,17:$V2,18:$V3,19:$V4},{10:[1,40]},o($Vd,[2,22]),o($Vc,[2,8]),o($Vc,[2,24]),o($Vc,[2,11]),o($Vc,[2,9]),o($Vc,[2,26]),o($Vc,[2,13]),o($Vc,[2,10]),o($Vc,[2,12])],
-defaultActions: {21:[2,1],22:[2,4],23:[2,3]},
+table: [{3:1,4:2,6:3,7:[1,4],8:5,9:6,10:$V0,11:8,14:9,15:10,16:$V1,17:$V2,18:$V3,19:$V4,20:$V5,21:$V6,22:$V7,23:$V8,24:$V9},{1:[3]},{5:[1,20]},{5:[2,2],7:[1,21]},{6:22,8:5,9:6,10:$V0,11:8,14:9,15:10,16:$V1,17:$V2,18:$V3,19:$V4,20:$V5,21:$V6,22:$V7,23:$V8,24:$V9},o($Va,[2,5],{9:23,22:$V7}),{8:24,10:$V0,11:8,14:9,15:10,16:$V1,17:$V2,18:$V3,19:$V4,20:$V5,21:$V6,23:$V8,24:$V9},o($Vb,[2,14],{11:25,14:26,16:$V1,17:$V2,18:$V3,19:$V4,20:$V5,21:$V6}),{10:[1,27],14:28,20:$V5,21:$V6},{10:[1,29],11:30,16:$V1,17:$V2,18:$V3,19:$V4},o($Vb,[2,15]),o($Vc,[2,22],{9:31,22:$V7}),o($Vd,[2,16]),o($Vd,[2,17]),o($Vd,[2,18]),o($Vd,[2,19]),o($Ve,[2,20]),o($Ve,[2,21]),o($Vb,[2,28]),o($Vb,[2,29]),{1:[2,1]},{5:[2,4]},{5:[2,3]},o($Va,[2,6]),o($Va,[2,7]),o($Vb,[2,24],{12:32,14:33,20:$V5,21:$V6}),{11:34,16:$V1,17:$V2,18:$V3,19:$V4},o($Vb,[2,26],{13:35,14:36,20:$V5,21:$V6}),{10:[1,37]},{11:38,16:$V1,17:$V2,18:$V3,19:$V4},{10:[1,39]},o($Vc,[2,23]),o($Vb,[2,8]),o($Vb,[2,25]),o($Vb,[2,11]),o($Vb,[2,9]),o($Vb,[2,27]),o($Vb,[2,13]),o($Vb,[2,10]),o($Vb,[2,12])],
+defaultActions: {20:[2,1],21:[2,4],22:[2,3]},
 parseError: function parseError(str, hash) {
     if (hash.recoverable) {
         this.trace(str);
@@ -693,83 +693,85 @@ break;
 case 17: yy_.yytext = 'premise';
       return 24; 
 break;
-case 18: yy_.yytext = 'weakening';return 25; 
+case 18: yy_.yytext = 'weakening';return 10; 
 break;
-case 19: yy_.yytext = 'cases';return 25; 
+case 19: yy_.yytext = 'cases';return 10; 
 break;
-case 20: yy_.yytext = 'DC';return 25; 
+case 20: yy_.yytext = 'DC';return 10; 
 break;
-case 21: yy_.yytext = 'reductio';return 25; 
+case 21: yy_.yytext = 'reductio';return 10; 
 break;
-case 22: yy_.yytext = 'DM';return 25; 
+case 22: yy_.yytext = 'DM';return 10; 
 break;
-case 23: yy_.yytext = 'contraposition';return 25; 
+case 23: yy_.yytext = 'contraposition';return 10; 
 break;
-case 24: yy_.yytext = 'C';return 25; 
+case 24: yy_.yytext = 'C';return 10; 
 break;
-case 25: yy_.yytext = 'contradiction';return 25; 
+case 25: yy_.yytext = 'contradiction';return 10; 
 break;
-case 26: yy_.yytext = 'not-all';return 25; 
+case 26: yy_.yytext = 'not-all';return 10; 
 break;
-case 27: yy_.yytext = 'all-not';return 25; 
+case 27: yy_.yytext = 'all-not';return 10; 
 break;
-case 28: yy_.yytext = 'exists-not';return 25; 
+case 28: yy_.yytext = 'exists-not';return 10; 
 break;
-case 29: yy_.yytext = 'not-exists';return 25; 
+case 29: yy_.yytext = 'not-exists';return 10; 
 break;
-case 30: yy_.yytext = 'dilemma';return 25; 
+case 30: yy_.yytext = 'dilemma';return 10; 
 break;
-case 31: yy_.yytext = 'modus-tollens';return 25; 
+case 31: yy_.yytext = 'modus-tollens';return 10; 
 break;
-case 32: yy_.yytext = 'hypothetical-syllogism';return 25; 
+case 32: yy_.yytext = 'hypothetical-syllogism';return 10; 
 break;
-case 33: yy_.yytext = 'disjunctive-syllogism';return 25; 
+case 33: yy_.yytext = 'disjunctive-syllogism';return 10; 
 break;
-case 34: yy_.yytext = 'commutivity';return 25; 
+case 34: yy_.yytext = 'commutivity';return 10; 
 break;
-case 35: yy_.yytext = 'double-negation';return 25; 
+case 35: yy_.yytext = 'double-negation';return 10; 
 break;
-case 36: yy_.yytext = "material-conditional";return 25; 
+case 36: yy_.yytext = "material-conditional";return 10; 
 break;
-case 37: yy_.yytext = 'biconditional-exchange';return 25; 
+case 37: yy_.yytext = 'biconditional-exchange';return 10; 
 break;
-case 38: yy_.yytext = 'quantifier-negation';return 25; 
+case 38: yy_.yytext = 'quantifier-negation';return 10; 
 break;
-case 39: yy_.yytext = 'implication';return 25; 
+case 39: yy_.yytext = 'implication';return 10; 
 break;
-case 40: yy_.yytext = 'transposition';return 25; 
+case 40: yy_.yytext = 'transposition';return 10; 
 break;
-case 41: yy_.yytext = 'distribution';return 25; 
+case 41: yy_.yytext = 'distribution';return 10; 
 break;
-case 42: yy_.yytext = 'association';return 25; 
+case 42: yy_.yytext = 'association';return 10; 
 break;
-case 43: yy_.yytext = 'idempotence';return 25; 
+case 43: yy_.yytext = 'idempotence';return 10; 
 break;
-case 44: yy_.yytext = 'exportation';return 25; 
+case 44: yy_.yytext = 'exportation';return 10; 
 break;
-case 45: yy_.yytext = 'equivalence';return 25; 
+case 45: yy_.yytext = 'equivalence';return 10; 
 break;
-case 46: yy_.yytext = 'universal';
+case 46: yy_.yytext = 'not_double_arrow';return 10; 
+break;
+case 47: yy_.yytext = 'universal';
       return 10; 
 break;
-case 47: yy_.yytext = 'existential';
+case 48: yy_.yytext = 'existential';
       return 10; 
 break;
-case 48: return 20; 
+case 49: return 20; 
 break;
-case 49: return 21; 
+case 50: return 21; 
 break;
-case 50: yy_.yytext = 'close-branch';return 25; 
+case 51: yy_.yytext = 'close-branch';return 10; 
 break;
-case 51: yy_.yytext = 'open-branch';return 25; 
+case 52: yy_.yytext = 'open-branch';return 10; 
 break;
-case 52: /*  Skip whitespace and commas. 
+case 53: /*  Skip whitespace and commas. 
       */ 
     
 break;
-case 53: return 5; 
+case 54: return 5; 
 break;
-case 54: 
+case 55: 
       /*  I would love to `return 'waffle';` and treat
           waffle as a category because I want to allow 
           some of the connectives to appear in waffle, e.g. 'not'.
@@ -777,14 +779,14 @@ case 54:
       */ 
     
 break;
-case 55: /* Ignore everything else */ 
+case 56: /* Ignore everything else */ 
 break;
-case 56:console.log(yy_.yytext);
+case 57:console.log(yy_.yytext);
 break;
 }
 },
-rules: [/^(?:([0-9][^,\s]*)(\s+and\s+)(?=[0-9]))/i,/^(?:([0-9][^,\s]*)\s+to\s+([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*?)\s*(?:-+)\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*)(?:(\s*,)*))/i,/^(?:elimination|eliminate|elim|e)/i,/^(?:introduction|introduce|intro|i)/i,/^(?:decomposition-2|decomposition2|d-2|d2)/i,/^(?:decomposition|d)/i,/^(?:✓|tick)/i,/^(?:⊥|_\|_|contradiction|contra|false)/i,/^(?:or|∨|\+|ǀǀ|\|)/i,/^(?:=|identity)/i,/^(?:and|conjunction|∧|•|&)/i,/^(?:double_arrow|↔|≡|⇔|<->)/i,/^(?:arrow|->|⇒|→|⊃)/i,/^(?:not|¬|˜|~|!|negation)/i,/^(?:reit|reiteration|r)/i,/^(?:premise|assumption|set member|sm|p)/i,/^(?:weakening|w)/i,/^(?:argument by cases|cases|ac)/i,/^(?:denying the consequent|dc)/i,/^(?:reductio|rd|reductio ad absurdum)/i,/^(?:dm|deMorgan|dem|de morgan)/i,/^(?:contraposition|cp)/i,/^(?:conditional|c)/i,/^(?:cd)/i,/^(?:not all|not-all|~∀)/i,/^(?:all not|all-not|∀~)/i,/^(?:exists not|exists-not|∃~)/i,/^(?:not exists|not-exists|~∃)/i,/^(?:dilemma|dil)/i,/^(?:mt|modus tollens|modus-tollens)/i,/^(?:hs|hypothetical syllogism|hypothetical-syllogism)/i,/^(?:ds|disjunctive syllogism|disjunctive-syllogism)/i,/^(?:commutivity|comm|com)/i,/^(?:dn|double-negation|double negation)/i,/^(?:mc|material-conditional|material conditional)/i,/^(?:bex|↔ex|biconditional-exchange|biconditional exchange)/i,/^(?:qn|quantifier-negation|quantifier negation)/i,/^(?:implication|impl)/i,/^(?:transposition|trans)/i,/^(?:distribution|dist)/i,/^(?:association|assoc)/i,/^(?:idempotence|idem)/i,/^(?:exportation|exp)/i,/^(?:equivalence|equiv)/i,/^(?:all|∀|every|universal)/i,/^(?:some|exists|∃|existential)/i,/^(?:left)/i,/^(?:right)/i,/^(?:close branch|close-branch)/i,/^(?:open branch|open-branch)/i,/^(?:[\s,]+)/i,/^(?:$)/i,/^(?:\w+)/i,/^(?:.)/i,/^(?:.)/i],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56],"inclusive":true}}
+rules: [/^(?:([0-9][^,\s]*)(\s+and\s+)(?=[0-9]))/i,/^(?:([0-9][^,\s]*)\s+to\s+([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*?)\s*(?:-+)\s*([0-9][^,\s]*))/i,/^(?:([0-9][^,\s]*)(?:(\s*,)*))/i,/^(?:elimination|eliminate|elim|e)/i,/^(?:introduction|introduce|intro|i)/i,/^(?:decomposition-2|decomposition2|d-2|d2)/i,/^(?:decomposition|d)/i,/^(?:✓|tick)/i,/^(?:⊥|_\|_|contradiction|contra|false)/i,/^(?:or|∨|\+|ǀǀ|\|)/i,/^(?:=|identity)/i,/^(?:and|conjunction|∧|•|&)/i,/^(?:double_arrow|↔|≡|⇔|<->)/i,/^(?:arrow|->|⇒|→|⊃)/i,/^(?:not|¬|˜|~|!|negation)/i,/^(?:reit|reiteration|r)/i,/^(?:premise|assumption|set member|sm|p)/i,/^(?:weakening|w)/i,/^(?:argument by cases|cases|ac)/i,/^(?:denying the consequent|dc)/i,/^(?:reductio|rd|reductio ad absurdum)/i,/^(?:dm|deMorgan|dem|de morgan)/i,/^(?:contraposition|cp)/i,/^(?:conditional|c)/i,/^(?:cd)/i,/^(?:not all|not-all|~∀)/i,/^(?:all not|all-not|∀~)/i,/^(?:exists not|exists-not|∃~)/i,/^(?:not exists|not-exists|~∃)/i,/^(?:dilemma|dil)/i,/^(?:mt|modus tollens|modus-tollens)/i,/^(?:hs|hypothetical syllogism|hypothetical-syllogism)/i,/^(?:ds|disjunctive syllogism|disjunctive-syllogism)/i,/^(?:commutivity|comm|com)/i,/^(?:dn|double-negation|double negation|negated negation|negated-negation|~~|¬¬|not not)/i,/^(?:mc|material-conditional|material conditional)/i,/^(?:bex|↔ex|biconditional-exchange|biconditional exchange)/i,/^(?:qn|quantifier-negation|quantifier negation)/i,/^(?:implication|impl)/i,/^(?:transposition|trans)/i,/^(?:distribution|dist)/i,/^(?:association|assoc)/i,/^(?:idempotence|idem)/i,/^(?:exportation|exp)/i,/^(?:equivalence|equiv)/i,/^(?:negated biconditional|negated-biconditional|not <->|~ <->|~<->|not<->|~↔|~≡|~ ↔|~ ≡|¬↔|¬≡|¬ ↔|¬ ≡)/i,/^(?:all|∀|every|universal)/i,/^(?:some|exists|∃|existential)/i,/^(?:left)/i,/^(?:right)/i,/^(?:close branch|close-branch)/i,/^(?:open branch|open-branch)/i,/^(?:[\s,]+)/i,/^(?:$)/i,/^(?:\w+)/i,/^(?:.)/i,/^(?:.)/i],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57],"inclusive":true}}
 });
 return lexer;
 })();
