@@ -1,0 +1,27 @@
+//- This can be used for both English and awFOL sentences; set param `sentenceIsAwFOL`
+template(name="editSentence")
+  h5 Your answer:
+  textarea(id="#{editorId}", style="display: none") {{defaultContent}}
+  .row
+    .col.s12
+      p#feedback
+  if sentenceIsAwFOL
+    .row: .col.s12
+      .left
+        button#convert-to-symbols.btn.waves-effect.grey convert to symbols
+
+
+template(name="editProof")
+  textarea(id="#{editorId}", style="display: none") 
+  .row
+    .col.s12
+      p#feedback
+      
+  .row: .col.s12
+    button#checkProof.btn.waves-effect.grey check
+    button#resetProof.btn.waves-effect.grey reset
+    button#convert-to-symbols.btn.waves-effect.grey convert to symbols
+
+  p#feedback .
+    i.material-icons error_outline
+

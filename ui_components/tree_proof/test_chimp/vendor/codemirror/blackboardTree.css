@@ -1,0 +1,38 @@
+/* Port of TextMate's Blackboard theme 
+  Modified and turned into black text on white background
+  for tree proofs.
+*/
+
+.cm-s-blackboardTree.CodeMirror { background: #EEE; color: black; height:auto; font-size:12pt}
+.cm-s-blackboardTree div.CodeMirror-selected { background: #253B76; }
+.cm-s-blackboardTree .CodeMirror-line::selection, .cm-s-blackboard .CodeMirror-line > span::selection, .cm-s-blackboard .CodeMirror-line > span > span::selection { background: rgba(37, 59, 118, .99); }
+.cm-s-blackboardTree .CodeMirror-line::-moz-selection, .cm-s-blackboard .CodeMirror-line > span::-moz-selection, .cm-s-blackboard .CodeMirror-line > span > span::-moz-selection { background: rgba(37, 59, 118, .99); }
+.cm-s-blackboardTree .CodeMirror-gutters { background: #0C1021; border-right: 0; }
+.cm-s-blackboardTree .CodeMirror-guttermarker { color: #FBDE2D; }
+.cm-s-blackboardTree .CodeMirror-guttermarker-subtle { color: #888; }
+.cm-s-blackboardTree .CodeMirror-linenumber { color: #888; }
+.cm-s-blackboardTree .CodeMirror-linenumbers { width:2em; padding-right:1em;}
+.cm-s-blackboardTree .CodeMirror-cursor { border-left: 1px solid #A7A7A7; }
+                
+.cm-s-blackboardTree .cm-keyword { color: #B35804; }
+.cm-s-blackboardTree .cm-punctuation { color: grey; }
+.cm-s-blackboardTree .cm-structure { color: #888; }
+.cm-s-blackboardTree .cm-atom { color: #D8FA3C; }
+.cm-s-blackboardTree .cm-number { color: #07800C; }
+.cm-s-blackboardTree .cm-def { color: #8DA6CE; }
+.cm-s-blackboardTree .cm-variable { color: black; }
+.cm-s-blackboardTree .cm-operator { color: #86069A; }
+.cm-s-blackboardTree .cm-comment { color: #AEAEAE; }
+.cm-s-blackboardTree .cm-string { color: #61CE3C; }
+.cm-s-blackboardTree .cm-string-2 { color: #61CE3C; }
+.cm-s-blackboardTree .cm-meta { color: #D8FA3C; }
+.cm-s-blackboardTree .cm-builtin { color: #8DA6CE; }
+.cm-s-blackboardTree .cm-tag { color: #8DA6CE; }
+.cm-s-blackboardTree .cm-attribute { color: #8DA6CE; }
+.cm-s-blackboardTree .cm-header { color: #FF6400; }
+.cm-s-blackboardTree .cm-hr { color: #AEAEAE; }
+.cm-s-blackboardTree .cm-link { color: #8DA6CE; }
+.cm-s-blackboardTree .cm-error { background: #9D1E15; color: #F8F8F8; }
+                
+.cm-s-blackboardTree .CodeMirror-activeline-background { background: #3C3636; }
+.cm-s-blackboardTree .CodeMirror-matchingbracket { outline:1px solid grey;color:black !important; }
