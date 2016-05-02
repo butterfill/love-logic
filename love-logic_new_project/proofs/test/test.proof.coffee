@@ -1,5 +1,6 @@
 chai = require 'chai' 
 expect = chai.expect
+should = chai.should()
 _ = require 'lodash'
 
 dialectManager = require('../../dialect_manager/dialectManager')
@@ -128,4 +129,42 @@ describe "proof", ->
       console.log theProof.toString()
       expect(theProof.toString()[0]).not.to.equal('1')
       
-    
+  describe ".clone", ->
+    it "enables you to clone a proof", ->
+      theProof = proof.parse '''
+        | A
+        | ---
+        | | B
+        | | B				// reit 3
+      '''
+      a = theProof.clone()
+      a.toString().indexOf('---').should.not.equal(-1)
+      a.toString().indexOf('A').should.not.equal(-1)
+      a.toString().indexOf('B').should.not.equal(-1)
+      a.toString().indexOf('|').should.not.equal(-1)
+      
+  describe ".detachChildren", ->
+    it "enables you to detach children from a", ->
+      theProof = proof.parse '''
+        | A
+        | ---
+        | | B
+        | | B				// reit 3
+      '''
+      {childlessProof, children} = theProof.detachChildren()
+      childlessProof.getChildren().length.should.equal(0)
+
+  describe ".convertToSymbols", ->
+    it "leaves lines with sentences containing syntax errors intact", ->
+      theProof = proof.parse '''
+        | blah
+      '''
+      txt = theProof.toString({replaceSymbols:true})
+      txt.indexOf('blah').should.not.equal(-1)
+    it "leaves lines containing justification with syntax errors intact", ->
+      theProof = proof.parse '''
+        | A     // blah
+      '''
+      txt = theProof.toString({replaceSymbols:true})
+      txt.indexOf('blah').should.not.equal(-1)
+            

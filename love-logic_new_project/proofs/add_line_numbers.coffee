@@ -32,7 +32,7 @@ split = (line) ->
   return { lineNumber:null, rest: line.content }
   
 
-to = (block) -> 
+to = (block, o) -> 
   # Do this in two passes.
   # First pass: add numbers to lines.
   walker = { 
@@ -54,8 +54,9 @@ to = (block) ->
           # Protect the user from duplicates in case they are only numbering lines 
           # that contain sentences
           lineNumber = "#{@lineCounter}x"
-      if lineNumber in @usedLineNumbers
-        throw new Error "Duplicate line number '#{lineNumber}' used for the second time at line #{@lineCounter}.  Line numbers must be unique."
+      unless o?.treeProof
+        if lineNumber in @usedLineNumbers
+          throw new Error "Duplicate line number '#{lineNumber}' used for the second time at line #{@lineCounter}.  Line numbers must be unique."
       @usedLineNumbers.push lineNumber
       line.number = lineNumber
       line.content = rest

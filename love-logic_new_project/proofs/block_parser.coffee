@@ -377,6 +377,10 @@ class Block
         res.push(item)
     return res
   
+  removeBlankAndDividerLines : ->
+    @content = @content.filter (item) -> not (item.type in ['blank_line', 'divider'])
+    return @
+  
   newLine : (lineObject) ->
     lineObject.parent = @
     prevLine = @getLastLine()
@@ -473,7 +477,6 @@ class Block
     otherLeafTypes = _.difference(leafTypes, ['close_branch', 'open_branch'])
     return (otherLeafTypes.length is 0)
 
-  
   toString : () ->
     # return util.inspect @
     _replacer = (key, value) ->

@@ -10,7 +10,7 @@ rules =
     Rules of proof for tree proofs as presented in Bergman et al, ‘The Logic Book’ (2014).  
   '''
   
-  premise : rule.from().to( rule.premise() )
+  premise : rule.from().to( rule.premiseInTreeProof() )
   
   'close-branch' : rule.from().to( rule.closeBranch() )
   'open-branch' : rule.from().to( rule.openBranch() )
@@ -87,7 +87,10 @@ rules =
     decomposition : rule.from('not exists τ φ').to( rule.matches('all τ not φ').and.doesntBranch() )
   
   identity : 
-    decomposition : rule.from('α=β').and('φ').to( rule.matches('φ[α-->β]').and.doesntBranch() )
+    decomposition : [
+      rule.from('α=β').and('φ').to( rule.matches('φ[α-->β]').and.doesntBranch() )
+      rule.from('β=α').and('φ').to( rule.matches('φ[α-->β]').and.doesntBranch() )
+    ]
   
 # Keys are awFOL `.type` properties (unlike the keys of `rules` which
 # are the names of rules defined in the `justification_parser.l` lexer).

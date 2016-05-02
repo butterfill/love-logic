@@ -53,6 +53,9 @@ _parseProof = (proofText) ->
 
 # Add a `verify` method to each line and block of `proof`.
 # (This is the only method you are likely to need.)
+# TODO: add verifyNaturalDeduction and check that the first line of a
+#   subproof has no justification other than premise 
+#   (i.e. `.justification.rule.connective` is `'premise'`)
 to = (proof) ->
   walker = 
     visit : (item) ->
@@ -126,6 +129,8 @@ checkTicksAreCorrect = (proof) ->
   result = proof.walk(walker)
   return false if result is false
   return true
+
+
 
 
 # In a tree proof, check that where a branch is created,

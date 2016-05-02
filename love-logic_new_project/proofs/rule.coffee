@@ -530,42 +530,68 @@ subproof = (premisePattern, conclusionPattern) ->
       return res
   }
 exports.subproof = subproof
+#
+#
+# # Attempt to find matches for each of `listOfPatterns (e.g. `['φ', 'not φ']`)
+# # in `listOfLines`.  Return new matches if success; otherwise return false.
+# # TODO: permuting order of lines is a bit suboptimal!
+# # TODO: don’t need to permuate order of patterns if we optimise order by
+# # considering whether one pattern matches another (e.g. 'φ' matches 'not φ' but
+# # not conversely).
+# linesContainPatterns = (listOfLines, listOfPatterns, priorMatches) ->
+#   patternsPerms = _permutations(listOfPatterns)
+#   linesPerms = _permutations(listOfLines)
+#   for thePatterns in patternsPerms
+#     for someLines in linesPerms
+#       test = _allPatternsAreMatched(someLines, thePatterns, priorMatches)
+#       return test if test isnt false
+#   return false
+# # Are all thePatterns matched in theLines?
+# _allPatternsAreMatched = (listOfLines, thePatterns, priorMatches) ->
+#   newMatches = priorMatches
+#   for pattern in thePatterns
+#     test = _doesPatternMatchAnyLines(listOfLines, pattern, newMatches)
+#     return false if test is false
+#     newMatches = test
+#   return newMatches
+# # Do any of `theLines` match `pattern`?
+# _doesPatternMatchAnyLines = (listOfLines, pattern, priorMatches) ->
+#   for line in listOfLines
+#     sentence = line.sentence
+#     test = sentence.findMatches(pattern, priorMatches)
+#     # console.log "tested req #{pattern.toString()} against #{line.sentence}, res is #{test}, newMatches contains entries for #{(x.toString() for x in _.keys(test)).join(', ')} with newMatches.ψ = #{fol._decorate(test.ψ).toString() if test.ψ}"
+#     return test unless test is false
+#   # We didn’t find any lines that match pattern:
+#   # console.log "didn’t find #{pattern} with #{_matchesToString(priorMatches)}"
+#   return false
+# # For testing only :
+# exports.linesContainPatterns = linesContainPatterns
 
-
-# Attempt to find matches for each of `listOfPatterns (e.g. `['φ', 'not φ']`)
-# in `listOfLines`.  Return new matches if success; otherwise return false.
-# TODO: permuting order of lines is a bit suboptimal!
-# TODO: don’t need to permuate order of patterns if we optimise order by
-# considering whether one pattern matches another (e.g. 'φ' matches 'not φ' but
-# not conversely).
-linesContainPatterns = (listOfLines, listOfPatterns, priorMatches) ->
-  patternsPerms = _permutations(listOfPatterns)
-  linesPerms = _permutations(listOfLines)
-  for thePatterns in patternsPerms
-    for someLines in linesPerms
-      test = _allPatternsAreMatched(someLines, thePatterns, priorMatches)
-      return test if test isnt false
-  return false
-# Are all thePatterns matched in theLines?
-_allPatternsAreMatched = (listOfLines, thePatterns, priorMatches) ->
-  newMatches = priorMatches
-  for pattern in thePatterns
-    test = _doesPatternMatchAnyLines(listOfLines, pattern, newMatches)
-    return false if test is false
+linesContainPatterns = (listOfLines, thePatterns, priorMatches) ->
+  return priorMatches if thePatterns.length is 0
+  thePatterns = _.clone(thePatterns)
+  pattern = thePatterns.pop()
+  candidateMatches = _whichLinesMatchThisPattern(listOfLines, pattern, priorMatches)
+  return false if candidateMatches.length is 0
+  for candidate in candidateMatches
+    currentMatches = candidate.matches
+    line = candidate.line
+    test = linesContainPatterns(listOfLines, thePatterns, currentMatches)
     newMatches = test
-  return newMatches
-# Do any of `theLines` match `pattern`?
-_doesPatternMatchAnyLines = (listOfLines, pattern, priorMatches) ->
-  for line in listOfLines
-    sentence = line.sentence
-    test = sentence.findMatches(pattern, priorMatches)
-    # console.log "tested req #{pattern.toString()} against #{line.sentence}, res is #{test}, newMatches contains entries for #{(x.toString() for x in _.keys(test)).join(', ')} with newMatches.ψ = #{fol._decorate(test.ψ).toString() if test.ψ}"
-    return test unless test is false
-  # We didn’t find any lines that match pattern:
-  # console.log "didn’t find #{pattern} with #{_matchesToString(priorMatches)}"
+    return newMatches if test isnt false
   return false
 # For testing only :
 exports.linesContainPatterns = linesContainPatterns
+
+_whichLinesMatchThisPattern  = (listOfLines, pattern, priorMatches) ->
+  result = []
+  for line in listOfLines
+    sentence = line.sentence
+    test = sentence.findMatches(pattern, priorMatches)
+    if test isnt false
+      result.push {line, matches:test}
+  return result
+
 
 
 # Return false if not; matches made if yes.
@@ -614,7 +640,7 @@ checkRequirementsMet = (line, theReqs) ->
       msg.push " citing a subproof of the form #{r}"
     else
       msg.push " citing a line of the form #{r}"
-  line.status.addMessage "you can only use #{ruleName} #{msg.join('; ')}."
+  line.status.addMessageIfNoneAlready "you can only use #{ruleName} #{msg.join('; ')}."
   return false
 
 areRequirementsMetByTheseLinesAndBlocks = (theReqs, line, citedLineOrdering, citedBlockOrdering) ->
@@ -714,44 +740,51 @@ doAnyCandidatesMeetThisReq = (req, candidates, priorMatches) ->
         
 
 
-# Use `rule.premise()` when the line in question
-# must be a premise or assumption.
 # Use like `rule.from().to( rule.premise() )`
-# Note: we cannot just use `line.isPremise()` because we do not
-# want to allow that a subproof can have more than one premise?
-# TODO: should be used like rule.from().to( rule.premise() )
+# when the line in question
+# must be a premise or assumption.
 premise = () ->
-  premiseRule = (line, priorMatches) ->
-    # The first line of any proof or subproof can be a premise.
-    return priorMatches if not line.prev
-    
-    # From now on we know that this is not the first line of a proof or subproof.
-    
-    lineIsInASubproof = line.parent.parent?
-    if lineIsInASubproof
-      line.status.addMessage "only the first line of a subproof may be a premise."
-      return false
-    
-    # From this point on, we are in the main proof (not in a subproof).
-    
-    # Is there a non-premise or subproof above line?
-    isNeitherAPremiseNorASubproof = (item) ->
-      if item.type is 'line'
-        thisIsAPremise = item.justification?.rule.connective is 'premise'
-        return false if thisIsAPremise 
-        return true if not thisIsAPremise
-      if item.type is 'block'   # A block is a subproof.
-        return true
-      # We don't care about dividers, blank lines and whatever else.
-      return false
-    thereIsANonPremiseAbove = line.findAbove( isNeitherAPremiseNorASubproof )
-    if thereIsANonPremiseAbove
-      line.status.addMessage  "premises may not occur after non-premises."
-      return false
-    return priorMatches
-    
-  return {check:premiseRule}
+  return {check:_checkIsPremise}
 exports.premise = premise      
+# Note: we cannot just use `line.isPremise()` below because we do not
+# want to allow that a subproof can have more than one premise?
+_checkIsPremise = (line, priorMatches) ->
+  # The first line of any proof or subproof can be a premise.
+  return priorMatches if not line.prev
+  
+  # From now on we know that this is not the first line of a proof or subproof.
+  
+  lineIsInASubproof = line.parent.parent?
+  if lineIsInASubproof
+    line.status.addMessage "only the first line of a subproof may be a premise."
+    return false
+  
+  # From this point on, we are in the main proof (not in a subproof).
+  
+  # Is there a non-premise or subproof above line?
+  isNeitherAPremiseNorASubproof = (item) ->
+    if item.type is 'line'
+      thisIsAPremise = item.justification?.rule.connective is 'premise'
+      return false if thisIsAPremise 
+      return true if not thisIsAPremise
+    if item.type is 'block'   # A block is a subproof.
+      return true
+    # We don't care about dividers, blank lines and whatever else.
+    return false
+  thereIsANonPremiseAbove = line.findAbove( isNeitherAPremiseNorASubproof )
+  if thereIsANonPremiseAbove
+    line.status.addMessage  "premises may not occur after non-premises."
+    return false
+  return priorMatches
+exports.premiseInTreeProof = () ->
+  premiseInTreeProofRule = (line, priorMatches) ->
+    # Only lines in the main proof (not subproofs) can be premises
+    if line.parent.parent?
+      line.status.addMessage('you cannot have a premise (aka ‘assumption’, ‘set member’) in a branch')
+      return false
+    return _checkIsPremise(line, priorMatches)
+  return {check:premiseInTreeProofRule}
+    
 
 phi = fol.parse('φ')
 notPhi = fol.parse('not φ')
@@ -765,13 +798,12 @@ closeBranch = () ->
         line.status.addMessage "You can only close on the final line of a branch."
         return false 
       lines = line.findAllAbove( (item) -> item.type is 'line' )
-      # console.log "lines.length = #{lines.length}"
-      test = linesContainPatterns(lines, [phi, notPhi], {})
+      test = linesContainPatterns(lines, [notPhi, phi], {})
       return priorMatches if test isnt false
       test2 = linesContainPatterns(lines, [notAIsA], {})
       return priorMatches if test2 isnt false
       # Failed to close:
-      line.status.addMessage "You can only close a branch if it contains either a sentence like ‘¬α=α’, or two sentences like ‘φ’ and ¬‘φ’."
+      line.status.addMessage "you can only close a branch if it contains either a sentence like ‘¬α=α’, or two sentences like ‘φ’ and ‘¬φ’."
       return false
   }
 exports.closeBranch = closeBranch

@@ -40,11 +40,29 @@ padRight = (n, len) ->
   return n+new Array(len - n.length + 1).join(' ') 
 
 # Add some convenience functions to a proof 
-_decorate = (proof) ->
+_decorate = (aProof) ->
+  
+  aProof.clone = (o) ->
+    txt = aProof.toString()
+    return parse(txt, o)
+  
+  # Useful for displaying tree proofs
+  aProof.detachChildren = () ->
+    # Option `.treeProof` is necessary because otherwise 
+    # `.clone` will fail to parse trees because they use duplicate line numbers.
+    proofClone = aProof.clone({treeProof:true})
+    children = proofClone.getChildren()
+    proofClone.content = proofClone.content.filter (item) -> not (item in children)
+    return {children, childlessProof:proofClone}
+  
+  
   
   # TODO: modify to cope with  different
-  # proof dialects (e.g. copi)
-  proof.toString = (o) ->
+  # proof dialects (e.g. copi)?
+  # Settings via `o`, defaults are all `undefined`: 
+  #   `.treeProof`
+  #   `.numberLines`  
+  aProof.toString = (o) ->
     o ?= {}
     walker = 
       result : []
@@ -63,7 +81,7 @@ _decorate = (proof) ->
         
       visit : (item) ->
         # insert a divider if necessary
-        if item.type isnt 'divider'
+        if item.type isnt 'divider' and (not o.treeProof)
           if walker.lookBackTwo[0]?.type is 'block' and walker.lookBackTwo[1]?.type is 'line'
             block = walker.lookBackTwo[0]
             if block.parent?
@@ -118,11 +136,11 @@ _decorate = (proof) ->
           walker.result.push 
             number:"#{walker.getAndIncLineNumber(line)}"
             indentation: "#{line.indentation}"
-            sentence : "#{line.sentence}"
+            sentence : "#{line.sentence or line.sentenceText}"
             justification: justification
             ticked : line.justification?.ticked
         return undefined  # Keep walking.
-    proof.walk walker
+    aProof.walk walker
     txt = ""
     maxSentenceLength = _.max( ((x.sentence?.length + x.indentation?.length) for x in walker.result)  )
     symbols = dialectManager.getSymbols()
@@ -130,21 +148,22 @@ _decorate = (proof) ->
     tickSymbol = "#{tickSymbol} "
     for line in walker.result
       tick = (tickSymbol if line.ticked) or ''
-      indentationSentence = padRight("#{line.indentation} #{line.sentence}",maxSentenceLength+1)
-      if walker.needLineNumbers or o.numberLines is true
-        txt += "#{line.number} "
+      indentationSentence = padRight("#{(line.indentation unless o.treeProof) or ''} #{line.sentence}",maxSentenceLength+1)
+      if walker.needLineNumbers or (o.numberLines is true)
+        unless o.numberLines is false
+          txt += "#{line.number} "
       txt += "#{indentationSentence}   #{tick}#{line.justification}\n"
     return txt.trim()
     
 
-parse = (proofText) ->
+parse = (proofText, o) ->
   try
-    block = blockParser.parse proofText
-    addLineNumbers.to block
-    addJustification.to block
-    addSentences.to block
-    addStatus.to block
-    addVerification.to block
+    block = blockParser.parse proofText, o
+    addLineNumbers.to block, o
+    addJustification.to block, o
+    addSentences.to block, o
+    addStatus.to block, o
+    addVerification.to block, o
   catch e
     return e.message
   
@@ -163,7 +182,10 @@ parse = (proofText) ->
     proof.walk walker
     return errorMessages.join('\n')
   
-  _decorate(proof)
+  walker = visit:(item)->
+    _decorate(item) if item.type is 'block'
+    return undefined # keep walking
+  proof.walk walker
   return proof
   
 exports.parse = parse

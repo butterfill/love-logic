@@ -84,6 +84,12 @@ describe "logicbook tree rules", ->
         | B     arrow D 1
       '''
       testProof(text, true)
+    it "does not allow Premise at the start of a branch", ->
+      text = '''
+        A arrow B     SM
+        | not A       SM
+      '''
+      testProof(text, false)
     it "verifies a tree with nested branching (arrow, arrow)", ->
       text = '''
         A arrow B     SM
@@ -661,3 +667,28 @@ describe "logicbook tree rules", ->
         Fb      = D 1,2 
       '''
       testProof(text, true)
+
+  describe "longer proofs", ->
+    # The incorrect line is the final closed branch thing (branch does not close!)
+    it "verifies a longish incorrect proof", ->
+      text = '''
+        not (A<->B)   SM
+        A or B        SM
+        C and D       SM
+        |A            ~<-> D 1
+        |not B        not <-> D 1
+        ||A         or D 2
+        |
+        || B        or D 2
+  
+        |not A             negated biconditional D 1
+        |B             ~ <-> D 1
+        | C     & D 3
+        | D       & D 3
+        ||A         or D 2
+        |
+        || B        or D 2
+        || X
+      '''
+      testProof(text, false)
+      

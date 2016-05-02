@@ -7,6 +7,8 @@
 # `add_justification`.
 #
 
+_ = require 'lodash'
+
 fol = require '../fol'
 substitute = require '../substitute'
 util = require '../util'
@@ -55,6 +57,9 @@ class LineStatus
   
   addMessage : (text) -> 
     @messages.push text
+  addMessageIfNoneAlready : (text) -> 
+    if @messages.length is 0
+      @messages.push text
   clearMessages : () ->
     @messages = []
   popMessage : () ->
@@ -71,15 +76,16 @@ class LineStatus
       @_addedAlthough = true
   getMessage : () ->
     return "" if @messages.length is 0
+    @messages = _.uniq(@messages)
     isCorrectText = ("not correct because" unless @verified) or ("correct but")
     msg = "This line is #{isCorrectText} #{@messages[0]}"
     if @messages.length > 1
-      msg += "And also #{@messages[1]}"
+      msg += " And also #{@messages[1]}"
     if @messages.length > 2
-      msg += "Further, #{@messages[2]}"
+      msg += " Further, #{@messages[2]}"
     if @messages.length > 3
-      msg += "And, for another thing, #{@messages[3]}"
+      msg += " And, for another thing, #{@messages[3]}"
     if @messages.length > 4
-      ((msg += "And #{x}") for x in @messages.splice(4))
+      ((msg += " And #{x}") for x in @messages.splice(4))
     return msg
   
