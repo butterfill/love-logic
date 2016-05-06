@@ -1,2 +1,2 @@
 cd ..
-browser-sync start --server --files "." --browser "google chrome" --startPath "/test_chimp/"
+browser-sync start --server --port 4000 --files "." --browser "google chrome" --startPath "/test_chimp/"

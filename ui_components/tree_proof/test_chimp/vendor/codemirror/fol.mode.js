@@ -35,9 +35,7 @@ CodeMirror.defineMode("fol", function(conf, parserConf) {
                                   "nor", "nand", "exists",
                                   "some", "all", "every",
                                   '¬', "⊥","=","∧","→","↔","∨","↓","↑","∀","∃" ]);
-  var commonKeywords = ["elim", "intro", "left", "right"];
-
-  var keywords = wordRegexp(commonKeywords);
+  var keywords = /^(((elim)|(intro)|(left)|(right)|(tick))\b)|✓/
 
 
 

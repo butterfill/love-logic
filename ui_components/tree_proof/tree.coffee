@@ -1,3 +1,6 @@
+# This module is made global as `tree` in `awfol.browserifyme.coffee`
+# (as are `fol` and `proof`).
+#
 # Also depends on these (which, it is assumed, are global)
 #   -  CodeMirror
 #   - jQuery ($)
@@ -116,11 +119,30 @@ decorateTreeProof = (treeProof, _parent) ->
   treeProof.displayEditable = (container, onChange) ->
     @container ?= container
     @onChange ?= onChange
-    displayEditable(treeProof, @container, @onChange)
+    oldScrollLeft = $(window).scrollLeft()
+    oldScrollTop = $(window).scrollTop()
+    @resizeContainer(50,50)
+    self = @
+    doAfterCreating = () ->
+      self.resizeContainer()
+      $(window).scrollLeft(oldScrollLeft)
+      $(window).scrollTop(oldScrollTop)
+    displayEditable(treeProof, @container, @onChange, doAfterCreating)
     return treeProof
   treeProof.displayStatic = (container) ->
+    @container ?= container
+    @resizeContainer(50,50)
     displayStatic(treeProof, container)
+    @resizeContainer()
     return treeProof
+  
+  treeProof.resizeContainer = (width, height) ->
+    $svg = $('svg', @container)
+    width ?=  $svg.width()+150  
+    height ?= $svg.height()+50
+    $container = $(@container)
+    $container.height( height )
+    $container.width( width )
   
   newParent = treeProof
   for c in treeProof.children
@@ -157,7 +179,11 @@ displayStatic = ( treeProof, container ) ->
   display( treeProof, container, nodeToHTML )
 exports.displayStatic = displayStatic
 
-displayEditable = (treeProof, container, onChange) ->
+# `onChange` is a function called when a value in one of the editors in 
+# the tree changes.
+# `callback` is called after the tree DOM elements (including the editors)
+# are created.
+displayEditable = (treeProof, container, onChange, callback) ->
   doAfterCreatingTreant = () ->
     # Create the CodeMirror things
     options = {
@@ -165,8 +191,9 @@ displayEditable = (treeProof, container, onChange) ->
       smartIndent : true
       lineNumbers : true
       autofocus : true
+      mode : 'fol'
       matchBrackets : true
-      gutters : ["error-light"]
+      # gutters : ["error-light"]
       tabSize : 4
       extraKeys :
         Tab: (cm) ->
@@ -198,6 +225,8 @@ displayEditable = (treeProof, container, onChange) ->
       node = _getNode $(e.target), nodeLocator
       node.remove()
       treeProof.displayEditable(container))(treeProof, container, nodeLocator)
+    # Finally, do whatever the caller requested:
+    callback?()
   display( treeProof, container, nodeToTextarea, doAfterCreatingTreant )
 exports.displayEditable = displayEditable
 
@@ -221,7 +250,7 @@ nodeToTextarea = (node) ->
   isLeaf = (not node.children?) or node.children.length is 0
   siblings = node.parent?.children
   isRightmostBranch = node is siblings?[siblings?.length-1]
-  res = "<div style='white-space:pre;margin-left:3em;width:200px;height:#{20*(proofText.split('\n').length)}px;'><textarea data-proofId='#{node.id}'>#{proofText}</textarea></div>"
+  res = "<div style='white-space:pre;margin-left:3em;width:250px;height:#{20*(proofText.split('\n').length)}px;'><textarea data-proofId='#{node.id}'>#{proofText}</textarea></div>"
   if isLeaf
     res += "<div class='center' style='margin-left:3em;margin-top:2em;'><a class='treeAddChild hint--bottom' data-hint='branch' data-proofId='#{node.id}' href='#'><i class='material-icons'>add_circle_outline</i></a></div>"
     if isRightmostBranch 

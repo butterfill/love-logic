@@ -24,6 +24,16 @@ to = (block) ->
       catch e
         line.sentenceErrors = e.message
       
+      line.canBeDecomposed = () ->
+        sentence = line.sentence
+        # the sentence could not be parsed:
+        return false unless sentence?
+        # The sentence is atomic:
+        return false unless sentence.left?
+        # the sentence is `not phi`  where `phi` is atomic
+        return false if (sentence.type is 'not' and not sentence.left.left?)
+        return true
+      
       return undefined  # Keep walking.
   block.walk walker
 

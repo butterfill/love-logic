@@ -69,6 +69,7 @@ exports.set = (name, version) ->
   setSymbols(d.symbols)
   setCurrentParser(d.parser)  
   setCurrentRules(d.rules)
+  setTreeRulesName(d.treeRules)
 # exports.getCurrentDialect = () ->
 #   return dialects[dialectName].versions[dialectVersion]
 exports.getCurrentDialectNameAndVersion = () ->
@@ -85,6 +86,11 @@ exports.getAllDialectNamesAndDescriptions = () ->
     res.push { name:key, description:d.description, textbook:d.textbook }
   return res
 
+currentTreeRulesName = undefined
+setTreeRulesName = (name) ->
+  currentTreeRulesName = name
+exports.getTreeRules = () -> ruleSets[currentTreeRulesName]
+  
 
 exports.listDialects = () ->
   return _.keys(dialects)

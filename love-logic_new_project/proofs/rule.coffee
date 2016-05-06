@@ -40,6 +40,9 @@ _allRulesUsedInThisBlock = (candidateLines, block, ruleSet) ->
   rulesUsed = []
   for l in candidateLines
     if l.parent is block
+      # If we haven’t yet checked this line, we need to do that so that
+      # we have `l.rulesChecked`:
+      l.verify() unless l.rulesChecked?
       for ruleAndMatches in l.rulesChecked
         r = ruleAndMatches.rule
         rulesUsed.push(r)
@@ -61,6 +64,7 @@ tickIf.allRulesAppliedInEveryBranch = ( ruleSet ) ->
 _someRulesUsedInThisBlock = (candidateLines, block, ruleSet) ->
   for l in candidateLines
     if l.parent is block
+      l.verify() unless l.rulesChecked?
       for ruleAndMatches in l.rulesChecked
         r = ruleAndMatches.rule
         return true if r in ruleSet
@@ -587,7 +591,7 @@ _whichLinesMatchThisPattern  = (listOfLines, pattern, priorMatches) ->
   result = []
   for line in listOfLines
     sentence = line.sentence
-    test = sentence.findMatches(pattern, priorMatches)
+    test = sentence?.findMatches(pattern, priorMatches)
     if test isnt false
       result.push {line, matches:test}
   return result
@@ -808,6 +812,8 @@ closeBranch = () ->
   }
 exports.closeBranch = closeBranch
 
+_selfIdenticalPattern = fol.parse 'α=α'
+sentenceIsSelfIdentity = (s) -> (s?) and s.findMatches(_selfIdenticalPattern) isnt false
 openBranch = () ->
   return {
     check : (line, priorMatches) ->
@@ -815,14 +821,65 @@ openBranch = () ->
       if line.next?
         line.status.addMessage "You can only put a ‘branch open’ marker on the final line of a branch."
         return false 
-      lines = line.findAllAbove( (item) -> item.type is 'line' )
-      test = linesContainPatterns(lines, [phi, notPhi], {})
-      test2 = linesContainPatterns(lines, [notAIsA], {})
+      linesAbove = line.findAllAbove( (item) -> item.type is 'line' )
+      test = linesContainPatterns(linesAbove, [phi, notPhi], {})
+      test2 = linesContainPatterns(linesAbove, [notAIsA], {})
       unless ((test is false) and (test2 is false))
         line.status.addMessage "You can only mark a branch open if it contains neither a sentence like ‘¬α=α’, nor two sentences like ‘φ’ and ¬‘φ’."
         return false
-      # Basic tests passed.
-      # TODO: Must now check that the branch is complete
+      # Basic tests passed.  
+      # Check that everything above can be ticked:
+      for aLineAbove in linesAbove
+        unless aLineAbove.canLineBeTicked()
+          line.status.addMessage "You can only mark a branch open if you have exhaustively decomposed every sentence on it, but line #{aLineAbove.number} has not been exhaustively decomposed."
+          return false
+      # Check that identity rules have been exhaustively applied
+      # (strictly: that you couldn’t add information by further applying them).
+      identityLinesAbove = (item for item in linesAbove when (item.sentence?.type is 'identity' and sentenceIsSelfIdentity(item.sentence) is false))
+      targetsForIdentityLines = (item for item in linesAbove when item.canBeDecomposed() is false)
+      for identityLine in identityLinesAbove
+        # Get a list of the lines that this identity statement could be 
+        # applied to.
+        identityLineNames = identityLine.sentence.getNames()
+        leftName = identityLineNames[0]
+        rightName = identityLineNames[1]
+        targetsForThisIdentity = { left:[], right:[] }
+        for t in targetsForIdentityLines
+          continue if t is identityLine
+          # We don’t want to include sentences like `a=a`:
+          continue if sentenceIsSelfIdentity(t.sentence)
+          # We do want to include sentences containing names in the identity.
+          containsLeftName = leftName in t.sentence.getNames()
+          if containsLeftName
+            targetsForThisIdentity.left.push(t)
+          containsRightName = rightName in t.sentence.getNames()
+          if containsRightName
+            targetsForThisIdentity.right.push(t)
+        sentenceStringsInLinesAbove = (l.sentence.toString({replaceSymbols:true}) for l in linesAbove when l.sentence?)
+        substitutionsLeft = fol.parse("φ[#{leftName}-->#{rightName}]").substitutions
+        substitutionsRight = fol.parse("φ[#{rightName}-->#{leftName}]").substitutions
+        
+        getAllSubstitutionInstances = (sentence, sub) ->
+          sentenceClone = sentence.clone()
+          sentenceClone.substitutions = sub
+          return sentenceClone.getAllSubstitutionInstances()
+        allSentencesDoAppearAbove = ( sentences ) ->
+          for s in sentences
+            return false unless s.toString({replaceSymbols:true}) in sentenceStringsInLinesAbove
+          return true
+        allSubstitutionInstancesDoAppearAbove = (sentences, sub) ->
+          for s in sentences
+            return false unless allSentencesDoAppearAbove( getAllSubstitutionInstances(s, sub) )
+          return true
+        leftTargetSentences = (t.sentence for t in targetsForThisIdentity.left)
+        unless allSubstitutionInstancesDoAppearAbove(leftTargetSentences, substitutionsLeft)
+          line.status.addMessage "You can only mark a branch open if you have exhaustively applied every identity statement in it, but you have not done so for the identity statement on line #{identityLine.number} ."
+          return false
+        rightTargetSentences = (t.sentence for t in targetsForThisIdentity.right)
+        unless allSubstitutionInstancesDoAppearAbove(rightTargetSentences, substitutionsRight)
+          line.status.addMessage "You can only mark a branch open if you have exhaustively applied every identity statement in it, but you have not done so for the identity statement on line #{identityLine.number} ."
+          return false
+        
       return priorMatches
       
   }

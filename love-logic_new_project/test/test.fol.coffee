@@ -3,6 +3,7 @@ _ = require 'lodash'
 chai = require('chai')
 assert = chai.assert
 expect = chai.expect
+should = chai.should()
 
 util = require '../util'
 fol = require '../fol'
@@ -140,3 +141,24 @@ describe "`fol`", ->
       expect(p[0].arity).to.equal 1
       expect(p[1].name).to.equal 'F'
       expect(p[1].arity).to.equal 2
+
+  describe ".getAllSubstitutionInstances", ->
+    it "works with one name", ->
+      e = fol.parse "F(b)[b-->a]"
+      res = e.getAllSubstitutionInstances()
+      strings = (x.toString({replaceSymbols:true}) for x in res)
+      console.log strings
+      (res.length is 2).should.be.true
+      ('F(a)' in strings).should.be.true
+      ('F(b)' in strings).should.be.true
+    it "works with two names", ->
+      e = fol.parse "F(a,a)[a-->b]"
+      res = e.getAllSubstitutionInstances()
+      strings = (x.toString({replaceSymbols:true}) for x in res)
+      console.log strings
+      (res.length is 4).should.be.true
+      ('F(a,a)' in strings).should.be.true
+      ('F(b,a)' in strings).should.be.true
+      ('F(a,b)' in strings).should.be.true
+      ('F(b,b)' in strings).should.be.true
+            

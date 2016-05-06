@@ -4,6 +4,7 @@
 
 chai = require 'chai' 
 expect = chai.expect
+should = chai.should()
 _ = require 'lodash'
 
 dialectManager = require('../../dialect_manager/dialectManager')
@@ -166,101 +167,44 @@ describe "logicbook tree rules", ->
       '''
       testProof(text, true)
       
-  describe "closing branches", ->
-    it "verifies a closed tree with a branching rule", ->
+  describe "syntax errors", ->
+    it "can cope with a proof in which there are syntax errors", ->
       text = '''
-        A arrow B   SM
-        A           SM
-        not B       SM
-        | not A             arrow D 1
-        | X
-      
-        | B     arrow D 1
-        | X
-      '''
-      testProof(text, true)
-    it "allows closing a with not a=a", ->
-      text = '''
-        A and not a=a
-        A             and D 1
-        not a=a       and D 1
-        X
-      '''
-      testProof(text, true)
-    it "verifies a simple tree (includes explicitly open branch)", ->
-      text = '''
-        A and not B
-        A             and D 1
-        not B         and D 1
-        O
-      '''
-      testProof(text, true)
-    it "does not allow closing a branch incorrectly", ->
-      text = '''
-        A and B
-        A          and D 1
-        B          and D 1
-        X
-      '''
-      theProof = proof.parse text
-      # console.log theProof.getLine(4).justification
-      # console.log theProof.getLine(4).verify()
-      # console.log theProof.getLine(4).getErrorMessage()
-      testProof(text, false)
-    it "does not allow more lines after closing a branch", ->
-      text = '''
-        A and not A
-        A             and D 1
-        not A         and D 1
-        X
-        A             and D 1
+        A and B             SM
+        sausages            SM
       '''
       testProof(text, false)
-    it "does not allow a branch after closing a branch", ->
+    it "can cope with a proof in which there is missing justification", ->
       text = '''
-        A and not A   SM
-        A arrow B     SM
-        A             and D 1
-        not A         and D 1
-        X
-        | not A             arrow D 2
-      
-        | B             arrow D 2
+        A and B             SM
+        C and D 
       '''
       testProof(text, false)
-
-  describe "marking branches open", ->
-    it "verifies an open tree with a branching rule", ->
+    it "can cope with a proof in which there is incorrect justification", ->
       text = '''
-        A arrow B   SM
-        not B       SM
-        | not A             arrow D 1
-        | O
-      
-        | B     arrow D 1
-        | X
-      '''
-      testProof(text, true)
-
-    it "does not allow incorrectly marking a branch as open", ->
-      text = '''
-        A and not A
-        A             and D 1
-        not A         and D 1
-        O
+        A and B             SM
+        C and D         thisisntarule
       '''
       testProof(text, false)
-    it "does not allow incorrectly marking a branch as open (not a=a version)", ->
+    it "can cope with a proof in which there is missing line numbers", ->
       text = '''
-        A and not a=a
-        A             and D 1
-        A             and D 1
-        not a=a       and D 1
-        O
+        A and B             SM
+        A           and D
       '''
       testProof(text, false)
-
-
+    it "can cope with a proof in which part of  the justification is missing", ->
+      text = '''
+        A and B             SM
+        A           D 1
+      '''
+      testProof(text, false)
+    it "can cope with a proof in which another part of the justification is missing", ->
+      text = '''
+        A and B             SM
+        A           and 1
+      '''
+      testProof(text, false)
+                                                                                                
   describe "checking tick marks", ->
     it "verifies ticks in a simple case", ->
       text = '''
@@ -692,3 +636,251 @@ describe "logicbook tree rules", ->
       '''
       testProof(text, false)
       
+
+  describe "closing branches", ->
+    it "verifies a closed tree with a branching rule", ->
+      text = '''
+        A arrow B   SM
+        A           SM
+        not B       SM
+        | not A             arrow D 1
+        | X
+      
+        | B     arrow D 1
+        | X
+      '''
+      testProof(text, true)
+    it "allows closing a with not a=a", ->
+      text = '''
+        A and not a=a
+        A             and D 1
+        not a=a       and D 1
+        X
+      '''
+      testProof(text, true)
+    it "verifies a simple tree (includes explicitly open branch)", ->
+      text = '''
+        A and not B
+        A             and D 1
+        not B         and D 1
+        O
+      '''
+      testProof(text, true)
+    it "does not allow closing a branch incorrectly", ->
+      text = '''
+        A and B
+        A          and D 1
+        B          and D 1
+        X
+      '''
+      theProof = proof.parse text
+      # console.log theProof.getLine(4).justification
+      # console.log theProof.getLine(4).verify()
+      # console.log theProof.getLine(4).getErrorMessage()
+      testProof(text, false)
+    it "does not allow more lines after closing a branch", ->
+      text = '''
+        A and not A
+        A             and D 1
+        not A         and D 1
+        X
+        A             and D 1
+      '''
+      testProof(text, false)
+    it "does not allow a branch after closing a branch", ->
+      text = '''
+        A and not A   SM
+        A arrow B     SM
+        A             and D 1
+        not A         and D 1
+        X
+        | not A             arrow D 2
+      
+        | B             arrow D 2
+      '''
+      testProof(text, false)
+
+  describe "marking branches open", ->
+    it "verifies an open tree with a branching rule", ->
+      text = '''
+        A arrow B   SM
+        not B       SM
+        | not A             arrow D 1
+        | O
+      
+        | B     arrow D 1
+        | X
+      '''
+      testProof(text, true)
+
+    it "does not allow incorrectly marking a branch as open", ->
+      text = '''
+        A and not A
+        A             and D 1
+        not A         and D 1
+        O
+      '''
+      testProof(text, false)
+    it "does not allow incorrectly marking a branch as open (not a=a version)", ->
+      text = '''
+        A and not a=a
+        A             and D 1
+        A             and D 1
+        not a=a       and D 1
+        O
+      '''
+      testProof(text, false)
+
+    it "the .canLineBeTicked function works (from `add_verification`)", ->
+      p = proof.parse '''
+        A and B       SM
+        A             and D 1
+        O
+      '''
+      # must verify before doing `.canLineBeTicked`
+      # p.verifyTree()
+      line = p.getLine(1)
+      test = line.canLineBeTicked()
+      test.should.be.false
+
+    it "the .canLineBeTicked function works, correct case (from `add_verification`)", ->
+      p = proof.parse '''
+        A and B       SM
+        A             and D 1
+        B             and D 1
+        O
+      '''
+      test = p.getLine(1).canLineBeTicked()
+      test.should.be.true
+
+    it "the .canLineBeTicked function works, not applicable case (a=b) (from `add_verification`)", ->
+      p = proof.parse '''
+        a=b       SM
+        O
+      '''
+      test = p.getLine(1).canLineBeTicked()
+      test.should.be.true
+
+    it "the .canLineBeTicked function works for `not A`", ->
+      p = proof.parse '''
+        not A       SM
+        O
+      '''
+      test = p.getLine(1).canLineBeTicked()
+      test.should.be.true
+
+    it "does not allow marking a branch as open if a conjunction has not been fully decomposed", ->
+      text = '''
+        A and B       SM
+        A             and D 1
+        O
+      '''
+      testProof(text, false)
+
+    it "does allow marking a branch as open if a conjunction has been fully decomposed", ->
+      text = '''
+        A and B       SM
+        A             and D 1
+        B             and D 1
+        O
+      '''
+      testProof(text, true)
+
+    it "does not allow marking a branch as open if a disjunction has not been fully decomposed", ->
+      text = '''
+        A and B       SM
+        C or D        SM
+        A             and D 1
+        B             and D 1
+        O
+      '''
+      testProof(text, false)
+
+    it "does allow marking a branch as open if a disjunction has been fully decomposed", ->
+      text = '''
+        A and B       SM
+        C or D        SM
+        A             and D 1
+        B             and D 1
+        | C       or D 2
+        
+        | D       or D 2
+        | O
+      '''
+      testProof(text, true)
+
+    it "does not allow marking a branch as open if a disjunction has not been fully decomposed", ->
+      text = '''
+        Fa                SM
+        Fb                SM
+        (exists x) Fx       SM
+        O
+      '''
+      testProof(text, false)
+
+    it "does  allow marking a branch as open if a disjunction has  been fully decomposed", ->
+      text = '''
+        Fa                SM
+        Fb                SM
+        (exists x) Fx       SM
+        | Fa          exists D 2
+        
+        | Fb          exists D 2
+        | O
+        
+        | Fc          exists D 2
+        | O
+      '''
+      testProof(text, false)
+
+    it "does not allow marking a branch as open if an identity statement has not been fully decomposed", ->
+      text = '''
+        Fa                SM
+        Gb                SM
+        a=b           SM
+        Fb            = D 1,3
+        O
+      '''
+      testProof(text, false)
+    it "does not allow marking a branch as open if an identity statement has not been fully decomposed (further test)", ->
+      text = '''
+        a=b               SM
+        Faa                SM
+        Fbb                = D 1,2
+        Fab                = D 1,2
+        O
+      '''
+      testProof(text, false)
+    it "does allow marking a branch as open if an identity statement has  been fully decomposed", ->
+      text = '''
+        Fa                SM
+        Gb                SM
+        a=b               SM
+        Fb                = D 1,3
+        Ga                = D 2,3
+        a=a               = D 3,3
+        b=b               = D 3,3
+        O
+      '''
+      testProof(text, true)
+    it "does allow marking a branch as open if an identity statement has  been fully decomposed even without requiring sentences like a=a", ->
+      text = '''
+        Fa                SM
+        Gb                SM
+        a=b               SM
+        Fb                = D 1,3
+        Ga                = D 2,3
+        O
+      '''
+      testProof(text, true)
+    it "does allow marking a branch as open if an identity statement has  been fully decomposed, further test", ->
+      text = '''
+        a=b               SM
+        Faa                SM
+        Fbb                = D 1,2
+        Fab                = D 1,2
+        Fba                = D 1,2
+        O
+      '''
+      testProof(text, true)
+

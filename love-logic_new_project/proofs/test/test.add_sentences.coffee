@@ -5,6 +5,7 @@ util = require 'util'
 chai = require('chai')
 assert = chai.assert
 expect = chai.expect
+should = chai.should()
 
 fol = require '../../parser/awFOL'
 
@@ -48,3 +49,24 @@ describe "add_sentences", ->
       line = proof.getLine(1)
       expect(line.sentenceErrors?).to.be.true
       expect(line.sentenceErrors.length>0).to.be.true
+
+  describe ".canBeDecomposed", ->
+    it "tells you when a sentence can be decomposed", ->
+      proof = _parse "not not A"
+      line = proof.getLine(1)
+      line.canBeDecomposed().should.be.true
+    it "tells you when a sentence cannot be decomposed", ->
+      proof = _parse "not A"
+      line = proof.getLine(1)
+      line.canBeDecomposed().should.be.false
+    it "tells you that an identity sentence cannot be decomposed", ->
+      proof = _parse "a=b"
+      line = proof.getLine(1)
+      line.canBeDecomposed().should.be.false
+    it "tells you that a negated identity sentence cannot be decomposed", ->
+      proof = _parse "not a=b"
+      line = proof.getLine(1)
+      line.canBeDecomposed().should.be.false
+      
+        
+  

@@ -78,7 +78,8 @@ to = (proof) ->
         aLine = item
         aLine.verify = () ->
           return verifyLine(aLine, proof)
-      
+        aLine.canLineBeTicked = () ->
+          return canLineBeTicked(aLine)
       return undefined
 
   proof.walk walker
@@ -208,15 +209,21 @@ exports.lineNeedsToBeTicked = lineNeedsToBeTicked
 # For tree proofs.  A line can be ticked if 
 # all rules that can be applied to it have been
 # applied.
+# Defaults to true if there is no `tickChecker` for the 
+# connective (e.g. with identity).
 canLineBeTicked = (line) ->
   theRules = dialectManager.getCurrentRules()
   sentence = line.sentence
   tickChecker = theRules.tickCheckers[sentence.type] 
+  # Default to true
+  return true unless tickChecker?
   unless _.isFunction(tickChecker)
     # We need to go one level further into the tickChecker object.
     # This is for rules like `not and decomposition`
     sentence = sentence.left
+    return true unless sentence?
     tickChecker = tickChecker[sentence.type] 
+    return true unless tickChecker?
   return tickChecker(line) 
 # for testing only:
 exports.canLineBeTicked = canLineBeTicked

@@ -216,7 +216,7 @@ findLineOrBlock = (targetNumber) ->
 
 # This should only be used if this line references a single line.
 getCitedLines = ->
-  return [] if not @justification.numbers
+  return [] if not @justification?.numbers?
   citedLines = []
   for targetNumber in @justification.numbers
     result = @findLine( targetNumber )

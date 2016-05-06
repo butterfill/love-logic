@@ -84,7 +84,13 @@ _decorate = (expression) ->
         return undefined
       e.walk subFinder
       return _subsFound
-    
+    e.getAllSubstitutionInstances = () ->
+      res = []
+      addToRes = (sentence) -> 
+        res.push( _decorate(sentence) )
+        return undefined
+      match.doAfterApplyingSubstitutions(e, addToRes)
+      return res
     # Get all names in the expression
     e.getNames = () ->
       _names = []

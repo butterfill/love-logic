@@ -322,7 +322,7 @@ process.chdir = function (dir) {
 process.umask = function() { return 0; };
 
 },{}],4:[function(require,module,exports){
-var _, currentParserName, currentRulesName, currentSymbolsName, dialectName, dialectVersion, dialects, parsers, ruleSets, setCurrentParser, setCurrentRules, setSymbols, symbols;
+var _, currentParserName, currentRulesName, currentSymbolsName, currentTreeRulesName, dialectName, dialectVersion, dialects, parsers, ruleSets, setCurrentParser, setCurrentRules, setSymbols, setTreeRulesName, symbols;
 
 _ = require('lodash');
 
@@ -409,7 +409,8 @@ exports.set = function(name, version) {
   d = allVersions[version];
   setSymbols(d.symbols);
   setCurrentParser(d.parser);
-  return setCurrentRules(d.rules);
+  setCurrentRules(d.rules);
+  return setTreeRulesName(d.treeRules);
 };
 
 exports.getCurrentDialectNameAndVersion = function() {
@@ -443,6 +444,16 @@ exports.getAllDialectNamesAndDescriptions = function() {
     });
   }
   return res;
+};
+
+currentTreeRulesName = void 0;
+
+setTreeRulesName = function(name) {
+  return currentTreeRulesName = name;
+};
+
+exports.getTreeRules = function() {
+  return ruleSets[currentTreeRulesName];
 };
 
 exports.listDialects = function() {
@@ -788,6 +799,16 @@ _decorate = function(expression) {
       };
       e.walk(subFinder);
       return _subsFound;
+    };
+    e.getAllSubstitutionInstances = function() {
+      var addToRes, res;
+      res = [];
+      addToRes = function(sentence) {
+        res.push(_decorate(sentence));
+        return void 0;
+      };
+      match.doAfterApplyingSubstitutions(e, addToRes);
+      return res;
     };
     e.getNames = function() {
       var _names, nameFinder;
@@ -18111,14 +18132,14 @@ findLineOrBlock = function(targetNumber) {
 };
 
 getCitedLines = function() {
-  var citedLines, i, len, ref, result, targetNumber;
-  if (!this.justification.numbers) {
+  var citedLines, i, len, ref, ref1, result, targetNumber;
+  if (((ref = this.justification) != null ? ref.numbers : void 0) == null) {
     return [];
   }
   citedLines = [];
-  ref = this.justification.numbers;
-  for (i = 0, len = ref.length; i < len; i++) {
-    targetNumber = ref[i];
+  ref1 = this.justification.numbers;
+  for (i = 0, len = ref1.length; i < len; i++) {
+    targetNumber = ref1[i];
     result = this.findLine(targetNumber);
     if (result !== false) {
       citedLines.push(result);
@@ -18290,6 +18311,20 @@ to = function(block) {
         e = error;
         line.sentenceErrors = e.message;
       }
+      line.canBeDecomposed = function() {
+        var sentence;
+        sentence = line.sentence;
+        if (sentence == null) {
+          return false;
+        }
+        if (sentence.left == null) {
+          return false;
+        }
+        if (sentence.type === 'not' && (sentence.left.left == null)) {
+          return false;
+        }
+        return true;
+      };
       return void 0;
     }
   };
@@ -18344,7 +18379,7 @@ LineStatus = (function() {
     this.justificationParsed = this.line.justification != null;
     if (this.line.sentenceErrors != null) {
       languageNames = util.getLanguageNames();
-      this.addMessage("the sentence you wrote (" + this.line.sentenceText + ") is not a sentence or well-formed formula of " + (languageNames.join(' or ')) + ".");
+      this.addMessage("the sentence you wrote (‘" + (this.line.sentenceText.trim()) + "’) is not a sentence or well-formed formula of " + (languageNames.join(' or ')) + ".");
     }
     if (this.line.justificationErrors != null) {
       this.addMessage("the justification you supplied (" + ((ref = this.line.justificationText) != null ? ref.trim() : void 0) + ") either mentions a rule you can't use here or doesn't make sense.");
@@ -18486,6 +18521,9 @@ to = function(proof) {
         aLine = item;
         aLine.verify = function() {
           return verifyLine(aLine, proof);
+        };
+        aLine.canLineBeTicked = function() {
+          return canLineBeTicked(aLine);
         };
       }
       return void 0;
@@ -18662,9 +18700,18 @@ canLineBeTicked = function(line) {
   theRules = dialectManager.getCurrentRules();
   sentence = line.sentence;
   tickChecker = theRules.tickCheckers[sentence.type];
+  if (tickChecker == null) {
+    return true;
+  }
   if (!_.isFunction(tickChecker)) {
     sentence = sentence.left;
+    if (sentence == null) {
+      return true;
+    }
     tickChecker = tickChecker[sentence.type];
+    if (tickChecker == null) {
+      return true;
+    }
   }
   return tickChecker(line);
 };
@@ -20946,7 +20993,7 @@ exports.parse = parse;
 
 
 },{"../dialect_manager/dialectManager":4,"./add_justification":15,"./add_line_numbers":16,"./add_sentences":17,"./add_status":18,"./add_verification":19,"./block_parser":20,"lodash":8}],27:[function(require,module,exports){
-var _, _From, _allRulesUsedInThisBlock, _checkIsPremise, _matchesToString, _notImplementedYet, _parseNameIfNecessaryAndDecorate, _permutations, _someRulesUsedInThisBlock, _whichLinesMatchThisPattern, areAllRequirementsMet, areRequirementsMetByTheseLinesAndBlocks, branch, checkCorrectNofLinesAndSubproofsCited, checkRequirementsMet, closeBranch, convertTextToRequirementIfNecessary, doAnyCandidatesMeetThisReq, doesALineAboveContainThisName, doesAPremiseHereOrAboveContainThisName, doesLineMatchPattern, fol, from, linesContainPatterns, matches, notAIsA, notPhi, numberToWords, openBranch, parseAndDecorateIfNecessary, parser, phi, premise, subproof, substitute, tickIf, to, util,
+var _, _From, _allRulesUsedInThisBlock, _checkIsPremise, _matchesToString, _notImplementedYet, _parseNameIfNecessaryAndDecorate, _permutations, _selfIdenticalPattern, _someRulesUsedInThisBlock, _whichLinesMatchThisPattern, areAllRequirementsMet, areRequirementsMetByTheseLinesAndBlocks, branch, checkCorrectNofLinesAndSubproofsCited, checkRequirementsMet, closeBranch, convertTextToRequirementIfNecessary, doAnyCandidatesMeetThisReq, doesALineAboveContainThisName, doesAPremiseHereOrAboveContainThisName, doesLineMatchPattern, fol, from, linesContainPatterns, matches, notAIsA, notPhi, numberToWords, openBranch, parseAndDecorateIfNecessary, parser, phi, premise, sentenceIsSelfIdentity, subproof, substitute, tickIf, to, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
   slice = [].slice;
 
@@ -20974,6 +21021,9 @@ _allRulesUsedInThisBlock = function(candidateLines, block, ruleSet) {
   for (k = 0, len = candidateLines.length; k < len; k++) {
     l = candidateLines[k];
     if (l.parent === block) {
+      if (l.rulesChecked == null) {
+        l.verify();
+      }
       ref = l.rulesChecked;
       for (m = 0, len1 = ref.length; m < len1; m++) {
         ruleAndMatches = ref[m];
@@ -21019,6 +21069,9 @@ _someRulesUsedInThisBlock = function(candidateLines, block, ruleSet) {
   for (k = 0, len = candidateLines.length; k < len; k++) {
     l = candidateLines[k];
     if (l.parent === block) {
+      if (l.rulesChecked == null) {
+        l.verify();
+      }
       ref = l.rulesChecked;
       for (m = 0, len1 = ref.length; m < len1; m++) {
         ruleAndMatches = ref[m];
@@ -21641,7 +21694,7 @@ _whichLinesMatchThisPattern = function(listOfLines, pattern, priorMatches) {
   for (k = 0, len = listOfLines.length; k < len; k++) {
     line = listOfLines[k];
     sentence = line.sentence;
-    test = sentence.findMatches(pattern, priorMatches);
+    test = sentence != null ? sentence.findMatches(pattern, priorMatches) : void 0;
     if (test !== false) {
       result.push({
         line: line,
@@ -21891,22 +21944,155 @@ closeBranch = function() {
 
 exports.closeBranch = closeBranch;
 
+_selfIdenticalPattern = fol.parse('α=α');
+
+sentenceIsSelfIdentity = function(s) {
+  return (s != null) && s.findMatches(_selfIdenticalPattern) !== false;
+};
+
 openBranch = function() {
   return {
     check: function(line, priorMatches) {
-      var lines, test, test2;
+      var aLineAbove, allSentencesDoAppearAbove, allSubstitutionInstancesDoAppearAbove, containsLeftName, containsRightName, getAllSubstitutionInstances, identityLine, identityLineNames, identityLinesAbove, item, k, l, leftName, leftTargetSentences, len, len1, len2, linesAbove, m, n, rightName, rightTargetSentences, sentenceStringsInLinesAbove, substitutionsLeft, substitutionsRight, t, targetsForIdentityLines, targetsForThisIdentity, test, test2;
       if (line.next != null) {
         line.status.addMessage("You can only put a ‘branch open’ marker on the final line of a branch.");
         return false;
       }
-      lines = line.findAllAbove(function(item) {
+      linesAbove = line.findAllAbove(function(item) {
         return item.type === 'line';
       });
-      test = linesContainPatterns(lines, [phi, notPhi], {});
-      test2 = linesContainPatterns(lines, [notAIsA], {});
+      test = linesContainPatterns(linesAbove, [phi, notPhi], {});
+      test2 = linesContainPatterns(linesAbove, [notAIsA], {});
       if (!((test === false) && (test2 === false))) {
         line.status.addMessage("You can only mark a branch open if it contains neither a sentence like ‘¬α=α’, nor two sentences like ‘φ’ and ¬‘φ’.");
         return false;
+      }
+      for (k = 0, len = linesAbove.length; k < len; k++) {
+        aLineAbove = linesAbove[k];
+        if (!aLineAbove.canLineBeTicked()) {
+          line.status.addMessage("You can only mark a branch open if you have exhaustively decomposed every sentence on it, but line " + aLineAbove.number + " has not been exhaustively decomposed.");
+          return false;
+        }
+      }
+      identityLinesAbove = (function() {
+        var len1, m, ref, results;
+        results = [];
+        for (m = 0, len1 = linesAbove.length; m < len1; m++) {
+          item = linesAbove[m];
+          if (((ref = item.sentence) != null ? ref.type : void 0) === 'identity' && sentenceIsSelfIdentity(item.sentence) === false) {
+            results.push(item);
+          }
+        }
+        return results;
+      })();
+      targetsForIdentityLines = (function() {
+        var len1, m, results;
+        results = [];
+        for (m = 0, len1 = linesAbove.length; m < len1; m++) {
+          item = linesAbove[m];
+          if (item.canBeDecomposed() === false) {
+            results.push(item);
+          }
+        }
+        return results;
+      })();
+      for (m = 0, len1 = identityLinesAbove.length; m < len1; m++) {
+        identityLine = identityLinesAbove[m];
+        identityLineNames = identityLine.sentence.getNames();
+        leftName = identityLineNames[0];
+        rightName = identityLineNames[1];
+        targetsForThisIdentity = {
+          left: [],
+          right: []
+        };
+        for (n = 0, len2 = targetsForIdentityLines.length; n < len2; n++) {
+          t = targetsForIdentityLines[n];
+          if (t === identityLine) {
+            continue;
+          }
+          if (sentenceIsSelfIdentity(t.sentence)) {
+            continue;
+          }
+          containsLeftName = indexOf.call(t.sentence.getNames(), leftName) >= 0;
+          if (containsLeftName) {
+            targetsForThisIdentity.left.push(t);
+          }
+          containsRightName = indexOf.call(t.sentence.getNames(), rightName) >= 0;
+          if (containsRightName) {
+            targetsForThisIdentity.right.push(t);
+          }
+        }
+        sentenceStringsInLinesAbove = (function() {
+          var len3, o, results;
+          results = [];
+          for (o = 0, len3 = linesAbove.length; o < len3; o++) {
+            l = linesAbove[o];
+            if (l.sentence != null) {
+              results.push(l.sentence.toString({
+                replaceSymbols: true
+              }));
+            }
+          }
+          return results;
+        })();
+        substitutionsLeft = fol.parse("φ[" + leftName + "-->" + rightName + "]").substitutions;
+        substitutionsRight = fol.parse("φ[" + rightName + "-->" + leftName + "]").substitutions;
+        getAllSubstitutionInstances = function(sentence, sub) {
+          var sentenceClone;
+          sentenceClone = sentence.clone();
+          sentenceClone.substitutions = sub;
+          return sentenceClone.getAllSubstitutionInstances();
+        };
+        allSentencesDoAppearAbove = function(sentences) {
+          var len3, o, ref, s;
+          for (o = 0, len3 = sentences.length; o < len3; o++) {
+            s = sentences[o];
+            if (ref = s.toString({
+              replaceSymbols: true
+            }), indexOf.call(sentenceStringsInLinesAbove, ref) < 0) {
+              return false;
+            }
+          }
+          return true;
+        };
+        allSubstitutionInstancesDoAppearAbove = function(sentences, sub) {
+          var len3, o, s;
+          for (o = 0, len3 = sentences.length; o < len3; o++) {
+            s = sentences[o];
+            if (!allSentencesDoAppearAbove(getAllSubstitutionInstances(s, sub))) {
+              return false;
+            }
+          }
+          return true;
+        };
+        leftTargetSentences = (function() {
+          var len3, o, ref, results;
+          ref = targetsForThisIdentity.left;
+          results = [];
+          for (o = 0, len3 = ref.length; o < len3; o++) {
+            t = ref[o];
+            results.push(t.sentence);
+          }
+          return results;
+        })();
+        if (!allSubstitutionInstancesDoAppearAbove(leftTargetSentences, substitutionsLeft)) {
+          line.status.addMessage("You can only mark a branch open if you have exhaustively applied every identity statement in it, but you have not done so for the identity statement on line " + identityLine.number + " .");
+          return false;
+        }
+        rightTargetSentences = (function() {
+          var len3, o, ref, results;
+          ref = targetsForThisIdentity.right;
+          results = [];
+          for (o = 0, len3 = ref.length; o < len3; o++) {
+            t = ref[o];
+            results.push(t.sentence);
+          }
+          return results;
+        })();
+        if (!allSubstitutionInstancesDoAppearAbove(rightTargetSentences, substitutionsRight)) {
+          line.status.addMessage("You can only mark a branch open if you have exhaustively applied every identity statement in it, but you have not done so for the identity statement on line " + identityLine.number + " .");
+          return false;
+        }
       }
       return priorMatches;
     }
@@ -24898,18 +25084,46 @@ decorateTreeProof = function(treeProof, _parent) {
     return decorateTreeProof(newTree);
   };
   treeProof.displayEditable = function(container, onChange) {
+    var doAfterCreating, oldScrollLeft, oldScrollTop, self;
     if (this.container == null) {
       this.container = container;
     }
     if (this.onChange == null) {
       this.onChange = onChange;
     }
-    displayEditable(treeProof, this.container, this.onChange);
+    oldScrollLeft = $(window).scrollLeft();
+    oldScrollTop = $(window).scrollTop();
+    this.resizeContainer(50, 50);
+    self = this;
+    doAfterCreating = function() {
+      self.resizeContainer();
+      $(window).scrollLeft(oldScrollLeft);
+      return $(window).scrollTop(oldScrollTop);
+    };
+    displayEditable(treeProof, this.container, this.onChange, doAfterCreating);
     return treeProof;
   };
   treeProof.displayStatic = function(container) {
+    if (this.container == null) {
+      this.container = container;
+    }
+    this.resizeContainer(50, 50);
     displayStatic(treeProof, container);
+    this.resizeContainer();
     return treeProof;
+  };
+  treeProof.resizeContainer = function(width, height) {
+    var $container, $svg;
+    $svg = $('svg', this.container);
+    if (width == null) {
+      width = $svg.width() + 150;
+    }
+    if (height == null) {
+      height = $svg.height() + 50;
+    }
+    $container = $(this.container);
+    $container.height(height);
+    return $container.width(width);
   };
   newParent = treeProof;
   ref = treeProof.children;
@@ -24959,7 +25173,7 @@ displayStatic = function(treeProof, container) {
 
 exports.displayStatic = displayStatic;
 
-displayEditable = function(treeProof, container, onChange) {
+displayEditable = function(treeProof, container, onChange, callback) {
   var doAfterCreatingTreant;
   doAfterCreatingTreant = function() {
     var editor, i, len, node, nodeLocator, options, proofId, ref, t;
@@ -24968,8 +25182,8 @@ displayEditable = function(treeProof, container, onChange) {
       smartIndent: true,
       lineNumbers: true,
       autofocus: true,
+      mode: 'fol',
       matchBrackets: true,
-      gutters: ["error-light"],
       tabSize: 4,
       extraKeys: {
         Tab: function(cm) {
@@ -25008,13 +25222,14 @@ displayEditable = function(treeProof, container, onChange) {
         return treeProof.displayEditable(container);
       };
     })(treeProof, container, nodeLocator));
-    return $('.treeRemoveNode').click((function(treeProof, container, nodeLocator) {
+    $('.treeRemoveNode').click((function(treeProof, container, nodeLocator) {
       return function(e) {
         node = _getNode($(e.target), nodeLocator);
         node.remove();
         return treeProof.displayEditable(container);
       };
     })(treeProof, container, nodeLocator));
+    return typeof callback === "function" ? callback() : void 0;
   };
   return display(treeProof, container, nodeToTextarea, doAfterCreatingTreant);
 };
@@ -25049,7 +25264,7 @@ nodeToTextarea = function(node) {
   isLeaf = (node.children == null) || node.children.length === 0;
   siblings = (ref = node.parent) != null ? ref.children : void 0;
   isRightmostBranch = node === (siblings != null ? siblings[(siblings != null ? siblings.length : void 0) - 1] : void 0);
-  res = "<div style='white-space:pre;margin-left:3em;width:200px;height:" + (20 * (proofText.split('\n').length)) + "px;'><textarea data-proofId='" + node.id + "'>" + proofText + "</textarea></div>";
+  res = "<div style='white-space:pre;margin-left:3em;width:250px;height:" + (20 * (proofText.split('\n').length)) + "px;'><textarea data-proofId='" + node.id + "'>" + proofText + "</textarea></div>";
   if (isLeaf) {
     res += "<div class='center' style='margin-left:3em;margin-top:2em;'><a class='treeAddChild hint--bottom' data-hint='branch' data-proofId='" + node.id + "' href='#'><i class='material-icons'>add_circle_outline</i></a></div>";
     if (isRightmostBranch) {
