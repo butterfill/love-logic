@@ -13,6 +13,7 @@ dialects =
         symbols : 'default'
         parser : 'awFOL'
         rules : 'fitch'
+        treeRules : 'logicbook_tree'
   teller :
     available : true
     description : 'The language and natural deduction proof system presented in Teller’s ‘A Modern Formal Logic Primer’ (1998)'
@@ -54,7 +55,7 @@ dialects =
 # default settings!
 dialectName = 'lpl'
 dialectVersion = "0.1"
-exports.set = (name, version) ->
+set = (name, version) ->
   # convenience: also accept an object
   if name.version?
     version = name.version
@@ -70,6 +71,7 @@ exports.set = (name, version) ->
   setCurrentParser(d.parser)  
   setCurrentRules(d.rules)
   setTreeRulesName(d.treeRules)
+exports.set = set
 # exports.getCurrentDialect = () ->
 #   return dialects[dialectName].versions[dialectVersion]
 exports.getCurrentDialectNameAndVersion = () ->
@@ -95,7 +97,7 @@ exports.getTreeRules = () -> ruleSets[currentTreeRulesName]
 exports.listDialects = () ->
   return _.keys(dialects)
   
-currentSymbolsName = 'default'
+currentSymbolsName = undefined
 setSymbols = (name) ->
   currentSymbolsName = name
 exports.setSymbols = setSymbols
@@ -129,8 +131,6 @@ setCurrentParser = (name) ->
   currentParserName = name
 exports.setCurrentParser = setCurrentParser
 
-setCurrentParser('awFOL')
-
   
 ruleSets = {}
 exports.registerRuleSet = (name, rules) ->
@@ -143,3 +143,6 @@ exports.getCurrentRulesName = () ->
 setCurrentRules = (name) ->
   currentRulesName = name
 exports.setCurrentRules = setCurrentRules
+
+# A default:
+set('lpl')

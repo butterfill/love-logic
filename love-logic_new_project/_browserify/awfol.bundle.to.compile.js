@@ -339,8 +339,8 @@ global.tree = tree;
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../../ui_components/tree_proof/tree":34,"../fol":7,"../proofs/proof":27}],5:[function(require,module,exports){
-var _, currentParserName, currentRulesName, currentSymbolsName, currentTreeRulesName, dialectName, dialectVersion, dialects, parsers, ruleSets, setCurrentParser, setCurrentRules, setSymbols, setTreeRulesName, symbols;
+},{"../../ui_components/tree_proof/tree":35,"../fol":7,"../proofs/proof":28}],5:[function(require,module,exports){
+var _, currentParserName, currentRulesName, currentSymbolsName, currentTreeRulesName, dialectName, dialectVersion, dialects, parsers, ruleSets, set, setCurrentParser, setCurrentRules, setSymbols, setTreeRulesName, symbols;
 
 _ = require('lodash');
 
@@ -355,7 +355,8 @@ dialects = {
       "0.1": {
         symbols: 'default',
         parser: 'awFOL',
-        rules: 'fitch'
+        rules: 'fitch',
+        treeRules: 'logicbook_tree'
       }
     }
   },
@@ -412,7 +413,7 @@ dialectName = 'lpl';
 
 dialectVersion = "0.1";
 
-exports.set = function(name, version) {
+set = function(name, version) {
   var allVersions, d;
   if (name.version != null) {
     version = name.version;
@@ -430,6 +431,8 @@ exports.set = function(name, version) {
   setCurrentRules(d.rules);
   return setTreeRulesName(d.treeRules);
 };
+
+exports.set = set;
 
 exports.getCurrentDialectNameAndVersion = function() {
   return {
@@ -478,7 +481,7 @@ exports.listDialects = function() {
   return _.keys(dialects);
 };
 
-currentSymbolsName = 'default';
+currentSymbolsName = void 0;
 
 setSymbols = function(name) {
   return currentSymbolsName = name;
@@ -535,8 +538,6 @@ setCurrentParser = function(name) {
 
 exports.setCurrentParser = setCurrentParser;
 
-setCurrentParser('awFOL');
-
 ruleSets = {};
 
 exports.registerRuleSet = function(name, rules) {
@@ -559,8 +560,10 @@ setCurrentRules = function(name) {
 
 exports.setCurrentRules = setCurrentRules;
 
+set('lpl');
 
-},{"../parser/awFOL":11,"../parser/copiFOL":12,"../parser/forallxFOL":13,"../parser/logicbookFOL":14,"../parser/tellerFOL":15,"../symbols":31,"lodash":9}],6:[function(require,module,exports){
+
+},{"../parser/awFOL":12,"../parser/copiFOL":13,"../parser/forallxFOL":14,"../parser/logicbookFOL":15,"../parser/tellerFOL":16,"../symbols":32,"lodash":9}],6:[function(require,module,exports){
 var Evaluator, _, dialectManager, evaluate, parser;
 
 _ = require('lodash');
@@ -691,7 +694,7 @@ exports.evaluate = evaluate;
 
 
 },{"./dialect_manager/dialectManager":5,"lodash":9}],7:[function(require,module,exports){
-var _, _decorate, dialectManager, evaluate, match, normalForm, parse, substitute, symbols, util;
+var _, _decorate, dialectManager, evaluate, match, normalForm, op, parse, substitute, symbols, util;
 
 _ = require('lodash');
 
@@ -704,6 +707,8 @@ substitute = require('./substitute');
 normalForm = require('./normal_form');
 
 evaluate = require('./evaluate');
+
+op = require('./op');
 
 symbols = require('./symbols');
 
@@ -900,6 +905,9 @@ _decorate = function(expression) {
       })();
       return unboundVariables;
     };
+    e.negate = function() {
+      return _decorate(op.negate(e));
+    };
     e.convertToPNFsimplifyAndSort = function() {
       var newE;
       newE = normalForm.convertToPNFsimplifyAndSort(expression);
@@ -920,7 +928,7 @@ _decorate = function(expression) {
 exports._decorate = _decorate;
 
 
-},{"./dialect_manager/dialectManager":5,"./evaluate":6,"./match":8,"./normal_form":10,"./substitute":30,"./symbols":31,"./util":32,"lodash":9}],8:[function(require,module,exports){
+},{"./dialect_manager/dialectManager":5,"./evaluate":6,"./match":8,"./normal_form":10,"./op":11,"./substitute":31,"./symbols":32,"./util":33,"lodash":9}],8:[function(require,module,exports){
 var _, _addSubToEverySentence, _addSubToEveryTerm, _addSubToEveryX, _applyOneSubstitution, _applyOrSkipSubstitutions, _canApplySubAtInnermostPoint, _isTermSub, _moveAllSubsInwards, _pullSub, _removeInefficaciousSubs, _skipOneSubstitution, apply, doAfterApplyingSubstitutions, find, findWithoutApplyingSubs, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -1254,7 +1262,7 @@ apply = function(pattern, matches, o) {
 exports.apply = apply;
 
 
-},{"./util":32,"lodash":9}],9:[function(require,module,exports){
+},{"./util":33,"lodash":9}],9:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -14096,7 +14104,36 @@ removeQuantifiersThatBindNothing = function(expression) {
 exports.removeQuantifiersThatBindNothing = removeQuantifiersThatBindNothing;
 
 
-},{"./match":8,"./substitute":30,"./util":32,"lodash":9}],11:[function(require,module,exports){
+},{"./match":8,"./substitute":31,"./util":33,"lodash":9}],11:[function(require,module,exports){
+var _, conjoin, dialectManager, negate, parser;
+
+_ = require('lodash');
+
+dialectManager = require('./dialect_manager/dialectManager');
+
+parser = dialectManager.getParser('awFOL');
+
+negate = function(e) {
+  var res;
+  res = parser.parse('not A');
+  res.left = e;
+  return res;
+};
+
+exports.negate = negate;
+
+conjoin = function(left, right) {
+  var res;
+  res = parser.parse('A and B');
+  res.left = left;
+  res.right = right;
+  return res;
+};
+
+exports.conjoin = conjoin;
+
+
+},{"./dialect_manager/dialectManager":5,"lodash":9}],12:[function(require,module,exports){
 (function (process){
 /* parser generated by jison 0.4.17 */
 /*
@@ -14857,7 +14894,7 @@ if (typeof module !== 'undefined' && require.main === module) {
 }
 }
 }).call(this,require('_process'))
-},{"_process":3,"fs":1,"path":2}],12:[function(require,module,exports){
+},{"_process":3,"fs":1,"path":2}],13:[function(require,module,exports){
 (function (process){
 /* parser generated by jison 0.4.17 */
 /*
@@ -15622,7 +15659,7 @@ if (typeof module !== 'undefined' && require.main === module) {
 }
 }
 }).call(this,require('_process'))
-},{"_process":3,"fs":1,"path":2}],13:[function(require,module,exports){
+},{"_process":3,"fs":1,"path":2}],14:[function(require,module,exports){
 (function (process){
 /* parser generated by jison 0.4.17 */
 /*
@@ -16384,7 +16421,7 @@ if (typeof module !== 'undefined' && require.main === module) {
 }
 }
 }).call(this,require('_process'))
-},{"_process":3,"fs":1,"path":2}],14:[function(require,module,exports){
+},{"_process":3,"fs":1,"path":2}],15:[function(require,module,exports){
 (function (process){
 /* parser generated by jison 0.4.17 */
 /*
@@ -17130,7 +17167,7 @@ if (typeof module !== 'undefined' && require.main === module) {
 }
 }
 }).call(this,require('_process'))
-},{"_process":3,"fs":1,"path":2}],15:[function(require,module,exports){
+},{"_process":3,"fs":1,"path":2}],16:[function(require,module,exports){
 (function (process){
 /* parser generated by jison 0.4.17 */
 /*
@@ -17892,7 +17929,7 @@ if (typeof module !== 'undefined' && require.main === module) {
 }
 }
 }).call(this,require('_process'))
-},{"_process":3,"fs":1,"path":2}],16:[function(require,module,exports){
+},{"_process":3,"fs":1,"path":2}],17:[function(require,module,exports){
 var CLOSE_BRANCH_JUSTIFICATION, OPEN_BRANCH_JUSTIFICATION, PREMISE_JUSTIFICATION, _, _FIND_JUSTIFICATION, _FIND_WHITESPACE_JUSTIFICATION, _isPremise, cleanNumber, dialectManager, findBlock, findLine, findLineOrBlock, getCitedBlocks, getCitedLines, getLinesThatCiteMe, getRuleName, jp, split, to,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -18201,7 +18238,7 @@ getCitedBlocks = function() {
 };
 
 
-},{"../dialect_manager/dialectManager":5,"./add_line_numbers":17,"./justification_parser":24,"lodash":9}],17:[function(require,module,exports){
+},{"../dialect_manager/dialectManager":5,"./add_line_numbers":18,"./justification_parser":25,"lodash":9}],18:[function(require,module,exports){
 var _, _DROP_TRAILING_DOTS_AND_BRACKET, _GET_NUMBER, cleanNumber, split, to,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -18301,7 +18338,7 @@ to = function(block, o) {
 exports.to = to;
 
 
-},{"lodash":9}],18:[function(require,module,exports){
+},{"lodash":9}],19:[function(require,module,exports){
 var fol, substitute, to, util;
 
 fol = require('../fol');
@@ -18353,7 +18390,7 @@ to = function(block) {
 exports.to = to;
 
 
-},{"../fol":7,"../substitute":30,"../util":32}],19:[function(require,module,exports){
+},{"../fol":7,"../substitute":31,"../util":33}],20:[function(require,module,exports){
 var LineStatus, _, fol, substitute, to, util;
 
 _ = require('lodash');
@@ -18469,7 +18506,7 @@ LineStatus = (function() {
 })();
 
 
-},{"../fol":7,"../substitute":30,"../util":32,"lodash":9}],20:[function(require,module,exports){
+},{"../fol":7,"../substitute":31,"../util":33,"lodash":9}],21:[function(require,module,exports){
 var _, _linesCitedAreOk, _parseProof, addJustification, addLineNumbers, addSentences, addStatus, anythingOtherThanABranchOccursAfterABranch, blockParser, canLineBeTicked, checkBranchingRules, checkItAccordsWithTheRules, checkLineAccordsWithOneOfTheseRules, checkTicksAreCorrect, dialectManager, lineNeedsToBeTicked, to, util, verifyLine,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -18519,14 +18556,17 @@ to = function(proof) {
       }
       if (item.type === 'block') {
         aBlock = item;
-        aBlock.verify = function() {
+        aBlock.verify = function(theRules) {
           var allLinesOk, verifyABlockWalker;
+          if (theRules == null) {
+            theRules = dialectManager.getCurrentRules();
+          }
           allLinesOk = true;
           verifyABlockWalker = {
             visit: function(item) {
               var ref, result;
               if ((ref = item.type) === 'line' || ref === 'close_branch' || ref === 'open_branch') {
-                result = item.verify();
+                result = item.verify(theRules);
                 allLinesOk = allLinesOk && result;
                 return void 0;
               }
@@ -18537,8 +18577,11 @@ to = function(proof) {
         };
       } else {
         aLine = item;
-        aLine.verify = function() {
-          return verifyLine(aLine, proof);
+        aLine.verify = function(theRules) {
+          if (theRules == null) {
+            theRules = dialectManager.getCurrentRules();
+          }
+          return verifyLine(aLine, proof, theRules);
         };
         aLine.canLineBeTicked = function() {
           return canLineBeTicked(aLine);
@@ -18548,9 +18591,12 @@ to = function(proof) {
     }
   };
   proof.walk(walker);
-  return proof.verifyTree = function() {
+  return proof.verifyTree = function(theRules) {
     var branches, test1, test2, test3;
-    test1 = proof.verify();
+    if (theRules == null) {
+      theRules = dialectManager.getTreeRules();
+    }
+    test1 = proof.verify(theRules);
     if (test1 === false) {
       return false;
     }
@@ -18736,8 +18782,11 @@ canLineBeTicked = function(line) {
 
 exports.canLineBeTicked = canLineBeTicked;
 
-verifyLine = function(lineOrLineNumber, proofText) {
+verifyLine = function(lineOrLineNumber, proofText, theRules) {
   var areLinesCitedOk, errorMessage, lineNumber, proof, ref, result, theLine;
+  if (theRules == null) {
+    theRules = dialectManager.getCurrentRules();
+  }
   if (_.isString(proofText)) {
     proofText = _parseProof(proofText);
   }
@@ -18768,7 +18817,7 @@ verifyLine = function(lineOrLineNumber, proofText) {
     theLine.status.verified = false;
     return false;
   }
-  result = checkItAccordsWithTheRules(theLine);
+  result = checkItAccordsWithTheRules(theLine, theRules);
   return result;
 };
 
@@ -18849,12 +18898,11 @@ checkLineAccordsWithOneOfTheseRules = function(line, rules) {
   return false;
 };
 
-checkItAccordsWithTheRules = function(line) {
-  var aRule, connective, i, intronation, j, len, len1, r, ref, ref1, ref2, ref3, ref4, ref5, ruleMap, rules, side, theRules;
+checkItAccordsWithTheRules = function(line, theRules) {
+  var aRule, connective, i, intronation, j, len, len1, r, ref, ref1, ref2, ref3, ref4, ref5, ruleMap, rules, side;
   connective = line.justification.rule.connective;
   intronation = (ref = line.justification.rule.variant) != null ? ref.intronation : void 0;
   side = (ref1 = line.justification.rule.variant) != null ? ref1.side : void 0;
-  theRules = dialectManager.getCurrentRules();
   ruleMap = theRules[connective];
   if (ruleMap == null) {
     line.status.addMessage(("the rule you specified, `" + connective + " " + (intronation || '') + " " + (side || '') + "` does not exist (or, if it does, you are not allowed to use it in this proof).").replace(/\s\s+/g, ''));
@@ -18925,7 +18973,7 @@ checkItAccordsWithTheRules = function(line) {
 };
 
 
-},{"../dialect_manager/dialectManager":5,"../util":32,"./add_justification":16,"./add_line_numbers":17,"./add_sentences":18,"./add_status":19,"./block_parser":21,"./fitch_rules":22,"./forallx_rules":23,"./logicbook_rules":25,"./logicbook_tree_rules":26,"./teller_rules":29,"lodash":9}],21:[function(require,module,exports){
+},{"../dialect_manager/dialectManager":5,"../util":33,"./add_justification":17,"./add_line_numbers":18,"./add_sentences":19,"./add_status":20,"./block_parser":22,"./fitch_rules":23,"./forallx_rules":24,"./logicbook_rules":26,"./logicbook_tree_rules":27,"./teller_rules":30,"lodash":9}],22:[function(require,module,exports){
 var Block, _, _INDENTATION_AT_START_OF_LINE, _SPLIT_LINE_WHEN_INDENTATION_FIRST, _SPLIT_LINE_WHEN_NUMBER_FIRST, areLinesFormattedIndentationFirst, clean, extractIndentationAndContentFrom, isBlank, isClosedBranchMarker, isDivider, isOpenBranchMarker, parse, removeIndentationFrom, removeNumberFrom, split, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -19405,7 +19453,7 @@ Block = (function() {
 exports.Block = Block;
 
 
-},{"../util":32,"lodash":9}],22:[function(require,module,exports){
+},{"../util":33,"lodash":9}],23:[function(require,module,exports){
 var dialectManager, rule, rules;
 
 dialectManager = require('../dialect_manager/dialectManager');
@@ -19476,7 +19524,7 @@ exports.rules = rules;
 dialectManager.registerRuleSet('fitch', rules);
 
 
-},{"../dialect_manager/dialectManager":5,"./rule":28}],23:[function(require,module,exports){
+},{"../dialect_manager/dialectManager":5,"./rule":29}],24:[function(require,module,exports){
 var dialectManager, rule, rules;
 
 dialectManager = require('../dialect_manager/dialectManager');
@@ -19630,7 +19678,7 @@ exports.rules = rules;
 dialectManager.registerRuleSet('forallx', rules);
 
 
-},{"../dialect_manager/dialectManager":5,"./rule":28}],24:[function(require,module,exports){
+},{"../dialect_manager/dialectManager":5,"./rule":29}],25:[function(require,module,exports){
 (function (process){
 /* parser generated by jison 0.4.17 */
 /*
@@ -20456,7 +20504,7 @@ if (typeof module !== 'undefined' && require.main === module) {
 }
 }
 }).call(this,require('_process'))
-},{"_process":3,"fs":1,"path":2}],25:[function(require,module,exports){
+},{"_process":3,"fs":1,"path":2}],26:[function(require,module,exports){
 var dialectManager, rule, rules;
 
 dialectManager = require('../dialect_manager/dialectManager');
@@ -20664,7 +20712,7 @@ exports.rules = rules;
 dialectManager.registerRuleSet('logicbook', rules);
 
 
-},{"../dialect_manager/dialectManager":5,"./rule":28}],26:[function(require,module,exports){
+},{"../dialect_manager/dialectManager":5,"./rule":29}],27:[function(require,module,exports){
 var _, _decorateRulesForTrees, dialectManager, rule, rules;
 
 dialectManager = require('../dialect_manager/dialectManager');
@@ -20777,7 +20825,7 @@ exports.rules = rules;
 dialectManager.registerRuleSet('logicbook_tree', rules);
 
 
-},{"../dialect_manager/dialectManager":5,"./rule":28,"lodash":9}],27:[function(require,module,exports){
+},{"../dialect_manager/dialectManager":5,"./rule":29,"lodash":9}],28:[function(require,module,exports){
 var _, _decorate, addJustification, addLineNumbers, addSentences, addStatus, addVerification, blockParser, dialectManager, padRight, parse,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -21010,7 +21058,7 @@ parse = function(proofText, o) {
 exports.parse = parse;
 
 
-},{"../dialect_manager/dialectManager":5,"./add_justification":16,"./add_line_numbers":17,"./add_sentences":18,"./add_status":19,"./add_verification":20,"./block_parser":21,"lodash":9}],28:[function(require,module,exports){
+},{"../dialect_manager/dialectManager":5,"./add_justification":17,"./add_line_numbers":18,"./add_sentences":19,"./add_status":20,"./add_verification":21,"./block_parser":22,"lodash":9}],29:[function(require,module,exports){
 var _, _From, _allRulesUsedInThisBlock, _checkIsPremise, _matchesToString, _notImplementedYet, _parseNameIfNecessaryAndDecorate, _permutations, _selfIdenticalPattern, _someRulesUsedInThisBlock, _whichLinesMatchThisPattern, areAllRequirementsMet, areRequirementsMetByTheseLinesAndBlocks, branch, checkCorrectNofLinesAndSubproofsCited, checkRequirementsMet, closeBranch, convertTextToRequirementIfNecessary, doAnyCandidatesMeetThisReq, doesALineAboveContainThisName, doesAPremiseHereOrAboveContainThisName, doesLineMatchPattern, fol, from, linesContainPatterns, matches, notAIsA, notPhi, numberToWords, openBranch, parseAndDecorateIfNecessary, parser, phi, premise, sentenceIsSelfIdentity, subproof, substitute, tickIf, to, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
   slice = [].slice;
@@ -22174,7 +22222,7 @@ numberToWords = function(num, type) {
 };
 
 
-},{"../fol":7,"../substitute":30,"../util":32,"lodash":9}],29:[function(require,module,exports){
+},{"../fol":7,"../substitute":31,"../util":33,"lodash":9}],30:[function(require,module,exports){
 var dialectManager, rule, rules;
 
 dialectManager = require('../dialect_manager/dialectManager');
@@ -22253,7 +22301,7 @@ exports.rules = rules;
 dialectManager.registerRuleSet('teller', rules);
 
 
-},{"../dialect_manager/dialectManager":5,"./rule":28}],30:[function(require,module,exports){
+},{"../dialect_manager/dialectManager":5,"./rule":29}],31:[function(require,module,exports){
 var _, _isOneASubstitutionInstanceOfTheOther, _subsForPNF, _subs_eliminate_redundancy, applySubstitutions, awFOL, dialectManager, doSub, doSubRecursive, from, isOneASubstitutionInstanceOfTheOther, isThereAWayOfApplyingTheSubstitutionToMakeTheFunctionReturnTrue, k, match, replace, subsForPNF, subs_eliminate_redundancy, theSub, to, util, v;
 
 _ = require('lodash');
@@ -22606,7 +22654,7 @@ isThereAWayOfApplyingTheSubstitutionToMakeTheFunctionReturnTrue = function(sente
 exports.isThereAWayOfApplyingTheSubstitutionToMakeTheFunctionReturnTrue = isThereAWayOfApplyingTheSubstitutionToMakeTheFunctionReturnTrue;
 
 
-},{"./dialect_manager/dialectManager":5,"./match":8,"./util":32,"lodash":9}],31:[function(require,module,exports){
+},{"./dialect_manager/dialectManager":5,"./match":8,"./util":33,"lodash":9}],32:[function(require,module,exports){
 var _, symbols;
 
 _ = require('lodash');
@@ -22630,7 +22678,9 @@ symbols = {
     propLanguageName: 'FOL',
     predLanguageName: 'FOL',
     elim: ' Elim',
-    intro: ' Intro'
+    intro: ' Intro',
+    decomposition: 'D',
+    decomposition2: 'D2'
   },
   copi: {
     'not': '~',
@@ -22734,7 +22784,7 @@ symbols = {
 module.exports = symbols;
 
 
-},{"lodash":9}],32:[function(require,module,exports){
+},{"lodash":9}],33:[function(require,module,exports){
 var _, _delExtraneousProperties, _typeComparator, areIdenticalExpressions, atomicExpressionComparator, atomicSentenceTypes, cloneExpression, delExtraneousProperties, dialectManager, exhaust, expressionContainsSubstitutions, expressionHasSub, expressionToString, expressionTypes, find, listMetaVariableNames, listOfAtomicExpressionsComparator, listTerms, matchesToString, max, termComparator, termTypes, walk, walkCompare, walkMutate, walkMutateFindOne,
   hasProp = {}.hasOwnProperty;
 
@@ -23469,7 +23519,7 @@ exports.getPredLanguageName = function() {
 };
 
 
-},{"./dialect_manager/dialectManager":5,"lodash":9}],33:[function(require,module,exports){
+},{"./dialect_manager/dialectManager":5,"lodash":9}],34:[function(require,module,exports){
 /*
 * Treant-js
 *
@@ -24841,8 +24891,9 @@ exports.getPredLanguageName = function() {
 	exports.Treant = Treant;
 })(exports);
 
-},{}],34:[function(require,module,exports){
-var Treant, _, _getNode, convertProofToTreeProof, decorateTreeProof, display, displayEditable, displayStatic, makeTreeProof, nodeToHTML, nodeToTextarea, proof;
+},{}],35:[function(require,module,exports){
+(function (global){
+var Treant, _, _getNode, convertProofToTreeProof, decorateTreeProof, display, displayEditable, displayStatic, fromSequent, makeTreeProof, nodeToHTML, nodeToTextarea, proof;
 
 _ = require('lodash');
 
@@ -24969,6 +25020,13 @@ decorateTreeProof = function(treeProof, _parent) {
     }
     return res.trim();
   };
+  treeProof.toProofObject = function() {
+    var txt;
+    txt = this.toSequent();
+    return proof.parse(txt, {
+      treeProof: true
+    });
+  };
   treeProof.getLastLineNumber = function() {
     var lengths, nofLines, sib;
     nofLines = treeProof.proofText.split('\n').length;
@@ -25023,11 +25081,8 @@ decorateTreeProof = function(treeProof, _parent) {
     };
   };
   treeProof.verify = function() {
-    var errorMessages, isCorrect, p, txt;
-    txt = this.toSequent();
-    p = proof.parse(txt, {
-      treeProof: true
-    });
+    var errorMessages, isCorrect, p;
+    p = this.toProofObject();
     isCorrect = p.verifyTree();
     errorMessages = p.listErrorMessages();
     return {
@@ -25091,6 +25146,15 @@ decorateTreeProof = function(treeProof, _parent) {
     $container.height(height);
     return $container.width(width);
   };
+  treeProof.areAllBranchesClosed = function() {
+    return this.toProofObject().areAllBranchesClosed();
+  };
+  treeProof.areAllBranchesClosedOrOpen = function() {
+    return this.toProofObject().areAllBranchesClosedOrOpen();
+  };
+  treeProof.getPremises = function() {
+    return this.toProofObject().getPremises();
+  };
   newParent = treeProof;
   ref = treeProof.children;
   for (i = 0, len = ref.length; i < len; i++) {
@@ -25115,7 +25179,7 @@ makeTreeProof = function(rootProofText, _parent) {
 exports.makeTreeProof = makeTreeProof;
 
 display = function(treeProof, container, nodeToHTML, callback) {
-  var chartCfg, nodes;
+  var chartCfg, nodes, theTreant;
   $(container).html('');
   nodes = treeProof.setInnerHTML(nodeToHTML);
   chartCfg = {
@@ -25128,7 +25192,9 @@ display = function(treeProof, container, nodeToHTML, callback) {
     },
     nodeStructure: nodes
   };
-  return new Treant(chartCfg, callback);
+  theTreant = new Treant(chartCfg, callback);
+  global.theTreant = theTreant;
+  return theTreant;
 };
 
 exports.display = display;
@@ -25139,7 +25205,7 @@ displayStatic = function(treeProof, container) {
 
 exports.displayStatic = displayStatic;
 
-displayEditable = function(treeProof, container, onChange, callback) {
+displayEditable = function(treeProof, container, onChange, callback, restore) {
   var doAfterCreatingTreant;
   doAfterCreatingTreant = function() {
     var editor, i, len, node, nodeLocator, options, proofId, ref, t;
@@ -25150,7 +25216,6 @@ displayEditable = function(treeProof, container, onChange, callback) {
       autofocus: true,
       mode: 'fol',
       matchBrackets: true,
-      gutters: ["error-light"],
       tabSize: 4,
       extraKeys: {
         Tab: function(cm) {
@@ -25174,6 +25239,16 @@ displayEditable = function(treeProof, container, onChange, callback) {
           return typeof onChange === "function" ? onChange(node) : void 0;
         };
       })(node));
+      editor.on('keyHandled', (function(node, treeProof, container) {
+        return function(instance, name, event) {
+          if (name === 'Enter') {
+            console.log("#treeAddChild" + (node.id.replace('.', '-')));
+            return $("#treeAddChild" + (node.id.replace('.', '-'))).parent().animate({
+              marginTop: "+=1em"
+            });
+          }
+        };
+      })(node, treeProof, container));
     }
     $('.treeAddChild').click((function(treeProof, container, nodeLocator) {
       return function(e) {
@@ -25233,7 +25308,7 @@ nodeToTextarea = function(node) {
   isRightmostBranch = node === (siblings != null ? siblings[(siblings != null ? siblings.length : void 0) - 1] : void 0);
   res = "<div style='white-space:pre;margin-left:3em;width:250px;height:" + (20 * (proofText.split('\n').length)) + "px;'><textarea data-proofId='" + node.id + "'>" + proofText + "</textarea></div>";
   if (isLeaf) {
-    res += "<div class='center' style='margin-left:3em;margin-top:2em;'><a class='treeAddChild hint--bottom' data-hint='branch' data-proofId='" + node.id + "' href='#'><i class='material-icons'>add_circle_outline</i></a></div>";
+    res += "<div class='center' style='margin-left:3em;margin-top:2em;'><a id='treeAddChild" + (node.id.replace('.', '-')) + "' class='treeAddChild hint--bottom' data-hint='branch' data-proofId='" + node.id + "' href='#'><i class='material-icons branch'>add_circle_outline</i></a></div>";
     if (isRightmostBranch) {
       linkRemoveSib = "<a class='treeRemoveNode hint--bottom' data-hint='remove rightmost node' data-proofId='" + node.id + "' href='#'><i class='material-icons'>remove_circle_outline</i></a>";
       linkAddSib = "<a class='treeAddSib hint--bottom' data-hint='add a node' data-proofId='" + node.id + "' href='#'><i class='material-icons'>add_circle_outline</i></a>";
@@ -25277,8 +25352,17 @@ convertProofToTreeProof = function(theProof) {
 
 exports.convertProofToTreeProof = convertProofToTreeProof;
 
+fromSequent = function(sequentTxt) {
+  return decorateTreeProof(convertProofToTreeProof(proof.parse(sequentTxt, {
+    treeProof: true
+  })));
+};
 
-},{"../../love-logic_new_project/proofs/proof":27,"./Treant":33,"lodash":35}],35:[function(require,module,exports){
+exports.fromSequent = fromSequent;
+
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"../../love-logic_new_project/proofs/proof":28,"./Treant":34,"lodash":36}],36:[function(require,module,exports){
 (function (global){
 /**
  * @license

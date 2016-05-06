@@ -20,6 +20,8 @@ symbols =
     predLanguageName : 'FOL'
     elim : ' Elim'
     intro : ' Intro'
+    decomposition: 'D'
+    decomposition2: 'D2'
     
 
   copi : 

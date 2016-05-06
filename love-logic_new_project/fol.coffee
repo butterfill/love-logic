@@ -13,8 +13,11 @@ match = require './match'
 substitute = require './substitute'
 normalForm = require './normal_form'
 evaluate = require('./evaluate')
+op = require('./op')
 symbols = require('./symbols')
 dialectManager = require('./dialect_manager/dialectManager')
+
+
   
 parse = (text, parser) ->
   parser ?= dialectManager.getCurrentParser()
@@ -129,7 +132,9 @@ _decorate = (expression) ->
       unboundVariables = (v for v in allVariableNames when normalForm.isVariableFree(v, expression))
       return unboundVariables
 
-      
+    e.negate = () ->
+      return _decorate(op.negate(e))
+    
     e.convertToPNFsimplifyAndSort = () ->
       newE = normalForm.convertToPNFsimplifyAndSort(expression)
       _decorate(newE)

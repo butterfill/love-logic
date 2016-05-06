@@ -75,6 +75,9 @@ decorateTreeProof = (treeProof, _parent) ->
     for l in proofLines
       res += "#{l.number} #{l.indentation} #{l.text}\n"
     return res.trim()
+  treeProof.toProofObject = () ->
+    txt = @toSequent()
+    return proof.parse(txt, {treeProof:true})
 
   # line numbers for trees
   treeProof.getLastLineNumber = () ->
@@ -97,8 +100,7 @@ decorateTreeProof = (treeProof, _parent) ->
     }
     
   treeProof.verify = () ->
-    txt = @toSequent()
-    p = proof.parse(txt, {treeProof:true})
+    p = @toProofObject()
     isCorrect = p.verifyTree()
     errorMessages = p.listErrorMessages()
     return {isCorrect, errorMessages}
@@ -144,6 +146,15 @@ decorateTreeProof = (treeProof, _parent) ->
     $container.height( height )
     $container.width( width )
   
+  treeProof.areAllBranchesClosed = () ->
+    return @toProofObject().areAllBranchesClosed()
+    
+  treeProof.areAllBranchesClosedOrOpen = () ->
+    return @toProofObject().areAllBranchesClosedOrOpen()
+  
+  treeProof.getPremises = () ->
+    return @toProofObject().getPremises()
+  
   newParent = treeProof
   for c in treeProof.children
     decorateTreeProof(c, newParent)
@@ -172,7 +183,9 @@ display = (treeProof, container, nodeToHTML, callback) ->
     nodeStructure: nodes
   # console.log "chartCfg"
   # console.log chartCfg
-  return new Treant(chartCfg, callback)
+  theTreant = new Treant(chartCfg, callback)
+  global.theTreant = theTreant
+  return theTreant
 exports.display = display
 
 displayStatic = ( treeProof, container ) ->
@@ -183,7 +196,7 @@ exports.displayStatic = displayStatic
 # the tree changes.
 # `callback` is called after the tree DOM elements (including the editors)
 # are created.
-displayEditable = (treeProof, container, onChange, callback) ->
+displayEditable = (treeProof, container, onChange, callback, restore) ->
   doAfterCreatingTreant = () ->
     # Create the CodeMirror things
     options = {
@@ -211,6 +224,13 @@ displayEditable = (treeProof, container, onChange, callback) ->
         # console.log "updated node #{node.id}, set to #{txt}"
         onChange?(node)
       )( node )
+      editor.on 'keyHandled', ((node, treeProof, container) -> (instance, name, event) ->
+        if name is 'Enter'
+          console.log "#treeAddChild#{node.id.replace('.','-')}"
+          $("#treeAddChild#{node.id.replace('.','-')}").parent().animate({marginTop:"+=1em"})
+          # Don’t do this because it messes up cursor position
+          #treeProof.displayEditable(container)
+      )(node, treeProof, container)
     
     # Bind the links for adding and removing children and siblings
     $('.treeAddChild').click ((treeProof, container, nodeLocator) -> (e) ->
@@ -252,7 +272,7 @@ nodeToTextarea = (node) ->
   isRightmostBranch = node is siblings?[siblings?.length-1]
   res = "<div style='white-space:pre;margin-left:3em;width:250px;height:#{20*(proofText.split('\n').length)}px;'><textarea data-proofId='#{node.id}'>#{proofText}</textarea></div>"
   if isLeaf
-    res += "<div class='center' style='margin-left:3em;margin-top:2em;'><a class='treeAddChild hint--bottom' data-hint='branch' data-proofId='#{node.id}' href='#'><i class='material-icons'>add_circle_outline</i></a></div>"
+    res += "<div class='center' style='margin-left:3em;margin-top:2em;'><a id='treeAddChild#{node.id.replace('.','-')}' class='treeAddChild hint--bottom' data-hint='branch' data-proofId='#{node.id}' href='#'><i class='material-icons branch'>add_circle_outline</i></a></div>"
     if isRightmostBranch 
       linkRemoveSib = "<a class='treeRemoveNode hint--bottom' data-hint='remove rightmost node' data-proofId='#{node.id}' href='#'><i class='material-icons'>remove_circle_outline</i></a>"
       linkAddSib = "<a class='treeAddSib hint--bottom' data-hint='add a node' data-proofId='#{node.id}' href='#'><i class='material-icons'>add_circle_outline</i></a>"
@@ -274,3 +294,7 @@ convertProofToTreeProof = (theProof) ->
   }
   return decorateTreeProof(nodes)
 exports.convertProofToTreeProof = convertProofToTreeProof  
+
+fromSequent = (sequentTxt) -> decorateTreeProof(convertProofToTreeProof(proof.parse(sequentTxt, {treeProof:true})))
+exports.fromSequent = fromSequent
+

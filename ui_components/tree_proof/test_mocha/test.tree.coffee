@@ -70,5 +70,42 @@ describe "tree ui component", ->
       console.log newTree.verify().errorMessages
       newTree.verify().isCorrect.should.be.true
       
-    
+  describe "areAllBranchesClosedOrOpen etc", ->
+    it "confirms that this is so", ->
+      t = tree.fromSequent """
+        1 | A ∨ C
+        2 | ¬A ∧ ¬C
+        3 || A      ∨decomposition 1
+        4 || ¬A     ∧decomposition 2
+        5 || X
+          | 
+        3 || C      ∨decomposition 1
+        4 || ¬C     ∧decomposition 2
+        5 || X
+      """
+      t.areAllBranchesClosedOrOpen().should.be.true
+      t.areAllBranchesClosed().should.be.true
+    it "denies that this is so when it ain’t", ->
+      t = tree.fromSequent """
+        1 | A ∨ C
+        2 | ¬A ∧ ¬C
+        3 || A      ∨decomposition 1
+        4 || ¬A     ∧decomposition 2
+        5 || X
+          | 
+        3 || C      ∨decomposition 1
+      """
+      t.areAllBranchesClosedOrOpen().should.be.false
+    it "handles another case", ->
+      t = tree.fromSequent """
+        1 | A ∨ C
+        2 | ¬A 
+        3 || A      ∨decomposition 1
+        5 || X
+          | 
+        3 || C      ∨decomposition 1
+        5 || O
+      """
+      t.areAllBranchesClosedOrOpen().should.be.true
+      t.areAllBranchesClosed().should.be.false
     

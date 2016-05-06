@@ -63,12 +63,14 @@ to = (proof) ->
       
       if item.type is 'block' 
         aBlock = item
-        aBlock.verify = () ->
+        aBlock.verify = (theRules) ->
+          theRules ?= dialectManager.getCurrentRules()
+          
           allLinesOk = true
           verifyABlockWalker = 
             visit : (item) ->
               if item.type in ['line', 'close_branch', 'open_branch']
-                result = item.verify()
+                result = item.verify(theRules)
                 allLinesOk = allLinesOk and result
                 return undefined # keep walking
           aBlock.walk verifyABlockWalker
@@ -76,16 +78,18 @@ to = (proof) ->
       else
         # item is a line, blank_line, divider or comment.
         aLine = item
-        aLine.verify = () ->
-          return verifyLine(aLine, proof)
+        aLine.verify = (theRules) ->
+          theRules ?= dialectManager.getCurrentRules()
+          return verifyLine(aLine, proof, theRules)
         aLine.canLineBeTicked = () ->
           return canLineBeTicked(aLine)
       return undefined
 
   proof.walk walker
   
-  proof.verifyTree = () ->
-    test1 = proof.verify()
+  proof.verifyTree = (theRules) ->
+    theRules ?= dialectManager.getTreeRules()
+    test1 = proof.verify(theRules)
     return false if test1 is false
     console.log "verify done"
     
@@ -236,7 +240,11 @@ exports.canLineBeTicked = canLineBeTicked
 # `lineOrLineNumber` is the 1-based linenumber in the proofText (so
 # not the name of the line) or a line object.
 # `proofText` may be a parsed proof (or a string, for testing).
-verifyLine = (lineOrLineNumber, proofText) ->
+verifyLine = (lineOrLineNumber, proofText, theRules) ->
+  
+  theRules ?= dialectManager.getCurrentRules()
+  # console.log "using #{dialectManager.getCurrentRulesName()}"
+  
   if _.isString proofText
     proofText = _parseProof proofText
   proof = proofText
@@ -277,7 +285,7 @@ verifyLine = (lineOrLineNumber, proofText) ->
     theLine.status.verified = false
     return false
   
-  result = checkItAccordsWithTheRules theLine
+  result = checkItAccordsWithTheRules theLine, theRules
   return result
 
 exports._line = verifyLine   #for testing only
@@ -343,7 +351,7 @@ checkLineAccordsWithOneOfTheseRules = (line, rules) ->
     
 
 
-checkItAccordsWithTheRules = (line) ->
+checkItAccordsWithTheRules = (line, theRules) ->
   # `connective` is 'and', 'reit' or 'premise' or ...
   connective = line.justification.rule.connective
   # `intronation` is 'elim' or 'intro'
@@ -351,8 +359,6 @@ checkItAccordsWithTheRules = (line) ->
   # `side` is 'left' or 'right'
   side = line.justification.rule.variant?.side
 
-  theRules = dialectManager.getCurrentRules()
-  # console.log "using #{dialectManager.getCurrentRulesName()}"
   ruleMap = theRules[connective]
 
   if not ruleMap?
