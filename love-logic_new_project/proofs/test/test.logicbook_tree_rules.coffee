@@ -29,17 +29,17 @@ setRulesAndParser = () ->
 testProof = (proofText, expected) ->
   theProof = proof.parse(proofText, {treeProof:true})
   console.log theProof if _.isString(theProof)
-  newPrfTxt = theProof.toString({numberLines:true})
   # console.log newPrfTxt
-  theProof = proof.parse(proofText, {treeProof:true})
   result = theProof.verifyTree()
-  if expected
-    if result isnt expected
-      console.log newPrfTxt
+  if result isnt expected
+    console.log theProof.toString({numberLines:true})
+    if expected
+      console.log "errorMessages: "
       console.log theProof.listErrorMessages()
-    expect(result).to.be.true
+  if expected is true
+    result.should.be.true
   else
-    expect(result).to.be.false
+    result.should.be.false
   
 describe "logicbook tree rules", ->
   
@@ -87,6 +87,19 @@ describe "logicbook tree rules", ->
         | B     arrow D 1
       '''
       testProof(text, true)
+    it "spots an error with branching in a nested case", ->
+      text = '''
+        1 | A ∨ B    Premise
+        2 | C ∨ D    Premise
+        3 || A     ∨D 1
+        4 ||| C      ∨D 2
+          || 
+        4 ||| C      ∨D 2
+          || 
+          | 
+        3 || B     ∨D 1
+      '''
+      testProof(text, false)
     it "does not allow Premise at the start of a branch", ->
       text = '''
         A arrow B     SM
@@ -1068,4 +1081,83 @@ describe "logicbook tree rules", ->
         | O
       '''
       testProof(text, false)
-        
+    
+    it "can spot an error in an incomplete proof (branching rule not fully written)", ->
+      text = '''
+        1 | A ∨ B    Premise
+        2 | ¬B       Premise
+        3 | ¬A       Premise
+        4 || A     ∨D 1
+        5 || X
+          | 
+        4 || 
+      '''
+      testProof(text, false)
+
+    it "can identify a mistake in not fully decompsing all D (not decomposed at all)", ->
+      text = '''
+        1 | (∀x) Fx    SM
+        2 | (∃x) ¬Gx    SM
+        3 || not Ga   exists D2 2
+        4 || O
+      '''
+      testProof(text, false)
+    it "can identify a mistake in not fully decompsing all D (only old constant decomposed)", ->
+      text = '''
+        1 | (∀x) Fx    SM
+        2 | (∃x) ¬Gx    SM
+        3 || not Ga   exists D2 2
+        4 || Fa       all D 1
+        5 || O
+      '''
+      testProof(text, false)
+    it "can identify a mistake in not fully decompsing all D (only new constant decomposed)", ->
+      text = '''
+        1 | (∀x) Fx    SM
+        2 | (∃x) ¬Gx    SM
+        3 || not Ga   exists D2 2
+        4 || Fb       all D 1
+        5 || O
+      '''
+      testProof(text, false)
+    it "can verify proof involving fully decompsing all D", ->
+      text = '''
+        1 | (∀x) Fx    SM
+        2 | (∃x) ¬Gx    SM
+        3 || not Ga   exists D2 2
+        4 || Fa       all D 1
+        5 || Fb       all D 1
+        6 || O
+      '''
+      testProof(text, true)
+    it "can identify a mistake in not fully decompsing all D  with an identity statement", ->
+      text = '''
+        1 | (∀x) Fx    SM
+        2 | a=b         SM
+        3 | Fa       all D 1
+        5 | Fc       all D 1
+        6 | O
+      '''
+      testProof(text, false)
+    it "can verify proof involving fully decompsing all D with an identity statement", ->
+      text = '''
+        1 | (∀x) Fx    SM
+        2 | a=b         SM
+        3 | Fa       all D 1
+        4 | Fb       all D 1
+        5 | Fc       all D 1
+        6 | O
+      '''
+      testProof(text, true)
+    it "can verify a simple open proof", ->
+      text = '''
+        1 | A → B    Premise
+        2 | ¬A       Premise
+        3 || ¬A     ∨D 1
+        4 || O
+          | 
+        3 || B     ∨D 1
+        4 || O
+      '''
+      testProof(text, false)
+

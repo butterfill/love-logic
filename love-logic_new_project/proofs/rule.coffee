@@ -111,6 +111,7 @@ tickIf.someRuleAppliedInEveryBranch = ( ruleSet ) ->
           # If we haven’t yet checked this line, we need to do that so that
           # we have `l.rulesChecked`:
           l.verifyTree() unless l.rulesChecked?
+          return {success:false} unless l.rulesChecked?
           for ruleAndMatches in l.rulesChecked
             r = ruleAndMatches.rule
             return {success:true} if r in ruleSet
@@ -140,6 +141,7 @@ tickIf.allRulesAppliedInEveryBranch = ( ruleSet ) ->
           # If we haven’t yet checked this line, we need to do that so that
           # we have `l.rulesChecked`:
           l.verifyTree() unless l.rulesChecked?
+          return {success:false} unless l.rulesChecked?
           for ruleAndMatches in l.rulesChecked
             r = ruleAndMatches.rule
             rulesUsed.push(r)
@@ -161,13 +163,77 @@ tickIf.allRulesAppliedInEveryBranch = ( ruleSet ) ->
       return success
   }
 
+# NB: assumes rule has a single `from` clause using a single term_metavariable.
 tickIf.ruleAppliedAtLeastOnceAndAppliedToEveryExistingConstant = ( rule ) ->
-  return (line) -> 
-    # TODO!
-    # Is the rule applied at least once?:
-    test1 = tickIf.someRuleAppliedInEveryBranch([rule])
-    result1 = test1(line)
-    return false unless result1
+  
+  fromPattern = rule._requirements.from[0].pattern
+  toPattern = rule._requirements.to.pattern
+  fromMetaVariableNames = fromPattern.listMetaVariableNamesAsList()
+  toMetaVariableNames = toPattern.listMetaVariableNamesAsList()
+  newMetaVariableNames = _.difference(toMetaVariableNames, fromMetaVariableNames)
+  unless newMetaVariableNames.length is 1
+    throw new Error "ruleAppliedAtLeastOnceAndAppliedToEveryExistingConstant contract broken, #{newMetaVariableNames}"
+  theMetaVariableName = newMetaVariableNames[0]
+  
+  makeFnToFindNameWhichIsUsedInApplyingTheRule = (fromLine) ->
+    fromMatches = fromLine.sentence.findMatches(fromPattern)
+    # console.log "fromMatches"
+    # console.log fromMatches
+    return (toLine) ->
+      # toMatches = toLine.sentence.findMatches(toPattern, fromMatches)
+      toMatches = doesLineMatchPattern(toLine, toPattern, fromMatches)
+      # console.log toPattern.toString()
+      # console.log toLine.sentence.toString()
+      # console.log theMetaVariableName
+      # console.log toMatches
+      return toMatches[theMetaVariableName].name
+  
+  getRequirement = (line) ->
+    candidateLines = line.getLinesThatCiteMe()
+    return (linesInBlock) ->
+      # What constants are mentioned in `linesInBlock` other
+      # than in lines which cite `line`??
+      namesUsed = []
+      for l in linesInBlock
+        unless l in candidateLines
+          if l.sentence?
+            for n in l.sentence.getNames()
+              namesUsed.push(n) unless n in namesUsed
+      # What constants is the rule applied to?
+      namesToWhichTheRuleIsApplied = []
+      findNameWhichIsUsedInApplyingTheRule = makeFnToFindNameWhichIsUsedInApplyingTheRule(line)
+      for l in linesInBlock
+        if l in candidateLines
+          namesToWhichTheRuleIsApplied.push( findNameWhichIsUsedInApplyingTheRule(l) )
+      namesYouShouldHaveAppliedTheRuleToButDidnt = _.difference(namesUsed, namesToWhichTheRuleIsApplied)
+      unless namesYouShouldHaveAppliedTheRuleToButDidnt.length is 0
+        return {success:false, errorMessage: "this rule was not applied to constants occurring in the branch (#{namesYouShouldHaveAppliedTheRuleToButDidnt.join(', ')})"}
+      namesYouAppliedTheRuleToThatDontOtherwiseAppearInTheBranch = _.difference(namesToWhichTheRuleIsApplied, namesUsed)
+      unless namesYouAppliedTheRuleToThatDontOtherwiseAppearInTheBranch.length > 0 
+        return {success:false, errorMessage: "this rule was not applied to at least one constant not otherwise occurring in the branch"}
+      return {success:true}
+      
+  return {
+    checkIsDecomposedInEveryNonClosedBranch : (line) ->
+      requirement = getRequirement(line)
+      proof = line.parent
+      leaves = proof.getLeaves()
+      for leaf in leaves
+        linesAbove = leaf.findAllAbove( (item) -> item.type is 'line' )
+        {success, errorMessage} = requirement(linesAbove)
+        return false unless success
+      return true
+    checkIsDecomposedInTheseLines : (line, lines) ->
+      requirement = getRequirement(line)
+      {success, errorMessage} = requirement(lines)
+      # This involves marking a partially decomposed line incorrect;
+      # we should probably not do that since it’s not the line but the claim
+      # that the branch is open which is at fault!
+      # unless success
+      #   line.status.addMessage errorMessage
+      #   line.status.verified = false
+      return success
+  }
       
 
 # All ways of describing a `rule` do and *MUST* use this class 
@@ -333,6 +399,7 @@ matches = (sentence) ->
     return test
   checkFunctions = [baseCheck]
   rulePart = {
+    pattern : pattern
     check : (line, priorMatches) ->
       currentMatches = priorMatches
       for f in checkFunctions
@@ -921,6 +988,7 @@ openBranch = (theRules) ->
         unless tickChecker.checkIsDecomposedInTheseLines(aLineAbove, linesAbove)
           line.status.addMessage "You can only mark a branch open if you have exhaustively decomposed every sentence on it, but line #{aLineAbove.number} has not been exhaustively decomposed."
           return false
+      
       # Check that identity rules have been exhaustively applied
       # (strictly: that you couldn’t add information by further applying them).
       identityLinesAbove = (item for item in linesAbove when (item.sentence?.type is 'identity' and sentenceIsSelfIdentity(item.sentence) is false))

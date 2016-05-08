@@ -104,7 +104,9 @@ rule.makeTickCheckers rules,
   double_arrow : rule.tickIf.someRuleAppliedInEveryBranch( [rules.double_arrow.decomposition[1], rules.double_arrow.decomposition[3]] )
   universal_quantifier : rule.tickIf.ruleAppliedAtLeastOnceAndAppliedToEveryExistingConstant( rules.universal.decomposition )
   existential_quantifier : rule.tickIf.someRuleAppliedInEveryBranch( [rules.existential.decomposition2] )
-  # identity : rule.tickIf.ruleAppliedToEverySentenceInEveryBranch( rule.identity.decomposition )
+  # identity : there is no `tickif` rule because identity statements cannot 
+  # be ticked; but the .openBranch rule checks that no further 
+  # information could be extracted from an identity statement.
   'not' :
     'not' : rule.tickIf.allRulesAppliedInEveryBranch( [rules['double-negation'].decomposition] )
     'and' : rule.tickIf.someRuleAppliedInEveryBranch( rules.not_and.decomposition )

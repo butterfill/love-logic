@@ -118,18 +118,19 @@ decorateTreeProof = (treeProof, _parent) ->
     newTree.onChange = @onChange
     return decorateTreeProof(newTree)
   
-  treeProof.displayEditable = (container, onChange) ->
+  treeProof.displayEditable = (container, onChange, doAfterCreating) ->
     @container ?= container
     @onChange ?= onChange
     oldScrollLeft = $(window).scrollLeft()
     oldScrollTop = $(window).scrollTop()
     @resizeContainer(50,50)
     self = @
-    doAfterCreating = () ->
+    whatToDoAfterCreating = (editorLocator) ->
       self.resizeContainer()
       $(window).scrollLeft(oldScrollLeft)
       $(window).scrollTop(oldScrollTop)
-    displayEditable(treeProof, @container, @onChange, doAfterCreating)
+      doAfterCreating?(editorLocator)
+    displayEditable(treeProof, @container, @onChange, whatToDoAfterCreating)
     return treeProof
   treeProof.displayStatic = (container) ->
     @container ?= container
@@ -197,7 +198,7 @@ exports.displayStatic = displayStatic
 # the tree changes.
 # `callback` is called after the tree DOM elements (including the editors)
 # are created.
-displayEditable = (treeProof, container, onChange, callback, restore) ->
+displayEditable = (treeProof, container, onChange, callback) ->
   doAfterCreatingTreant = () ->
     # Create the CodeMirror things
     options = {
@@ -214,11 +215,13 @@ displayEditable = (treeProof, container, onChange, callback, restore) ->
           cm.replaceSelection('    ');
     }
     nodeLocator = treeProof.getNodeLocator()
+    editorLocator = {}
     for t in $("#{container} textarea")
       proofId = $(t).attr('data-proofId')
       node = nodeLocator[proofId]
       options.firstLineNumber = node.getFirstLineNumber()
       editor = CodeMirror.fromTextArea(t, options)
+      editorLocator[proofId] = editor
       editor.on 'change', ((node) -> (doc) ->
         txt = doc.getValue()
         node.proofText = txt
@@ -227,8 +230,8 @@ displayEditable = (treeProof, container, onChange, callback, restore) ->
       )( node )
       editor.on 'keyHandled', ((node, treeProof, container) -> (instance, name, event) ->
         if name is 'Enter'
-          console.log "#treeAddChild#{node.id.replace('.','-')}"
-          $("#treeAddChild#{node.id.replace('.','-')}").parent().animate({marginTop:"+=1em"})
+          # console.log "#treeAddChild#{node.id.replace('.','-')}"
+          $("#treeAddChild#{node.id.replace('.','-')}").parent().animate({marginTop:"+=1.1em"})
           # Don’t do this because it messes up cursor position
           #treeProof.displayEditable(container)
       )(node, treeProof, container)
@@ -236,8 +239,12 @@ displayEditable = (treeProof, container, onChange, callback, restore) ->
     # Bind the links for adding and removing children and siblings
     $('.treeAddChild').click ((treeProof, container, nodeLocator) -> (e) ->
       node = _getNode $(e.target), nodeLocator
-      node.addChild('').addSib('')
-      treeProof.displayEditable(container)
+      firstNewChild = node.addChild('')
+      firstNewChild.addSib('')
+      doAfterCreating = (editorLocator) ->
+        editorToFocus = editorLocator[firstNewChild.id]
+        editorToFocus.focus()
+      treeProof.displayEditable(container, undefined, doAfterCreating)
       onChange?(node)
       )(treeProof, container, nodeLocator)
     $('.treeAddSib').click ((treeProof, container, nodeLocator) -> (e) ->
@@ -253,7 +260,7 @@ displayEditable = (treeProof, container, onChange, callback, restore) ->
       onChange?(node)
       )(treeProof, container, nodeLocator)
     # Finally, do whatever the caller requested:
-    callback?()
+    callback?(editorLocator)
   display( treeProof, container, nodeToTextarea, doAfterCreatingTreant )
 exports.displayEditable = displayEditable
 
@@ -287,8 +294,13 @@ nodeToTextarea = (node) ->
   return res
 
 
-
-
+areDistinctProofs = (t1, t2) ->
+  return false if t1 is t2
+  return true unless t1? and t2?
+  t1 = decorateTreeProof( _.clone(t1) )
+  t2 = decorateTreeProof( _.clone(t2) )
+  return t1.toSequent() isnt t2.toSequent()
+exports.areDistinctProofs = areDistinctProofs
 
 # Converts a `proof` object to a `treeProof` object
 convertProofToTreeProof = (theProof) ->

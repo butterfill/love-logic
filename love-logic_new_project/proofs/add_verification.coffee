@@ -13,7 +13,7 @@
 # (which is about identifying how the proof writer names lines) and 
 # `rule` (which is for describing rules of proof).
 #
-# In adding verification, this module also checks that the cited lines 
+# In adding verification, this module also this that the cited lines 
 # and blocks exist and can be cited from the line they are cited from.  
 # (It makes sense to do this here rather than in `rule` because the
 # check doesn't depend on which rule is used.)
@@ -99,10 +99,9 @@ to = (proof) ->
     return false if anythingOtherThanABranchOccursAfterABranch(proof)
     # console.log "anythingOtherThanABranchOccursAfterABranch done"
     
-    branches = proof.getChildren()
-    test2 = checkBranchingRules(branches)
+    test2 = checkBranchingRules(proof)
+    # console.log "checkBranchingRules done, with result: #{test2}"
     return false if test2 is false
-    # console.log "checkBranchingRules done"
     
     test3 = checkTicksAreCorrect(proof)
     return false if test3 is false
@@ -144,8 +143,10 @@ checkTicksAreCorrect = (proof) ->
 # In a tree proof, check that where a branch is created,
 # the right number of branches have been created using
 # the right rules.
-checkBranchingRules = (branches) ->
+checkBranchingRules = (theProof) ->
+  branches = theProof.getChildren()
   return true unless branches?.length > 0
+  # checkBranchingRules for the children of the branches:
   for b in branches
     test = checkBranchingRules(b)
     return false if test is false
@@ -159,7 +160,10 @@ checkBranchingRules = (branches) ->
     # console.log "at line #{line?.number}."
     rule = line?.rulesChecked?[0].rule
     unless rule? 
-      throw new Error "Could not get rule at line #{b.getFirstLine()?.number}."
+      line.status.addMessage("you do not seem to be using a branching rule correctly on this line")
+      # console.log "you do not seem to be using a branching rule correctly on line #{line.type} #{line.number}, (#{line.sentenceText})"
+      line.status.verified = false
+      return false
     if rule in rulesUsed
       # You cannot use the same rule twice in branching ...
       # ... provided there is more than one rule.
@@ -178,10 +182,12 @@ checkBranchingRules = (branches) ->
               rulesUsed.push(r)
         unless itIsOkToUseTheSameRuleTwiceHere
           line.status.addMessage("you cannot use the same rule twice in branching")
-          console.log "you cannot use the same rule twice in branching"
+          # console.log "you cannot use the same rule twice in branching"
+          line.status.verified = false
           return false
     if rule.ruleSet isnt ruleSet
-      # You cannot combine rules from different ruleSets in branching
+      line.status.verified = false
+      line.status.addMessage("you cannot combine different rules from in branching")
       return false
     rulesUsed.push(rule)
   if rulesUsed.length < ruleSet.length
@@ -361,7 +367,7 @@ checkItAccordsWithTheRules = (line, theRules) ->
   ruleMap = theRules[connective]
 
   if not ruleMap?
-    line.status.addMessage ("the rule you specified, `#{connective} #{intronation or ''} #{side or ''}` does not exist (or, if it does, you are not allowed to use it in this proof).".replace /\s\s+/g,'')
+    line.status.addMessage("the rule you specified, `#{connective} #{intronation or ''} #{side or ''}` does not exist (or, if it does, you are not allowed to use it in this proof).".replace /\s\s+/g,'')
     line.status.verified = false 
     return false
   

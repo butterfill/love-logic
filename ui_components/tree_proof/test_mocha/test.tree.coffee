@@ -126,3 +126,24 @@ describe "tree ui component", ->
       test = t.verify()
       console.log test
       test.isCorrect.should.be.false
+  
+  describe "areDistinctProofs", ->
+    it "can confirm that two distinct proofs are distinct", ->
+      t1 = tree.fromSequent "A"
+      t2 = tree.fromSequent "B"
+      test = tree.areDistinctProofs(t1,t2)
+      test.should.be.true
+    it "can confirm that two identical proofs are not distinct", ->
+      t = tree.fromSequent "A"
+      test = tree.areDistinctProofs(t,t)
+      test.should.be.false
+    it "can confirm that two identical proofs are not distinct", ->
+      t1 = tree.fromSequent "A\nB"
+      t2 = tree.fromSequent "A\nB"
+      test = tree.areDistinctProofs(t1,t2)
+      test.should.be.false
+    it "copes with undefined values", ->
+      t = tree.fromSequent "A"
+      test = tree.areDistinctProofs(t,undefined)
+      test.should.be.true
+    

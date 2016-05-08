@@ -68,6 +68,8 @@ _decorate = (expression) ->
       return util.expressionToString e, o
     e.listMetaVariableNames = () ->
       return util.listMetaVariableNames e
+    e.listMetaVariableNamesAsList = () ->
+      return util.listMetaVariableNamesAsList e
       
     e.findMatches = (pattern, _matches, o) ->
       result = match.find e, pattern, _matches, o

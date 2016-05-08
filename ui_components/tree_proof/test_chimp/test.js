@@ -776,6 +776,9 @@ _decorate = function(expression) {
     e.listMetaVariableNames = function() {
       return util.listMetaVariableNames(e);
     };
+    e.listMetaVariableNamesAsList = function() {
+      return util.listMetaVariableNamesAsList(e);
+    };
     e.findMatches = function(pattern, _matches, o) {
       var result;
       result = match.find(e, pattern, _matches, o);
@@ -18608,7 +18611,7 @@ to = function(proof) {
   };
   proof.walk(walker);
   return proof.verifyTree = function(theRules) {
-    var branches, test1, test2, test3;
+    var test1, test2, test3;
     if (theRules == null) {
       theRules = dialectManager.getTreeRules();
     }
@@ -18619,8 +18622,7 @@ to = function(proof) {
     if (anythingOtherThanABranchOccursAfterABranch(proof)) {
       return false;
     }
-    branches = proof.getChildren();
-    test2 = checkBranchingRules(branches);
+    test2 = checkBranchingRules(proof);
     if (test2 === false) {
       return false;
     }
@@ -18682,8 +18684,9 @@ checkTicksAreCorrect = function(proof) {
   return true;
 };
 
-checkBranchingRules = function(branches) {
-  var b, i, itIsOkToUseTheSameRuleTwiceHere, j, k, len, len1, len2, line, nofBranchingRules, r, ref, ref1, ref2, ref3, ref4, ref5, rule, ruleSet, rulesUsed, test;
+checkBranchingRules = function(theProof) {
+  var b, branches, i, itIsOkToUseTheSameRuleTwiceHere, j, k, len, len1, len2, line, nofBranchingRules, r, ref, ref1, ref2, ref3, ref4, rule, ruleSet, rulesUsed, test;
+  branches = theProof.getChildren();
   if (!((branches != null ? branches.length : void 0) > 0)) {
     return true;
   }
@@ -18704,7 +18707,9 @@ checkBranchingRules = function(branches) {
     line = b.getFirstLine();
     rule = line != null ? (ref4 = line.rulesChecked) != null ? ref4[0].rule : void 0 : void 0;
     if (rule == null) {
-      throw new Error("Could not get rule at line " + ((ref5 = b.getFirstLine()) != null ? ref5.number : void 0) + ".");
+      line.status.addMessage("you do not seem to be using a branching rule correctly on this line");
+      line.status.verified = false;
+      return false;
     }
     if (indexOf.call(rulesUsed, rule) >= 0) {
       if (ruleSet.length > 1) {
@@ -18720,12 +18725,14 @@ checkBranchingRules = function(branches) {
         }
         if (!itIsOkToUseTheSameRuleTwiceHere) {
           line.status.addMessage("you cannot use the same rule twice in branching");
-          console.log("you cannot use the same rule twice in branching");
+          line.status.verified = false;
           return false;
         }
       }
     }
     if (rule.ruleSet !== ruleSet) {
+      line.status.verified = false;
+      line.status.addMessage("you cannot combine different rules from in branching");
       return false;
     }
     rulesUsed.push(rule);
@@ -21016,14 +21023,17 @@ parse = function(proofText, o) {
     walker = {
       visit: function(item) {
         var errorMsg, lineName, ref;
-        if ((ref = item != null ? item.type : void 0) !== 'line' && ref !== 'close_branch' && ref !== 'open_branch') {
+        if ((ref = item != null ? item.type : void 0) !== 'line' && ref !== 'blank_line' && ref !== 'close_branch' && ref !== 'open_branch') {
           return void 0;
         }
         if (item.status.verified === false) {
           lineName = item.number;
           errorMsg = item.status.getMessage();
-          return errorMessages.push(lineName + ": " + errorMsg);
+          if ((errorMsg != null) && errorMsg !== '') {
+            errorMessages.push(lineName + ": " + errorMsg);
+          }
         }
+        return void 0;
       }
     };
     proof.walk(walker);
@@ -21165,6 +21175,11 @@ tickIf.someRuleAppliedInEveryBranch = function(ruleSet) {
           if (l.rulesChecked == null) {
             l.verifyTree();
           }
+          if (l.rulesChecked == null) {
+            return {
+              success: false
+            };
+          }
           ref = l.rulesChecked;
           for (m = 0, len1 = ref.length; m < len1; m++) {
             ruleAndMatches = ref[m];
@@ -21205,7 +21220,7 @@ tickIf.allRulesAppliedInEveryBranch = function(ruleSet) {
     var candidateLines;
     candidateLines = line.getLinesThatCiteMe();
     return function(linesInBlock, rulesUsed) {
-      var k, l, len, len1, len2, m, n, r, ref, ruleAndMatches, rulesStillToUse;
+      var k, l, len, len1, len2, m, o, r, ref, ruleAndMatches, rulesStillToUse;
       if (rulesUsed == null) {
         rulesUsed = [];
       }
@@ -21216,6 +21231,11 @@ tickIf.allRulesAppliedInEveryBranch = function(ruleSet) {
           if (l.rulesChecked == null) {
             l.verifyTree();
           }
+          if (l.rulesChecked == null) {
+            return {
+              success: false
+            };
+          }
           ref = l.rulesChecked;
           for (m = 0, len1 = ref.length; m < len1; m++) {
             ruleAndMatches = ref[m];
@@ -21225,8 +21245,8 @@ tickIf.allRulesAppliedInEveryBranch = function(ruleSet) {
         }
       }
       rulesStillToUse = [];
-      for (n = 0, len2 = ruleSet.length; n < len2; n++) {
-        r = ruleSet[n];
+      for (o = 0, len2 = ruleSet.length; o < len2; o++) {
+        r = ruleSet[o];
         if (indexOf.call(rulesUsed, r) < 0) {
           rulesStillToUse.push(r);
         }
@@ -21259,12 +21279,95 @@ tickIf.allRulesAppliedInEveryBranch = function(ruleSet) {
 };
 
 tickIf.ruleAppliedAtLeastOnceAndAppliedToEveryExistingConstant = function(rule) {
-  return function(line) {
-    var result1, test1;
-    test1 = tickIf.someRuleAppliedInEveryBranch([rule]);
-    result1 = test1(line);
-    if (!result1) {
-      return false;
+  var fromMetaVariableNames, fromPattern, getRequirement, makeFnToFindNameWhichIsUsedInApplyingTheRule, newMetaVariableNames, theMetaVariableName, toMetaVariableNames, toPattern;
+  fromPattern = rule._requirements.from[0].pattern;
+  toPattern = rule._requirements.to.pattern;
+  fromMetaVariableNames = fromPattern.listMetaVariableNamesAsList();
+  toMetaVariableNames = toPattern.listMetaVariableNamesAsList();
+  newMetaVariableNames = _.difference(toMetaVariableNames, fromMetaVariableNames);
+  if (newMetaVariableNames.length !== 1) {
+    throw new Error("ruleAppliedAtLeastOnceAndAppliedToEveryExistingConstant contract broken, " + newMetaVariableNames);
+  }
+  theMetaVariableName = newMetaVariableNames[0];
+  makeFnToFindNameWhichIsUsedInApplyingTheRule = function(fromLine) {
+    var fromMatches;
+    fromMatches = fromLine.sentence.findMatches(fromPattern);
+    return function(toLine) {
+      var toMatches;
+      toMatches = doesLineMatchPattern(toLine, toPattern, fromMatches);
+      return toMatches[theMetaVariableName].name;
+    };
+  };
+  getRequirement = function(line) {
+    var candidateLines;
+    candidateLines = line.getLinesThatCiteMe();
+    return function(linesInBlock) {
+      var findNameWhichIsUsedInApplyingTheRule, k, l, len, len1, len2, m, n, namesToWhichTheRuleIsApplied, namesUsed, namesYouAppliedTheRuleToThatDontOtherwiseAppearInTheBranch, namesYouShouldHaveAppliedTheRuleToButDidnt, o, ref;
+      namesUsed = [];
+      for (k = 0, len = linesInBlock.length; k < len; k++) {
+        l = linesInBlock[k];
+        if (indexOf.call(candidateLines, l) < 0) {
+          if (l.sentence != null) {
+            ref = l.sentence.getNames();
+            for (m = 0, len1 = ref.length; m < len1; m++) {
+              n = ref[m];
+              if (indexOf.call(namesUsed, n) < 0) {
+                namesUsed.push(n);
+              }
+            }
+          }
+        }
+      }
+      namesToWhichTheRuleIsApplied = [];
+      findNameWhichIsUsedInApplyingTheRule = makeFnToFindNameWhichIsUsedInApplyingTheRule(line);
+      for (o = 0, len2 = linesInBlock.length; o < len2; o++) {
+        l = linesInBlock[o];
+        if (indexOf.call(candidateLines, l) >= 0) {
+          namesToWhichTheRuleIsApplied.push(findNameWhichIsUsedInApplyingTheRule(l));
+        }
+      }
+      namesYouShouldHaveAppliedTheRuleToButDidnt = _.difference(namesUsed, namesToWhichTheRuleIsApplied);
+      if (namesYouShouldHaveAppliedTheRuleToButDidnt.length !== 0) {
+        return {
+          success: false,
+          errorMessage: "this rule was not applied to constants occurring in the branch (" + (namesYouShouldHaveAppliedTheRuleToButDidnt.join(', ')) + ")"
+        };
+      }
+      namesYouAppliedTheRuleToThatDontOtherwiseAppearInTheBranch = _.difference(namesToWhichTheRuleIsApplied, namesUsed);
+      if (!(namesYouAppliedTheRuleToThatDontOtherwiseAppearInTheBranch.length > 0)) {
+        return {
+          success: false,
+          errorMessage: "this rule was not applied to at least one constant not otherwise occurring in the branch"
+        };
+      }
+      return {
+        success: true
+      };
+    };
+  };
+  return {
+    checkIsDecomposedInEveryNonClosedBranch: function(line) {
+      var errorMessage, k, leaf, leaves, len, linesAbove, proof, ref, requirement, success;
+      requirement = getRequirement(line);
+      proof = line.parent;
+      leaves = proof.getLeaves();
+      for (k = 0, len = leaves.length; k < len; k++) {
+        leaf = leaves[k];
+        linesAbove = leaf.findAllAbove(function(item) {
+          return item.type === 'line';
+        });
+        ref = requirement(linesAbove), success = ref.success, errorMessage = ref.errorMessage;
+        if (!success) {
+          return false;
+        }
+      }
+      return true;
+    },
+    checkIsDecomposedInTheseLines: function(line, lines) {
+      var errorMessage, ref, requirement, success;
+      requirement = getRequirement(line);
+      ref = requirement(lines), success = ref.success, errorMessage = ref.errorMessage;
+      return success;
     }
   };
 };
@@ -21386,7 +21489,7 @@ exports.previousLineCitesSameLines = function() {
 exports.ruleIsAppliedToEveryExistingConstantAndANewConstant = function(termMetaVarName) {
   return {
     check: function(line, priorMatches, rule) {
-      var k, len, len1, len2, len3, len4, m, n, name, nameMatch, namesInBranch, namesMatchedInApplyingTheRule, o, p, ref, ruleAndMatch, rules, rulesChecked, sib, siblings, sisterBranches, theMatches, walker, x;
+      var k, len, len1, len2, len3, len4, m, name, nameMatch, namesInBranch, namesMatchedInApplyingTheRule, o, p, q, ref, ruleAndMatch, rules, rulesChecked, sib, siblings, sisterBranches, theMatches, walker, x;
       sisterBranches = line.parent.parent.getChildren();
       siblings = (function() {
         var k, len, results;
@@ -21437,8 +21540,8 @@ exports.ruleIsAppliedToEveryExistingConstantAndANewConstant = function(termMetaV
             matches: priorMatches
           }
         ];
-        for (n = 0, len2 = rulesChecked.length; n < len2; n++) {
-          ruleAndMatch = rulesChecked[n];
+        for (o = 0, len2 = rulesChecked.length; o < len2; o++) {
+          ruleAndMatch = rulesChecked[o];
           if (ruleAndMatch.rule === rule) {
             theMatches = ruleAndMatch.matches;
             nameMatch = theMatches[termMetaVarName];
@@ -21446,15 +21549,15 @@ exports.ruleIsAppliedToEveryExistingConstantAndANewConstant = function(termMetaV
           }
         }
       }
-      for (o = 0, len3 = namesInBranch.length; o < len3; o++) {
-        name = namesInBranch[o];
+      for (p = 0, len3 = namesInBranch.length; p < len3; p++) {
+        name = namesInBranch[p];
         if (indexOf.call(namesMatchedInApplyingTheRule, name) < 0) {
           line.status.addMessage("you don’t have a branch for the name ‘" + name + "’");
           return false;
         }
       }
-      for (p = 0, len4 = namesMatchedInApplyingTheRule.length; p < len4; p++) {
-        name = namesMatchedInApplyingTheRule[p];
+      for (q = 0, len4 = namesMatchedInApplyingTheRule.length; q < len4; q++) {
+        name = namesMatchedInApplyingTheRule[q];
         if (!(indexOf.call(namesInBranch, name) >= 0)) {
           return priorMatches;
         }
@@ -21490,6 +21593,7 @@ matches = function(sentence) {
   };
   checkFunctions = [baseCheck];
   rulePart = {
+    pattern: pattern,
     check: function(line, priorMatches) {
       var currentMatches, f, k, len, test;
       currentMatches = priorMatches;
@@ -21860,7 +21964,7 @@ _whichLinesMatchThisPattern = function(listOfLines, pattern, priorMatches) {
 };
 
 checkRequirementsMet = function(line, theReqs) {
-  var citedBlockOrdering, citedBlocks, citedBlocksPerms, citedLineOrdering, citedLines, citedLinesPerms, k, l, len, len1, len2, len3, m, msg, n, o, preliminaryTest, r, ref, ref1, ruleName, test, theMatches;
+  var citedBlockOrdering, citedBlocks, citedBlocksPerms, citedLineOrdering, citedLines, citedLinesPerms, k, l, len, len1, len2, len3, m, msg, o, p, preliminaryTest, r, ref, ref1, ruleName, test, theMatches;
   preliminaryTest = checkCorrectNofLinesAndSubproofsCited(line, theReqs);
   if (!preliminaryTest) {
     return false;
@@ -21880,8 +21984,8 @@ checkRequirementsMet = function(line, theReqs) {
   citedBlocksPerms = _permutations(citedBlocks);
   for (m = 0, len1 = citedLinesPerms.length; m < len1; m++) {
     citedLineOrdering = citedLinesPerms[m];
-    for (n = 0, len2 = citedBlocksPerms.length; n < len2; n++) {
-      citedBlockOrdering = citedBlocksPerms[n];
+    for (o = 0, len2 = citedBlocksPerms.length; o < len2; o++) {
+      citedBlockOrdering = citedBlocksPerms[o];
       test = areRequirementsMetByTheseLinesAndBlocks(theReqs, line, citedLineOrdering, citedBlockOrdering);
       if (test !== false) {
         theMatches = test;
@@ -21895,8 +21999,8 @@ checkRequirementsMet = function(line, theReqs) {
     msg.push("on a line with the form " + theReqs.to);
   }
   ref1 = theReqs.from;
-  for (o = 0, len3 = ref1.length; o < len3; o++) {
-    r = ref1[o];
+  for (p = 0, len3 = ref1.length; p < len3; p++) {
+    r = ref1[p];
     if (r.type === 'subproof') {
       msg.push(" citing a subproof of the form " + r);
     } else {
@@ -22114,7 +22218,7 @@ sentenceIsSelfIdentity = function(s) {
 openBranch = function(theRules) {
   return {
     check: function(line, priorMatches) {
-      var aLineAbove, allSentencesDoAppearAbove, allSubstitutionInstancesDoAppearAbove, containsLeftName, containsRightName, getAllSubstitutionInstances, identityLine, identityLineNames, identityLinesAbove, item, k, l, leftName, leftTargetSentences, len, len1, len2, linesAbove, m, n, rightName, rightTargetSentences, sentenceStringsInLinesAbove, substitutionsLeft, substitutionsRight, t, targetsForIdentityLines, targetsForThisIdentity, tickChecker;
+      var aLineAbove, allSentencesDoAppearAbove, allSubstitutionInstancesDoAppearAbove, containsLeftName, containsRightName, getAllSubstitutionInstances, identityLine, identityLineNames, identityLinesAbove, item, k, l, leftName, leftTargetSentences, len, len1, len2, linesAbove, m, o, rightName, rightTargetSentences, sentenceStringsInLinesAbove, substitutionsLeft, substitutionsRight, t, targetsForIdentityLines, targetsForThisIdentity, tickChecker;
       if (line.next != null) {
         line.status.addMessage("You can only put a ‘branch open’ marker on the final line of a branch.");
         return false;
@@ -22165,8 +22269,8 @@ openBranch = function(theRules) {
           left: [],
           right: []
         };
-        for (n = 0, len2 = targetsForIdentityLines.length; n < len2; n++) {
-          t = targetsForIdentityLines[n];
+        for (o = 0, len2 = targetsForIdentityLines.length; o < len2; o++) {
+          t = targetsForIdentityLines[o];
           if (t === identityLine) {
             continue;
           }
@@ -22183,10 +22287,10 @@ openBranch = function(theRules) {
           }
         }
         sentenceStringsInLinesAbove = (function() {
-          var len3, o, results;
+          var len3, p, results;
           results = [];
-          for (o = 0, len3 = linesAbove.length; o < len3; o++) {
-            l = linesAbove[o];
+          for (p = 0, len3 = linesAbove.length; p < len3; p++) {
+            l = linesAbove[p];
             if (l.sentence != null) {
               results.push(l.sentence.toString({
                 replaceSymbols: true
@@ -22204,9 +22308,9 @@ openBranch = function(theRules) {
           return sentenceClone.getAllSubstitutionInstances();
         };
         allSentencesDoAppearAbove = function(sentences) {
-          var len3, o, ref, s;
-          for (o = 0, len3 = sentences.length; o < len3; o++) {
-            s = sentences[o];
+          var len3, p, ref, s;
+          for (p = 0, len3 = sentences.length; p < len3; p++) {
+            s = sentences[p];
             if (ref = s.toString({
               replaceSymbols: true
             }), indexOf.call(sentenceStringsInLinesAbove, ref) < 0) {
@@ -22216,9 +22320,9 @@ openBranch = function(theRules) {
           return true;
         };
         allSubstitutionInstancesDoAppearAbove = function(sentences, sub) {
-          var len3, o, s;
-          for (o = 0, len3 = sentences.length; o < len3; o++) {
-            s = sentences[o];
+          var len3, p, s;
+          for (p = 0, len3 = sentences.length; p < len3; p++) {
+            s = sentences[p];
             if (!allSentencesDoAppearAbove(getAllSubstitutionInstances(s, sub))) {
               return false;
             }
@@ -22226,11 +22330,11 @@ openBranch = function(theRules) {
           return true;
         };
         leftTargetSentences = (function() {
-          var len3, o, ref, results;
+          var len3, p, ref, results;
           ref = targetsForThisIdentity.left;
           results = [];
-          for (o = 0, len3 = ref.length; o < len3; o++) {
-            t = ref[o];
+          for (p = 0, len3 = ref.length; p < len3; p++) {
+            t = ref[p];
             results.push(t.sentence);
           }
           return results;
@@ -22240,11 +22344,11 @@ openBranch = function(theRules) {
           return false;
         }
         rightTargetSentences = (function() {
-          var len3, o, ref, results;
+          var len3, p, ref, results;
           ref = targetsForThisIdentity.right;
           results = [];
-          for (o = 0, len3 = ref.length; o < len3; o++) {
-            t = ref[o];
+          for (p = 0, len3 = ref.length; p < len3; p++) {
+            t = ref[p];
             results.push(t.sentence);
           }
           return results;
@@ -22774,7 +22878,8 @@ symbols = {
     elim: ' Elim',
     intro: ' Intro',
     decomposition: 'D',
-    decomposition2: 'D2'
+    decomposition2: 'D2',
+    premise: 'Premise'
   },
   copi: {
     'not': '~',
@@ -22890,10 +22995,10 @@ walkMutate = function(expression, fn, o) {
   var e, result;
   if (_.isArray(expression)) {
     return (function() {
-      var i, len, results;
+      var j, len, results;
       results = [];
-      for (i = 0, len = expression.length; i < len; i++) {
-        e = expression[i];
+      for (j = 0, len = expression.length; j < len; j++) {
+        e = expression[j];
         results.push(walkMutate(e, fn, o));
       }
       return results;
@@ -22975,7 +23080,7 @@ walk = function(expression, fn, o) {
 exports.walk = walk;
 
 walkCompare = function(firstExp, otherExp, comparator, o) {
-  var attr, e, i, idx, j, l, len, len1, len2, ref, ref1, result, test;
+  var attr, e, idx, j, l, len, len1, len2, m, ref, ref1, result, test;
   if (o == null) {
     o = {};
   }
@@ -22989,8 +23094,8 @@ walkCompare = function(firstExp, otherExp, comparator, o) {
     return firstExp === otherExp;
   }
   ref = [_.isBoolean, _.isNumber, _.isString];
-  for (i = 0, len = ref.length; i < len; i++) {
-    test = ref[i];
+  for (j = 0, len = ref.length; j < len; j++) {
+    test = ref[j];
     if (test(firstExp) || test(otherExp)) {
       return firstExp === otherExp;
     }
@@ -23002,7 +23107,7 @@ walkCompare = function(firstExp, otherExp, comparator, o) {
     if (firstExp.length !== otherExp.length) {
       return false;
     }
-    for (idx = j = 0, len1 = firstExp.length; j < len1; idx = ++j) {
+    for (idx = l = 0, len1 = firstExp.length; l < len1; idx = ++l) {
       e = firstExp[idx];
       if (!walkCompare(e, otherExp[idx], comparator)) {
         return false;
@@ -23011,8 +23116,8 @@ walkCompare = function(firstExp, otherExp, comparator, o) {
     return true;
   }
   ref1 = ['substitutions', 'from', 'to', 'box', 'term', 'boundVariable', 'termlist', 'left', 'right', 'type', 'name', 'letter', 'value'];
-  for (l = 0, len2 = ref1.length; l < len2; l++) {
-    attr = ref1[l];
+  for (m = 0, len2 = ref1.length; m < len2; m++) {
+    attr = ref1[m];
     if (attr in firstExp || attr in otherExp) {
       if (!(attr in firstExp && attr in otherExp)) {
         return false;
@@ -23034,7 +23139,7 @@ areIdenticalExpressions = function(firstExp, otherExp, o) {
 exports.areIdenticalExpressions = areIdenticalExpressions;
 
 find = function(expression, finder) {
-  var attr, decision, i, j, l, len, len1, len2, ref, ref1, test, x;
+  var attr, decision, j, l, len, len1, len2, m, ref, ref1, test, x;
   decision = finder(expression);
   if (decision !== void 0) {
     return decision;
@@ -23043,15 +23148,15 @@ find = function(expression, finder) {
     return void 0;
   }
   ref = [_.isBoolean, _.isNumber, _.isString];
-  for (i = 0, len = ref.length; i < len; i++) {
-    test = ref[i];
+  for (j = 0, len = ref.length; j < len; j++) {
+    test = ref[j];
     if (test(expression)) {
       return void 0;
     }
   }
   if (_.isArray(expression)) {
-    for (j = 0, len1 = expression.length; j < len1; j++) {
-      x = expression[j];
+    for (l = 0, len1 = expression.length; l < len1; l++) {
+      x = expression[l];
       decision = find(x, finder);
       if (decision !== void 0) {
         return decision;
@@ -23060,8 +23165,8 @@ find = function(expression, finder) {
     return void 0;
   }
   ref1 = ['substitutions', 'from', 'to', 'box', 'term', 'boundVariable', 'termlist', 'left', 'right', 'type', 'name', 'letter', 'value'];
-  for (l = 0, len2 = ref1.length; l < len2; l++) {
-    attr = ref1[l];
+  for (m = 0, len2 = ref1.length; m < len2; m++) {
+    attr = ref1[m];
     if (attr in expression) {
       decision = find(expression[attr], finder);
       if (decision !== void 0) {
@@ -23111,13 +23216,13 @@ delExtraneousProperties = function(expression) {
 };
 
 _delExtraneousProperties = function(expression) {
-  var attr, i, len, ref, value;
+  var attr, j, len, ref, value;
   if (expression === null) {
     return expression;
   }
   ref = ['location', 'symbol', 'parent'];
-  for (i = 0, len = ref.length; i < len; i++) {
-    attr = ref[i];
+  for (j = 0, len = ref.length; j < len; j++) {
+    attr = ref[j];
     if (attr in expression) {
       delete expression[attr];
     }
@@ -23135,23 +23240,23 @@ _delExtraneousProperties = function(expression) {
 exports.delExtraneousProperties = delExtraneousProperties;
 
 cloneExpression = function(expression) {
-  var _clone, attr, i, j, len, len1, ref, ref1, test, x;
+  var _clone, attr, j, l, len, len1, ref, ref1, test, x;
   if (expression === null) {
     return null;
   }
   ref = [_.isBoolean, _.isNumber, _.isString];
-  for (i = 0, len = ref.length; i < len; i++) {
-    test = ref[i];
+  for (j = 0, len = ref.length; j < len; j++) {
+    test = ref[j];
     if (test(expression)) {
       return expression;
     }
   }
   if (_.isArray(expression)) {
     return (function() {
-      var j, len1, results;
+      var l, len1, results;
       results = [];
-      for (j = 0, len1 = expression.length; j < len1; j++) {
-        x = expression[j];
+      for (l = 0, len1 = expression.length; l < len1; l++) {
+        x = expression[l];
         results.push(cloneExpression(x));
       }
       return results;
@@ -23159,8 +23264,8 @@ cloneExpression = function(expression) {
   }
   _clone = {};
   ref1 = ['substitutions', 'from', 'to', 'box', 'term', 'boundVariable', 'termlist', 'left', 'right', 'type', 'name', 'letter', 'value'];
-  for (j = 0, len1 = ref1.length; j < len1; j++) {
-    attr = ref1[j];
+  for (l = 0, len1 = ref1.length; l < len1; l++) {
+    attr = ref1[l];
     if (attr in expression) {
       _clone[attr] = cloneExpression(expression[attr]);
     }
@@ -23171,7 +23276,7 @@ cloneExpression = function(expression) {
 exports.cloneExpression = cloneExpression;
 
 expressionToString = function(expression, o) {
-  var _cleanUp, eClone, expressionStr, i, k, len, ref, rplc, symbolNum, test, walker;
+  var _cleanUp, eClone, expressionStr, j, k, len, ref, rplc, symbolNum, test, walker;
   if (o == null) {
     o = {};
   }
@@ -23181,22 +23286,22 @@ expressionToString = function(expression, o) {
     o.symbols = dialectManager.getSymbols();
   }
   ref = [_.isBoolean, _.isNumber, _.isString, _.isArray];
-  for (i = 0, len = ref.length; i < len; i++) {
-    test = ref[i];
+  for (j = 0, len = ref.length; j < len; j++) {
+    test = ref[j];
     if (test(expression)) {
       return "" + expression;
     }
   }
   symbolNum = 0;
   walker = function(e) {
-    var aBox, bracketsNeeded, j, left_bracket, len1, lhs, middle, ref1, ref2, ref3, ref4, rhs, right_bracket, symbol, theSubs, variableName, x;
+    var aBox, bracketsNeeded, l, left_bracket, len1, lhs, middle, ref1, ref2, ref3, ref4, rhs, right_bracket, symbol, theSubs, variableName, x;
     if (e === null) {
       return 'null';
     }
     symbolNum += 1;
     ref1 = [_.isBoolean, _.isNumber, _.isString];
-    for (j = 0, len1 = ref1.length; j < len1; j++) {
-      test = ref1[j];
+    for (l = 0, len1 = ref1.length; l < len1; l++) {
+      test = ref1[l];
       if (test(e)) {
         return "" + e;
       }
@@ -23224,10 +23329,10 @@ expressionToString = function(expression, o) {
     }
     if (e.type === 'termlist') {
       return (function() {
-        var l, len2, results;
+        var len2, m, results;
         results = [];
-        for (l = 0, len2 = e.length; l < len2; l++) {
-          x = e[l];
+        for (m = 0, len2 = e.length; m < len2; m++) {
+          x = e[m];
           results.push(x.name);
         }
         return results;
@@ -23370,14 +23475,14 @@ exhaust = function(expression, fn, comparator) {
 exports.exhaust = exhaust;
 
 listOfAtomicExpressionsComparator = function(left, right) {
-  var i, idx, leftElement, len, result;
+  var idx, j, leftElement, len, result;
   if (left.length < right.length) {
     return -1;
   }
   if (left.length > right.length) {
     return 1;
   }
-  for (idx = i = 0, len = left.length; i < len; idx = ++i) {
+  for (idx = j = 0, len = left.length; j < len; idx = ++j) {
     leftElement = left[idx];
     result = atomicExpressionComparator(leftElement, right[idx]);
     if (result !== 0) {
@@ -23550,6 +23655,12 @@ listMetaVariableNames = function(expression) {
 
 exports.listMetaVariableNames = listMetaVariableNames;
 
+exports.listMetaVariableNamesAsList = function(expression) {
+  var i;
+  i = listMetaVariableNames(expression);
+  return [].concat(i.inExpression).concat(i.inBox).concat(i.inSub.left).concat(i.inSub.right);
+};
+
 expressionTypes = ['existential_quantifier', 'universal_quantifier', 'and', 'or', 'nand', 'nor', 'arrow', 'double_arrow', 'not', 'value', 'predicate', 'identity', 'expression_variable', 'sentence_letter'];
 
 exports.expressionTypes = expressionTypes;
@@ -23580,13 +23691,13 @@ expressionContainsSubstitutions = function(expression) {
 exports.expressionContainsSubstitutions = expressionContainsSubstitutions;
 
 expressionHasSub = function(expression, sub) {
-  var candidateSub, i, len, ref;
+  var candidateSub, j, len, ref;
   if ((expression != null ? expression.substitutions : void 0) == null) {
     return false;
   }
   ref = expression.substitutions;
-  for (i = 0, len = ref.length; i < len; i++) {
-    candidateSub = ref[i];
+  for (j = 0, len = ref.length; j < len; j++) {
+    candidateSub = ref[j];
     if (areIdenticalExpressions(candidateSub.from, sub.from) && areIdenticalExpressions(candidateSub.to, sub.to)) {
       return true;
     }
@@ -25039,7 +25150,7 @@ txt2 = 'not (A<->B)   SM\nA or B        SM\nC and D       SM\n|A            ~<->
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"../../../love-logic_new_project/dialect_manager/dialectManager":4,"../../../love-logic_new_project/fol":6,"../../../love-logic_new_project/proofs/proof":27,"../tree":35,"lodash":36}],35:[function(require,module,exports){
 (function (global){
-var Treant, _, _getNode, convertProofToTreeProof, decorateTreeProof, display, displayEditable, displayStatic, fromSequent, makeTreeProof, nodeToHTML, nodeToTextarea, proof;
+var Treant, _, _getNode, areDistinctProofs, convertProofToTreeProof, decorateTreeProof, display, displayEditable, displayStatic, fromSequent, makeTreeProof, nodeToHTML, nodeToTextarea, proof;
 
 _ = require('lodash');
 
@@ -25250,8 +25361,8 @@ decorateTreeProof = function(treeProof, _parent) {
     newTree.onChange = this.onChange;
     return decorateTreeProof(newTree);
   };
-  treeProof.displayEditable = function(container, onChange) {
-    var doAfterCreating, oldScrollLeft, oldScrollTop, self;
+  treeProof.displayEditable = function(container, onChange, doAfterCreating) {
+    var oldScrollLeft, oldScrollTop, self, whatToDoAfterCreating;
     if (this.container == null) {
       this.container = container;
     }
@@ -25262,12 +25373,13 @@ decorateTreeProof = function(treeProof, _parent) {
     oldScrollTop = $(window).scrollTop();
     this.resizeContainer(50, 50);
     self = this;
-    doAfterCreating = function() {
+    whatToDoAfterCreating = function(editorLocator) {
       self.resizeContainer();
       $(window).scrollLeft(oldScrollLeft);
-      return $(window).scrollTop(oldScrollTop);
+      $(window).scrollTop(oldScrollTop);
+      return typeof doAfterCreating === "function" ? doAfterCreating(editorLocator) : void 0;
     };
-    displayEditable(treeProof, this.container, this.onChange, doAfterCreating);
+    displayEditable(treeProof, this.container, this.onChange, whatToDoAfterCreating);
     return treeProof;
   };
   treeProof.displayStatic = function(container) {
@@ -25354,10 +25466,10 @@ displayStatic = function(treeProof, container) {
 
 exports.displayStatic = displayStatic;
 
-displayEditable = function(treeProof, container, onChange, callback, restore) {
+displayEditable = function(treeProof, container, onChange, callback) {
   var doAfterCreatingTreant;
   doAfterCreatingTreant = function() {
-    var editor, i, len, node, nodeLocator, options, proofId, ref, t;
+    var editor, editorLocator, i, len, node, nodeLocator, options, proofId, ref, t;
     options = {
       theme: 'blackboardTree',
       smartIndent: true,
@@ -25373,6 +25485,7 @@ displayEditable = function(treeProof, container, onChange, callback, restore) {
       }
     };
     nodeLocator = treeProof.getNodeLocator();
+    editorLocator = {};
     ref = $(container + " textarea");
     for (i = 0, len = ref.length; i < len; i++) {
       t = ref[i];
@@ -25380,6 +25493,7 @@ displayEditable = function(treeProof, container, onChange, callback, restore) {
       node = nodeLocator[proofId];
       options.firstLineNumber = node.getFirstLineNumber();
       editor = CodeMirror.fromTextArea(t, options);
+      editorLocator[proofId] = editor;
       editor.on('change', (function(node) {
         return function(doc) {
           var txt;
@@ -25391,9 +25505,8 @@ displayEditable = function(treeProof, container, onChange, callback, restore) {
       editor.on('keyHandled', (function(node, treeProof, container) {
         return function(instance, name, event) {
           if (name === 'Enter') {
-            console.log("#treeAddChild" + (node.id.replace('.', '-')));
             return $("#treeAddChild" + (node.id.replace('.', '-'))).parent().animate({
-              marginTop: "+=1em"
+              marginTop: "+=1.1em"
             });
           }
         };
@@ -25401,9 +25514,16 @@ displayEditable = function(treeProof, container, onChange, callback, restore) {
     }
     $('.treeAddChild').click((function(treeProof, container, nodeLocator) {
       return function(e) {
+        var doAfterCreating, firstNewChild;
         node = _getNode($(e.target), nodeLocator);
-        node.addChild('').addSib('');
-        treeProof.displayEditable(container);
+        firstNewChild = node.addChild('');
+        firstNewChild.addSib('');
+        doAfterCreating = function(editorLocator) {
+          var editorToFocus;
+          editorToFocus = editorLocator[firstNewChild.id];
+          return editorToFocus.focus();
+        };
+        treeProof.displayEditable(container, void 0, doAfterCreating);
         return typeof onChange === "function" ? onChange(node) : void 0;
       };
     })(treeProof, container, nodeLocator));
@@ -25423,7 +25543,7 @@ displayEditable = function(treeProof, container, onChange, callback, restore) {
         return typeof onChange === "function" ? onChange(node) : void 0;
       };
     })(treeProof, container, nodeLocator));
-    return typeof callback === "function" ? callback() : void 0;
+    return typeof callback === "function" ? callback(editorLocator) : void 0;
   };
   return display(treeProof, container, nodeToTextarea, doAfterCreatingTreant);
 };
@@ -25469,6 +25589,20 @@ nodeToTextarea = function(node) {
   }
   return res;
 };
+
+areDistinctProofs = function(t1, t2) {
+  if (t1 === t2) {
+    return false;
+  }
+  if (!((t1 != null) && (t2 != null))) {
+    return true;
+  }
+  t1 = decorateTreeProof(_.clone(t1));
+  t2 = decorateTreeProof(_.clone(t2));
+  return t1.toSequent() !== t2.toSequent();
+};
+
+exports.areDistinctProofs = areDistinctProofs;
 
 convertProofToTreeProof = function(theProof) {
   var c, childlessProof, children, nodes, proofText, ref, x;

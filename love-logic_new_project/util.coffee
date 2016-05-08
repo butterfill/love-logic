@@ -565,7 +565,10 @@ listMetaVariableNames = (expression) ->
   walk expression, walker
   return result
 exports.listMetaVariableNames = listMetaVariableNames
-    
+
+exports.listMetaVariableNamesAsList = (expression) ->
+  i = listMetaVariableNames(expression)
+  return [].concat(i.inExpression).concat(i.inBox).concat(i.inSub.left).concat(i.inSub.right)
     
 # A list of everything that counts as an expression in awFOL.
 expressionTypes = [

@@ -22,6 +22,8 @@ symbols =
     intro : ' Intro'
     decomposition: 'D'
     decomposition2: 'D2'
+    # necessary for trees:
+    premise : 'Premise'
     
 
   copi : 

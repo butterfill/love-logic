@@ -174,11 +174,13 @@ parse = (proofText, o) ->
     errorMessages = []
     walker = 
       visit : (item) ->
-        return undefined unless item?.type in ['line', 'close_branch', 'open_branch']
+        return undefined unless item?.type in ['line', 'blank_line', 'close_branch', 'open_branch']
         if item.status.verified is false
           lineName = item.number
           errorMsg = item.status.getMessage()
-          errorMessages.push "#{lineName}: #{errorMsg}"
+          if errorMsg? and errorMsg isnt ''
+            errorMessages.push "#{lineName}: #{errorMsg}"
+        return undefined # Keep walking
     proof.walk walker
     return errorMessages.join('\n')
   
