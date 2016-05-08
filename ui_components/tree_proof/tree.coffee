@@ -148,9 +148,10 @@ decorateTreeProof = (treeProof, _parent) ->
   
   treeProof.areAllBranchesClosed = () ->
     return @toProofObject().areAllBranchesClosed()
-    
   treeProof.areAllBranchesClosedOrOpen = () ->
     return @toProofObject().areAllBranchesClosedOrOpen()
+  treeProof.hasOpenBranch = () ->
+    return @toProofObject().hasOpenBranch()
   
   treeProof.getPremises = () ->
     return @toProofObject().getPremises()
@@ -236,15 +237,21 @@ displayEditable = (treeProof, container, onChange, callback, restore) ->
     $('.treeAddChild').click ((treeProof, container, nodeLocator) -> (e) ->
       node = _getNode $(e.target), nodeLocator
       node.addChild('').addSib('')
-      treeProof.displayEditable(container))(treeProof, container, nodeLocator)
+      treeProof.displayEditable(container)
+      onChange?(node)
+      )(treeProof, container, nodeLocator)
     $('.treeAddSib').click ((treeProof, container, nodeLocator) -> (e) ->
       node = _getNode $(e.target), nodeLocator
       node.addSib('')
-      treeProof.displayEditable(container))(treeProof, container, nodeLocator)
+      treeProof.displayEditable(container)
+      onChange?(node)
+      )(treeProof, container, nodeLocator)
     $('.treeRemoveNode').click ((treeProof, container, nodeLocator) -> (e) ->
       node = _getNode $(e.target), nodeLocator
       node.remove()
-      treeProof.displayEditable(container))(treeProof, container, nodeLocator)
+      treeProof.displayEditable(container)
+      onChange?(node)
+      )(treeProof, container, nodeLocator)
     # Finally, do whatever the caller requested:
     callback?()
   display( treeProof, container, nodeToTextarea, doAfterCreatingTreant )

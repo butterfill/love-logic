@@ -34,53 +34,136 @@ exports.setParser = (aParser) ->
 
 
 
+# Add the `.ruleSet` property to each rule.
+# This makes it easy to see which rules must all be 
+# applied in order to tick a line of the tree proof.
+_decorateRulesForTrees = (rules) ->
+  for key of rules
+    if rules[key].type is 'rule'
+      rule = rules[key]
+      rule.ruleSet ?= [rule] 
+      continue
+    if _.isArray(rules[key])
+      listOfRules = rules[key]
+      for rule in listOfRules
+        rule.ruleSet = listOfRules
+    if _.isObject(rules[key])
+      _decorateRulesForTrees(rules[key])
+
+makeTickCheckers = (rulesObject, tickCheckers) ->
+  _decorateRulesForTrees( rulesObject )
+  
+  dummyTrueTickChecker = {
+    checkIsDecomposedInEveryNonClosedBranch : () -> true
+    checkIsDecomposedInTheseLines : () -> true
+  }
+  
+  rulesObject.getTickChecker = (sentence) ->
+    theTickChecker = tickCheckers[sentence.type] 
+    # Default to true
+    return dummyTrueTickChecker unless theTickChecker?
+    if _.isFunction(theTickChecker.checkIsDecomposedInEveryNonClosedBranch)
+      return theTickChecker
+    else
+      # We need to go one level further into the tickChecker object.
+      # This is for rules like `not and decomposition`
+      sentence = sentence.left
+      return dummyTrueTickChecker unless sentence?
+      # console.log "tickChecker level 2: #{sentence.type}"
+      theTickChecker = theTickChecker[sentence.type] 
+      return dummyTrueTickChecker unless theTickChecker?
+      return theTickChecker
+    
+exports.makeTickCheckers = makeTickCheckers
+
+
+# `requirement` is a function from lines to an object:
+# {success:Boolean, _progress:<will be fed into requirement>}.
+# 
+requirementIsMetInEveryNonClosedBranch = (block, requirement, _progress) ->
+  # If this is a closed branch, the requirement is met by default:
+  # (This means that everything can be ticked in a closed tree.
+  # but if you mess this up, you also mess up marking branches open.
+  # I think this is OK: the machine will complain about incorrect ticks
+  # only when noticing their incorrectness potentially enables you to
+  # close a branch.)
+  return true if block.isClosedBranch()
+  # If `requirement` is met in this block, it is met outright:
+  {success, _progress} = requirement(block.content, _progress)
+  return true if success
+  children = block.getChildren()
+  return false unless children?.length > 0
+  # `requirement` met only if it is met in every child:
+  for childBlock in children
+     success = requirementIsMetInEveryNonClosedBranch(childBlock, requirement, _progress)
+    return false unless success
+  return true
+
 tickIf = {}
 exports.tickIf = tickIf
-_allRulesUsedInThisBlock = (candidateLines, block, ruleSet) ->
-  rulesUsed = []
-  for l in candidateLines
-    if l.parent is block
-      # If we haven’t yet checked this line, we need to do that so that
-      # we have `l.rulesChecked`:
-      l.verify() unless l.rulesChecked?
-      for ruleAndMatches in l.rulesChecked
-        r = ruleAndMatches.rule
-        rulesUsed.push(r)
-  rulesStillToUse = []
-  for r in ruleSet
-    rulesStillToUse.push(r) unless r in rulesUsed
-  return true if rulesStillToUse.length is 0
-  children = block.getChildren()
-  return false unless children?.length > 0
-  for childBlock in children
-    test = _allRulesUsedInThisBlock(candidateLines, childBlock, rulesStillToUse)
-    return false if test is false
-  return true
-tickIf.allRulesAppliedInEveryBranch = ( ruleSet ) ->
-  return (line) ->
-    candidateLines = line.getLinesThatCiteMe()
-    return _allRulesUsedInThisBlock(candidateLines, line.parent, ruleSet)
-
-_someRulesUsedInThisBlock = (candidateLines, block, ruleSet) ->
-  for l in candidateLines
-    if l.parent is block
-      l.verify() unless l.rulesChecked?
-      for ruleAndMatches in l.rulesChecked
-        r = ruleAndMatches.rule
-        return true if r in ruleSet
-  children = block.getChildren()
-  return false unless children?.length > 0
-  for childBlock in children
-    test = _someRulesUsedInThisBlock(candidateLines, childBlock, ruleSet)
-    return false if test is false
-  return true
+# NB: only works with tree proofs (because uses `.verifyTree`)
 tickIf.someRuleAppliedInEveryBranch = ( ruleSet ) ->
-  return (line) ->
+  getRequirement = (line) ->
     candidateLines = line.getLinesThatCiteMe()
-    return _someRulesUsedInThisBlock(candidateLines, line.parent, ruleSet)
+    return (linesInBlock) ->
+      for l in linesInBlock
+        if l in candidateLines
+          # If we haven’t yet checked this line, we need to do that so that
+          # we have `l.rulesChecked`:
+          l.verifyTree() unless l.rulesChecked?
+          for ruleAndMatches in l.rulesChecked
+            r = ruleAndMatches.rule
+            return {success:true} if r in ruleSet
+      return {success:false}
+      
+  return {
+    checkIsDecomposedInEveryNonClosedBranch : (line) ->
+      requirement = getRequirement(line)
+      return requirementIsMetInEveryNonClosedBranch(line.parent, requirement)  
+    checkIsDecomposedInTheseLines : (line, lines) ->
+      requirement = getRequirement(line)
+      {success} = requirement(lines)
+      return success
+  }
+
+# NB: only works with tree proofs (because uses `.verifyTree`)
+_allRulesUsedInThisBlock = (candidateLines, block, ruleSet) ->
+tickIf.allRulesAppliedInEveryBranch = ( ruleSet ) ->
+  
+  getRequirement = (line) ->
+    candidateLines = line.getLinesThatCiteMe()
+    return (linesInBlock, rulesUsed) ->
+      rulesUsed ?= []
+      rulesUsed = _.clone(rulesUsed)
+      for l in linesInBlock
+        if l in candidateLines
+          # If we haven’t yet checked this line, we need to do that so that
+          # we have `l.rulesChecked`:
+          l.verifyTree() unless l.rulesChecked?
+          for ruleAndMatches in l.rulesChecked
+            r = ruleAndMatches.rule
+            rulesUsed.push(r)
+      rulesStillToUse = []
+      for r in ruleSet
+        rulesStillToUse.push(r) unless r in rulesUsed
+      if rulesStillToUse.length is 0
+        return {success:true} 
+      else
+        return {success:false, _progress:rulesUsed}
+  
+  return {
+    checkIsDecomposedInEveryNonClosedBranch : (line) ->
+      requirement = getRequirement(line)
+      return requirementIsMetInEveryNonClosedBranch(line.parent, requirement)  
+    checkIsDecomposedInTheseLines : (line, lines) ->
+      requirement = getRequirement(line)
+      {success} = requirement(lines)
+      return success
+  }
 
 tickIf.ruleAppliedAtLeastOnceAndAppliedToEveryExistingConstant = ( rule ) ->
   return (line) -> 
+    # TODO!
     # Is the rule applied at least once?:
     test1 = tickIf.someRuleAppliedInEveryBranch([rule])
     result1 = test1(line)
@@ -794,6 +877,14 @@ phi = fol.parse('φ')
 notPhi = fol.parse('not φ')
 notAIsA = fol.parse('not α=α')
 
+branchContainsASimpleContradiction = (line) ->
+  lines = line.findAllAbove( (item) -> item.type is 'line' )
+  test = linesContainPatterns(lines, [notPhi, phi], {})
+  return true if test isnt false
+  test2 = linesContainPatterns(lines, [notAIsA], {})
+  return true if test2 isnt false
+  return false
+
 closeBranch = () ->
   return {
     check : (line, priorMatches) ->
@@ -801,11 +892,8 @@ closeBranch = () ->
       if line.next?
         line.status.addMessage "You can only close on the final line of a branch."
         return false 
-      lines = line.findAllAbove( (item) -> item.type is 'line' )
-      test = linesContainPatterns(lines, [notPhi, phi], {})
-      return priorMatches if test isnt false
-      test2 = linesContainPatterns(lines, [notAIsA], {})
-      return priorMatches if test2 isnt false
+      if branchContainsASimpleContradiction(line)
+        return priorMatches
       # Failed to close:
       line.status.addMessage "you can only close a branch if it contains either a sentence like ‘¬α=α’, or two sentences like ‘φ’ and ‘¬φ’."
       return false
@@ -814,23 +902,23 @@ exports.closeBranch = closeBranch
 
 _selfIdenticalPattern = fol.parse 'α=α'
 sentenceIsSelfIdentity = (s) -> (s?) and s.findMatches(_selfIdenticalPattern) isnt false
-openBranch = () ->
+# This is a special rule: it needs to know which rule set it is in.
+openBranch = (theRules) ->
   return {
     check : (line, priorMatches) ->
       # Nothing can come after marking a branch open!
       if line.next?
         line.status.addMessage "You can only put a ‘branch open’ marker on the final line of a branch."
         return false 
-      linesAbove = line.findAllAbove( (item) -> item.type is 'line' )
-      test = linesContainPatterns(linesAbove, [phi, notPhi], {})
-      test2 = linesContainPatterns(linesAbove, [notAIsA], {})
-      unless ((test is false) and (test2 is false))
+      if branchContainsASimpleContradiction(line)
         line.status.addMessage "You can only mark a branch open if it contains neither a sentence like ‘¬α=α’, nor two sentences like ‘φ’ and ¬‘φ’."
         return false
-      # Basic tests passed.  
+      
       # Check that everything above can be ticked:
+      linesAbove = line.findAllAbove( (item) -> item.type is 'line' )
       for aLineAbove in linesAbove
-        unless aLineAbove.canLineBeTicked()
+        tickChecker = theRules.getTickChecker(aLineAbove.sentence)
+        unless tickChecker.checkIsDecomposedInTheseLines(aLineAbove, linesAbove)
           line.status.addMessage "You can only mark a branch open if you have exhaustively decomposed every sentence on it, but line #{aLineAbove.number} has not been exhaustively decomposed."
           return false
       # Check that identity rules have been exhaustively applied

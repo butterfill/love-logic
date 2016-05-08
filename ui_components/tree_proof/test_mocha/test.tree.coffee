@@ -108,4 +108,21 @@ describe "tree ui component", ->
       """
       t.areAllBranchesClosedOrOpen().should.be.true
       t.areAllBranchesClosed().should.be.false
-    
+
+  describe "misc errors", ->
+    it "can check a proof", ->
+      t = tree.fromSequent """
+        1 | A ∨ B        SM
+        2 | A → ¬B        SM
+        3 | B → ¬A        SM
+        4 || A      ∨D 1
+        5 || ¬B     →D 4, 2
+        6 || O
+          | 
+        4 || B      ∨D 1
+        5 || ¬A     →D 4, 2
+        6 || O
+      """
+      test = t.verify()
+      console.log test
+      test.isCorrect.should.be.false

@@ -96,7 +96,14 @@ to = (block) ->
           return true
         )
         return (x.sentence for x in premiseLines )
-
+      
+      # For trees:
+      block.isClosedBranch = () ->
+        lineTypes = (x.type for x in block.content)
+        return 'close_branch' in lineTypes
+      block.isOpenBranch = () ->
+        lineTypes = (x.type for x in block.content)
+        return 'open_branch' in lineTypes
       return undefined  # Keep walking.
       
   block.walk walker

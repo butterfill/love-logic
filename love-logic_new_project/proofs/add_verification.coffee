@@ -81,6 +81,9 @@ to = (proof) ->
         aLine.verify = (theRules) ->
           theRules ?= dialectManager.getCurrentRules()
           return verifyLine(aLine, proof, theRules)
+        aLine.verifyTree = (theRules) ->
+          theRules ?= dialectManager.getTreeRules()
+          return verifyLine(aLine, proof, theRules)
         aLine.canLineBeTicked = () ->
           return canLineBeTicked(aLine)
       return undefined
@@ -91,15 +94,15 @@ to = (proof) ->
     theRules ?= dialectManager.getTreeRules()
     test1 = proof.verify(theRules)
     return false if test1 is false
-    console.log "verify done"
+    # console.log "verify done"
     
     return false if anythingOtherThanABranchOccursAfterABranch(proof)
-    console.log "anythingOtherThanABranchOccursAfterABranch done"
+    # console.log "anythingOtherThanABranchOccursAfterABranch done"
     
     branches = proof.getChildren()
     test2 = checkBranchingRules(branches)
     return false if test2 is false
-    console.log "checkBranchingRules done"
+    # console.log "checkBranchingRules done"
     
     test3 = checkTicksAreCorrect(proof)
     return false if test3 is false
@@ -153,7 +156,7 @@ checkBranchingRules = (branches) ->
   rulesUsed = []
   for b in branches
     line = b.getFirstLine()
-    console.log "at line #{line?.number}."
+    # console.log "at line #{line?.number}."
     rule = line?.rulesChecked?[0].rule
     unless rule? 
       throw new Error "Could not get rule at line #{b.getFirstLine()?.number}."
@@ -216,19 +219,11 @@ exports.lineNeedsToBeTicked = lineNeedsToBeTicked
 # Defaults to true if there is no `tickChecker` for the 
 # connective (e.g. with identity).
 canLineBeTicked = (line) ->
-  theRules = dialectManager.getCurrentRules()
+  theRules = dialectManager.getTreeRules()
   sentence = line.sentence
-  tickChecker = theRules.tickCheckers[sentence.type] 
-  # Default to true
-  return true unless tickChecker?
-  unless _.isFunction(tickChecker)
-    # We need to go one level further into the tickChecker object.
-    # This is for rules like `not and decomposition`
-    sentence = sentence.left
-    return true unless sentence?
-    tickChecker = tickChecker[sentence.type] 
-    return true unless tickChecker?
-  return tickChecker(line) 
+  # console.log "tickChecker: #{sentence.type}"
+  tickChecker = theRules.getTickChecker(sentence)
+  return tickChecker.checkIsDecomposedInEveryNonClosedBranch(line)
 # for testing only:
 exports.canLineBeTicked = canLineBeTicked
   
@@ -241,7 +236,6 @@ exports.canLineBeTicked = canLineBeTicked
 # not the name of the line) or a line object.
 # `proofText` may be a parsed proof (or a string, for testing).
 verifyLine = (lineOrLineNumber, proofText, theRules) ->
-  
   theRules ?= dialectManager.getCurrentRules()
   # console.log "using #{dialectManager.getCurrentRulesName()}"
   
@@ -256,6 +250,11 @@ verifyLine = (lineOrLineNumber, proofText, theRules) ->
     theLine = proof.getLine lineNumber
     if not theLine
       throw new Error "Could not find line #{lineNumber} in #{proofText}"
+
+  # Avoid re-doing verification. (NB doing this would reuqire 
+  # that proof objects do not change sentences or rules!)
+  # if theLine.status.verificationAttempted
+  #   return theLine.status.verified
 
   theLine.status.verificationAttempted = true
   

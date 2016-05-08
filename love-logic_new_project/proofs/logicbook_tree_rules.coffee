@@ -13,7 +13,6 @@ rules =
   premise : rule.from().to( rule.premiseInTreeProof() )
   
   'close-branch' : rule.from().to( rule.closeBranch() )
-  'open-branch' : rule.from().to( rule.openBranch() )
   
   'double-negation' : 
     decomposition : rule.from('not not φ').to( rule.matches('φ').and.doesntBranch() )
@@ -91,10 +90,14 @@ rules =
       rule.from('α=β').and('φ').to( rule.matches('φ[α-->β]').and.doesntBranch() )
       rule.from('β=α').and('φ').to( rule.matches('φ[α-->β]').and.doesntBranch() )
     ]
-  
+
+# `.openBranch` is a special rule: it needs to know which rule set it is in.
+rules['open-branch'] = rule.from().to( rule.openBranch(rules) )
+
+
 # Keys are awFOL `.type` properties (unlike the keys of `rules` which
 # are the names of rules defined in the `justification_parser.l` lexer).
-rules.tickCheckers = 
+rule.makeTickCheckers rules, 
   'and' : rule.tickIf.allRulesAppliedInEveryBranch( rules.and.decomposition )
   'or' : rule.tickIf.someRuleAppliedInEveryBranch( rules.or.decomposition )
   arrow : rule.tickIf.someRuleAppliedInEveryBranch( rules.arrow.decomposition )
@@ -112,23 +115,6 @@ rules.tickCheckers =
     existential_quantifier : rule.tickIf.allRulesAppliedInEveryBranch( rules['not-exists'].decomposition )
   
 
-# Add the `.ruleSet` property to each rule.
-# This makes it easy to see which rules must all be 
-# applied in order to tick a line of the tree proof.
-_decorateRulesForTrees = (rules) ->
-  for key of rules
-    if rules[key].type is 'rule'
-      rule = rules[key]
-      rule.ruleSet ?= [rule] 
-      continue
-    if _.isArray(rules[key])
-      listOfRules = rules[key]
-      for rule in listOfRules
-        rule.ruleSet = listOfRules
-    if _.isObject(rules[key])
-      _decorateRulesForTrees(rules[key])
-
-_decorateRulesForTrees( rules )
 
 exports.rules = rules
 dialectManager.registerRuleSet('logicbook_tree', rules)

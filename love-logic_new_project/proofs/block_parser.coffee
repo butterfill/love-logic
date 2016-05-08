@@ -476,6 +476,10 @@ class Block
     leafTypes = _.uniq(l.type for l in leaves)
     otherLeafTypes = _.difference(leafTypes, ['close_branch', 'open_branch'])
     return (otherLeafTypes.length is 0)
+  hasOpenBranch : () ->
+    leaves = @getLeaves()
+    leafTypes = _.uniq(l.type for l in leaves)
+    return ('open_branch' in leafTypes)
 
   toString : () ->
     # return util.inspect @

@@ -23,17 +23,19 @@ popRulesAndParser = () ->
   dialectManager.setSymbols(oldSymbols.pop())
 setRulesAndParser = () ->
   dialectManager.set('logicbook')
-  dialectManager.setCurrentRules('logicbook_tree')
-   
+  # TODO: should not be necessary
+  # dialectManager.setCurrentRules('logicbook_tree')
+
 testProof = (proofText, expected) ->
-  theProof = proof.parse proofText
+  theProof = proof.parse(proofText, {treeProof:true})
   console.log theProof if _.isString(theProof)
   newPrfTxt = theProof.toString({numberLines:true})
-  console.log newPrfTxt
-  theProof = proof.parse newPrfTxt
+  # console.log newPrfTxt
+  theProof = proof.parse(proofText, {treeProof:true})
   result = theProof.verifyTree()
   if expected
     if result isnt expected
+      console.log newPrfTxt
       console.log theProof.listErrorMessages()
     expect(result).to.be.true
   else
@@ -480,13 +482,6 @@ describe "logicbook tree rules", ->
         A             dn D 1
       '''
       testProof(text, true)
-    it "spots a mistake with not not D tick", ->
-      text = '''
-        not not A     tick SM
-        not not B     tick SM
-        A             dn D 1
-      '''
-      testProof(text, false)
     it "verifies <->D", ->
       text = '''
         A<->B     SM
@@ -884,3 +879,193 @@ describe "logicbook tree rules", ->
       '''
       testProof(text, true)
 
+  describe "misc problems", ->
+    it "spots a mistake with not not D tick", ->
+      text = '''
+        not not A     tick SM
+        not not B     tick SM
+        A             dn D 1
+      '''
+      testProof(text, false)
+    it "the .canLineBeTicked function works with not not D tick (from `add_verification`)", ->
+      p = proof.parse '''
+        not not A     SM
+      '''
+      line = p.getLine(1)
+      test = line.canLineBeTicked()
+      test.should.be.false
+    it "the .canLineBeTicked function works with not not D tick, harder case (from `add_verification`)", ->
+      p = proof.parse '''
+        not not A     tick SM
+        not not B     tick SM
+        A             dn D 1
+      '''
+      line = p.getLine(2)
+      test = line.canLineBeTicked()
+      test.should.be.false
+
+    it "marking branches open with -> D works", ->
+      text = '''
+          | A arrow B        SM
+        2 || not A        arrow D 1
+        3 || O
+          | 
+        2 || B        arrow D 1
+        3 || O
+      '''
+      testProof(text, true)
+    
+    it "marking branches open with `and D` works (nested case, complete tree)", ->
+      text = '''
+        1 | A arrow B
+        2 | C and B        SM
+        3 || not A   -> D  1
+        4 || C   and D 2
+        5 || B   and D 2
+        6 || O
+          | 
+        3 || B    -> D 1
+        4 || C   and D 2
+        5 || B   and D 2
+        6 || O
+      '''
+      testProof(text, true)
+    
+    it "marking branches open with `and D` works (nested case, incomplete tree)", ->
+      text = '''
+        1 | A arrow B
+        2 | C and B        SM
+        3 || not A   -> D  1
+        4 || C   and D 2
+        5 || B   and D 2
+        6 || O
+          | 
+        3 || B    -> D 1
+      '''
+      testProof(text, true)
+    
+    it "marking branches open with `-> D` works (nested case, complete tree)", ->
+      text = '''
+        1 | A → B    ✓ SM
+        2 | C → D    tick SM
+        3 || ¬A     →D 1
+        4 ||| ¬C      →D 2
+        5 ||| O
+          || 
+        4 ||| D      →D 2
+        5 ||| O
+          || 
+          | 
+        3 || B     →D 1
+        4 ||| ¬C      →D 2
+        5 ||| O
+          || 
+        4 ||| D      →D 2
+        5 ||| O
+      '''
+      testProof(text, true)
+    
+    it "marking branches open with `-> D` works (nested case, not complete tree)", ->
+      text = '''
+        1 | A → B    SM
+        2 | C → D    SM
+        3 || ¬A     →D 1
+        5 ||| ¬C      →D 2
+        6 ||| O
+          || 
+        5 ||| D      →D 2
+        6 ||| O
+          || 
+          | 
+        3 || B     →D 1
+      '''
+      testProof(text, true)
+      
+    it "verifies a tree that it should verify", ->
+      text = '''
+        1 | A ∨ B     SM
+        2 | A → ¬B    SM
+        3 | B → ¬A    SM
+        4 || A     ∨D 1
+        5 ||| ¬A      →D 2
+        6 ||| X
+          || 
+        5 ||| ¬B      →D 2
+        7 |||| ¬B       →D 3
+        8 |||| O
+          ||| 
+        7 |||| ¬A       →D 3
+        8 |||| X
+          ||| 
+          || 
+          | 
+        4 || B     ∨D 1
+        5 ||| ¬B      →D 3
+        6 ||| X
+          || 
+        5 ||| ¬A      →D 3
+        7 |||| ¬A       →D 2
+          ||| 
+        7 |||| ¬B       →D 2
+        8 |||| X
+      '''
+      testProof(text, true)
+    
+    it "recognizes as open a branch that is open", ->
+      text = '''
+        1 | A ∧ B    SM
+        2 | C → D    SM
+        3 | C        SM
+        4 || ¬C     →D 2
+        5 || X
+          | 
+        4 || D     →D 2
+        5 || A      ∧D 1
+        6 || B      ∧D 1
+        7 || O
+      '''
+      testProof(text, true)
+      
+    it "copes with full decomposition split between branches", ->
+      text = '''
+        A and B       SM tick
+        C or D        SM
+        A      and D 1
+        | C           or D 2
+        | B      and D 1
+        | O
+    
+        | D           or D 2
+        | B      and D 1
+        | O
+      '''
+      testProof(text, true)
+
+    it "spots an error involving incomplete decomposition split between branches", ->
+      text = '''
+        A and B       SM tick
+        C or D        SM
+        A      and D 1
+        | C           or D 2
+        | B      and D 1
+        | O
+    
+        | D           or D 2
+        | O
+      '''
+      testProof(text, false)
+    it "spots another error involving incomplete decomposition split between branches", ->
+      text = '''
+        A and B       SM tick
+        C or D        SM
+        A      and D 1
+        | C           or D 2
+        | B      and D 1
+        | O
+    
+        | D           or D 2
+        | A      and D 1
+        | O
+      '''
+      testProof(text, false)
+        

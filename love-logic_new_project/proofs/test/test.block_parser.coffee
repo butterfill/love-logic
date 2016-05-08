@@ -695,3 +695,30 @@ describe "block_parser", ->
       '''
       block = bp.parse txt
       block.areAllBranchesClosedOrOpen().should.be.false
+    it "can tell you when a proof has an open branch", ->
+      txt = '''
+      A
+      | B
+      | X
+      
+      | C
+      | O
+      
+      | D
+      | | E
+      | | F
+      '''
+      block = bp.parse txt
+      block.hasOpenBranch().should.be.true
+    it "can tell you when a proof doesn't have an open branch", ->
+      txt = '''
+      A
+      | B
+      | X
+      
+      | D
+      | | E
+      | | F
+      '''
+      block = bp.parse txt
+      block.hasOpenBranch().should.be.false

@@ -18035,6 +18035,34 @@ to = function(block) {
           return results;
         })();
       };
+      block.isClosedBranch = function() {
+        var lineTypes, x;
+        lineTypes = (function() {
+          var i, len, ref, results;
+          ref = block.content;
+          results = [];
+          for (i = 0, len = ref.length; i < len; i++) {
+            x = ref[i];
+            results.push(x.type);
+          }
+          return results;
+        })();
+        return indexOf.call(lineTypes, 'close_branch') >= 0;
+      };
+      block.isOpenBranch = function() {
+        var lineTypes, x;
+        lineTypes = (function() {
+          var i, len, ref, results;
+          ref = block.content;
+          results = [];
+          for (i = 0, len = ref.length; i < len; i++) {
+            x = ref[i];
+            results.push(x.type);
+          }
+          return results;
+        })();
+        return indexOf.call(lineTypes, 'open_branch') >= 0;
+      };
       return void 0;
     }
   };
@@ -18565,6 +18593,12 @@ to = function(proof) {
           }
           return verifyLine(aLine, proof, theRules);
         };
+        aLine.verifyTree = function(theRules) {
+          if (theRules == null) {
+            theRules = dialectManager.getTreeRules();
+          }
+          return verifyLine(aLine, proof, theRules);
+        };
         aLine.canLineBeTicked = function() {
           return canLineBeTicked(aLine);
         };
@@ -18582,17 +18616,14 @@ to = function(proof) {
     if (test1 === false) {
       return false;
     }
-    console.log("verify done");
     if (anythingOtherThanABranchOccursAfterABranch(proof)) {
       return false;
     }
-    console.log("anythingOtherThanABranchOccursAfterABranch done");
     branches = proof.getChildren();
     test2 = checkBranchingRules(branches);
     if (test2 === false) {
       return false;
     }
-    console.log("checkBranchingRules done");
     test3 = checkTicksAreCorrect(proof);
     if (test3 === false) {
       return false;
@@ -18671,7 +18702,6 @@ checkBranchingRules = function(branches) {
   for (j = 0, len1 = branches.length; j < len1; j++) {
     b = branches[j];
     line = b.getFirstLine();
-    console.log("at line " + (line != null ? line.number : void 0) + ".");
     rule = line != null ? (ref4 = line.rulesChecked) != null ? ref4[0].rule : void 0 : void 0;
     if (rule == null) {
       throw new Error("Could not get rule at line " + ((ref5 = b.getFirstLine()) != null ? ref5.number : void 0) + ".");
@@ -18743,23 +18773,10 @@ exports.lineNeedsToBeTicked = lineNeedsToBeTicked;
 
 canLineBeTicked = function(line) {
   var sentence, theRules, tickChecker;
-  theRules = dialectManager.getCurrentRules();
+  theRules = dialectManager.getTreeRules();
   sentence = line.sentence;
-  tickChecker = theRules.tickCheckers[sentence.type];
-  if (tickChecker == null) {
-    return true;
-  }
-  if (!_.isFunction(tickChecker)) {
-    sentence = sentence.left;
-    if (sentence == null) {
-      return true;
-    }
-    tickChecker = tickChecker[sentence.type];
-    if (tickChecker == null) {
-      return true;
-    }
-  }
-  return tickChecker(line);
+  tickChecker = theRules.getTickChecker(sentence);
+  return tickChecker.checkIsDecomposedInEveryNonClosedBranch(line);
 };
 
 exports.canLineBeTicked = canLineBeTicked;
@@ -19409,6 +19426,21 @@ Block = (function() {
     })());
     otherLeafTypes = _.difference(leafTypes, ['close_branch', 'open_branch']);
     return otherLeafTypes.length === 0;
+  };
+
+  Block.prototype.hasOpenBranch = function() {
+    var l, leafTypes, leaves;
+    leaves = this.getLeaves();
+    leafTypes = _.uniq((function() {
+      var j, len, results;
+      results = [];
+      for (j = 0, len = leaves.length; j < len; j++) {
+        l = leaves[j];
+        results.push(l.type);
+      }
+      return results;
+    })());
+    return (indexOf.call(leafTypes, 'open_branch') >= 0);
   };
 
   Block.prototype.toString = function() {
@@ -20695,7 +20727,7 @@ dialectManager.registerRuleSet('logicbook', rules);
 
 
 },{"../dialect_manager/dialectManager":4,"./rule":28}],26:[function(require,module,exports){
-var _, _decorateRulesForTrees, dialectManager, rule, rules;
+var _, dialectManager, rule, rules;
 
 dialectManager = require('../dialect_manager/dialectManager');
 
@@ -20709,7 +20741,6 @@ rules = {
   _description: 'Rules of proof for tree proofs as presented in Bergman et al, ‘The Logic Book’ (2014).  ',
   premise: rule.from().to(rule.premiseInTreeProof()),
   'close-branch': rule.from().to(rule.closeBranch()),
-  'open-branch': rule.from().to(rule.openBranch()),
   'double-negation': {
     decomposition: rule.from('not not φ').to(rule.matches('φ').and.doesntBranch())
   },
@@ -20755,7 +20786,9 @@ rules = {
   }
 };
 
-rules.tickCheckers = {
+rules['open-branch'] = rule.from().to(rule.openBranch(rules));
+
+rule.makeTickCheckers(rules, {
   'and': rule.tickIf.allRulesAppliedInEveryBranch(rules.and.decomposition),
   'or': rule.tickIf.someRuleAppliedInEveryBranch(rules.or.decomposition),
   arrow: rule.tickIf.someRuleAppliedInEveryBranch(rules.arrow.decomposition),
@@ -20771,36 +20804,7 @@ rules.tickCheckers = {
     universal_quantifier: rule.tickIf.allRulesAppliedInEveryBranch(rules['not-all'].decomposition),
     existential_quantifier: rule.tickIf.allRulesAppliedInEveryBranch(rules['not-exists'].decomposition)
   }
-};
-
-_decorateRulesForTrees = function(rules) {
-  var i, key, len, listOfRules, results;
-  results = [];
-  for (key in rules) {
-    if (rules[key].type === 'rule') {
-      rule = rules[key];
-      if (rule.ruleSet == null) {
-        rule.ruleSet = [rule];
-      }
-      continue;
-    }
-    if (_.isArray(rules[key])) {
-      listOfRules = rules[key];
-      for (i = 0, len = listOfRules.length; i < len; i++) {
-        rule = listOfRules[i];
-        rule.ruleSet = listOfRules;
-      }
-    }
-    if (_.isObject(rules[key])) {
-      results.push(_decorateRulesForTrees(rules[key]));
-    } else {
-      results.push(void 0);
-    }
-  }
-  return results;
-};
-
-_decorateRulesForTrees(rules);
+});
 
 exports.rules = rules;
 
@@ -21041,7 +21045,7 @@ exports.parse = parse;
 
 
 },{"../dialect_manager/dialectManager":4,"./add_justification":16,"./add_line_numbers":17,"./add_sentences":18,"./add_status":19,"./add_verification":20,"./block_parser":21,"lodash":8}],28:[function(require,module,exports){
-var _, _From, _allRulesUsedInThisBlock, _checkIsPremise, _matchesToString, _notImplementedYet, _parseNameIfNecessaryAndDecorate, _permutations, _selfIdenticalPattern, _someRulesUsedInThisBlock, _whichLinesMatchThisPattern, areAllRequirementsMet, areRequirementsMetByTheseLinesAndBlocks, branch, checkCorrectNofLinesAndSubproofsCited, checkRequirementsMet, closeBranch, convertTextToRequirementIfNecessary, doAnyCandidatesMeetThisReq, doesALineAboveContainThisName, doesAPremiseHereOrAboveContainThisName, doesLineMatchPattern, fol, from, linesContainPatterns, matches, notAIsA, notPhi, numberToWords, openBranch, parseAndDecorateIfNecessary, parser, phi, premise, sentenceIsSelfIdentity, subproof, substitute, tickIf, to, util,
+var _, _From, _allRulesUsedInThisBlock, _checkIsPremise, _decorateRulesForTrees, _matchesToString, _notImplementedYet, _parseNameIfNecessaryAndDecorate, _permutations, _selfIdenticalPattern, _whichLinesMatchThisPattern, areAllRequirementsMet, areRequirementsMetByTheseLinesAndBlocks, branch, branchContainsASimpleContradiction, checkCorrectNofLinesAndSubproofsCited, checkRequirementsMet, closeBranch, convertTextToRequirementIfNecessary, doAnyCandidatesMeetThisReq, doesALineAboveContainThisName, doesAPremiseHereOrAboveContainThisName, doesLineMatchPattern, fol, from, linesContainPatterns, makeTickCheckers, matches, notAIsA, notPhi, numberToWords, openBranch, parseAndDecorateIfNecessary, parser, phi, premise, requirementIsMetInEveryNonClosedBranch, sentenceIsSelfIdentity, subproof, substitute, tickIf, to, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
   slice = [].slice;
 
@@ -21059,96 +21063,198 @@ exports.setParser = function(aParser) {
   return parser = aParser;
 };
 
-tickIf = {};
-
-exports.tickIf = tickIf;
-
-_allRulesUsedInThisBlock = function(candidateLines, block, ruleSet) {
-  var childBlock, children, k, l, len, len1, len2, len3, m, n, o, r, ref, ruleAndMatches, rulesStillToUse, rulesUsed, test;
-  rulesUsed = [];
-  for (k = 0, len = candidateLines.length; k < len; k++) {
-    l = candidateLines[k];
-    if (l.parent === block) {
-      if (l.rulesChecked == null) {
-        l.verify();
+_decorateRulesForTrees = function(rules) {
+  var k, key, len, listOfRules, results, rule;
+  results = [];
+  for (key in rules) {
+    if (rules[key].type === 'rule') {
+      rule = rules[key];
+      if (rule.ruleSet == null) {
+        rule.ruleSet = [rule];
       }
-      ref = l.rulesChecked;
-      for (m = 0, len1 = ref.length; m < len1; m++) {
-        ruleAndMatches = ref[m];
-        r = ruleAndMatches.rule;
-        rulesUsed.push(r);
+      continue;
+    }
+    if (_.isArray(rules[key])) {
+      listOfRules = rules[key];
+      for (k = 0, len = listOfRules.length; k < len; k++) {
+        rule = listOfRules[k];
+        rule.ruleSet = listOfRules;
       }
     }
-  }
-  rulesStillToUse = [];
-  for (n = 0, len2 = ruleSet.length; n < len2; n++) {
-    r = ruleSet[n];
-    if (indexOf.call(rulesUsed, r) < 0) {
-      rulesStillToUse.push(r);
+    if (_.isObject(rules[key])) {
+      results.push(_decorateRulesForTrees(rules[key]));
+    } else {
+      results.push(void 0);
     }
   }
-  if (rulesStillToUse.length === 0) {
+  return results;
+};
+
+makeTickCheckers = function(rulesObject, tickCheckers) {
+  var dummyTrueTickChecker;
+  _decorateRulesForTrees(rulesObject);
+  dummyTrueTickChecker = {
+    checkIsDecomposedInEveryNonClosedBranch: function() {
+      return true;
+    },
+    checkIsDecomposedInTheseLines: function() {
+      return true;
+    }
+  };
+  return rulesObject.getTickChecker = function(sentence) {
+    var theTickChecker;
+    theTickChecker = tickCheckers[sentence.type];
+    if (theTickChecker == null) {
+      return dummyTrueTickChecker;
+    }
+    if (_.isFunction(theTickChecker.checkIsDecomposedInEveryNonClosedBranch)) {
+      return theTickChecker;
+    } else {
+      sentence = sentence.left;
+      if (sentence == null) {
+        return dummyTrueTickChecker;
+      }
+      theTickChecker = theTickChecker[sentence.type];
+      if (theTickChecker == null) {
+        return dummyTrueTickChecker;
+      }
+      return theTickChecker;
+    }
+  };
+};
+
+exports.makeTickCheckers = makeTickCheckers;
+
+requirementIsMetInEveryNonClosedBranch = function(block, requirement, _progress) {
+  var childBlock, children, k, len, ref, success;
+  if (block.isClosedBranch()) {
+    return true;
+  }
+  ref = requirement(block.content, _progress), success = ref.success, _progress = ref._progress;
+  if (success) {
     return true;
   }
   children = block.getChildren();
   if (!((children != null ? children.length : void 0) > 0)) {
     return false;
   }
-  for (o = 0, len3 = children.length; o < len3; o++) {
-    childBlock = children[o];
-    test = _allRulesUsedInThisBlock(candidateLines, childBlock, rulesStillToUse);
-    if (test === false) {
-      return false;
-    }
+  for (k = 0, len = children.length; k < len; k++) {
+    childBlock = children[k];
+    success = requirementIsMetInEveryNonClosedBranch(childBlock, requirement, _progress);
+  }
+  if (!success) {
+    return false;
   }
   return true;
 };
 
-tickIf.allRulesAppliedInEveryBranch = function(ruleSet) {
-  return function(line) {
+tickIf = {};
+
+exports.tickIf = tickIf;
+
+tickIf.someRuleAppliedInEveryBranch = function(ruleSet) {
+  var getRequirement;
+  getRequirement = function(line) {
     var candidateLines;
     candidateLines = line.getLinesThatCiteMe();
-    return _allRulesUsedInThisBlock(candidateLines, line.parent, ruleSet);
+    return function(linesInBlock) {
+      var k, l, len, len1, m, r, ref, ruleAndMatches;
+      for (k = 0, len = linesInBlock.length; k < len; k++) {
+        l = linesInBlock[k];
+        if (indexOf.call(candidateLines, l) >= 0) {
+          if (l.rulesChecked == null) {
+            l.verifyTree();
+          }
+          ref = l.rulesChecked;
+          for (m = 0, len1 = ref.length; m < len1; m++) {
+            ruleAndMatches = ref[m];
+            r = ruleAndMatches.rule;
+            if (indexOf.call(ruleSet, r) >= 0) {
+              return {
+                success: true
+              };
+            }
+          }
+        }
+      }
+      return {
+        success: false
+      };
+    };
+  };
+  return {
+    checkIsDecomposedInEveryNonClosedBranch: function(line) {
+      var requirement;
+      requirement = getRequirement(line);
+      return requirementIsMetInEveryNonClosedBranch(line.parent, requirement);
+    },
+    checkIsDecomposedInTheseLines: function(line, lines) {
+      var requirement, success;
+      requirement = getRequirement(line);
+      success = requirement(lines).success;
+      return success;
+    }
   };
 };
 
-_someRulesUsedInThisBlock = function(candidateLines, block, ruleSet) {
-  var childBlock, children, k, l, len, len1, len2, m, n, r, ref, ruleAndMatches, test;
-  for (k = 0, len = candidateLines.length; k < len; k++) {
-    l = candidateLines[k];
-    if (l.parent === block) {
-      if (l.rulesChecked == null) {
-        l.verify();
-      }
-      ref = l.rulesChecked;
-      for (m = 0, len1 = ref.length; m < len1; m++) {
-        ruleAndMatches = ref[m];
-        r = ruleAndMatches.rule;
-        if (indexOf.call(ruleSet, r) >= 0) {
-          return true;
-        }
-      }
-    }
-  }
-  children = block.getChildren();
-  if (!((children != null ? children.length : void 0) > 0)) {
-    return false;
-  }
-  for (n = 0, len2 = children.length; n < len2; n++) {
-    childBlock = children[n];
-    test = _someRulesUsedInThisBlock(candidateLines, childBlock, ruleSet);
-    if (test === false) {
-      return false;
-    }
-  }
-  return true;
-};
+_allRulesUsedInThisBlock = function(candidateLines, block, ruleSet) {};
 
-tickIf.someRuleAppliedInEveryBranch = function(ruleSet) {
-  return function(line) {
+tickIf.allRulesAppliedInEveryBranch = function(ruleSet) {
+  var getRequirement;
+  getRequirement = function(line) {
     var candidateLines;
     candidateLines = line.getLinesThatCiteMe();
-    return _someRulesUsedInThisBlock(candidateLines, line.parent, ruleSet);
+    return function(linesInBlock, rulesUsed) {
+      var k, l, len, len1, len2, m, n, r, ref, ruleAndMatches, rulesStillToUse;
+      if (rulesUsed == null) {
+        rulesUsed = [];
+      }
+      rulesUsed = _.clone(rulesUsed);
+      for (k = 0, len = linesInBlock.length; k < len; k++) {
+        l = linesInBlock[k];
+        if (indexOf.call(candidateLines, l) >= 0) {
+          if (l.rulesChecked == null) {
+            l.verifyTree();
+          }
+          ref = l.rulesChecked;
+          for (m = 0, len1 = ref.length; m < len1; m++) {
+            ruleAndMatches = ref[m];
+            r = ruleAndMatches.rule;
+            rulesUsed.push(r);
+          }
+        }
+      }
+      rulesStillToUse = [];
+      for (n = 0, len2 = ruleSet.length; n < len2; n++) {
+        r = ruleSet[n];
+        if (indexOf.call(rulesUsed, r) < 0) {
+          rulesStillToUse.push(r);
+        }
+      }
+      if (rulesStillToUse.length === 0) {
+        return {
+          success: true
+        };
+      } else {
+        return {
+          success: false,
+          _progress: rulesUsed
+        };
+      }
+    };
+  };
+  return {
+    checkIsDecomposedInEveryNonClosedBranch: function(line) {
+      var requirement;
+      requirement = getRequirement(line);
+      return requirementIsMetInEveryNonClosedBranch(line.parent, requirement);
+    },
+    checkIsDecomposedInTheseLines: function(line, lines) {
+      var requirement, success;
+      requirement = getRequirement(line);
+      success = requirement(lines).success;
+      return success;
+    }
   };
 };
 
@@ -21965,23 +22071,30 @@ notPhi = fol.parse('not φ');
 
 notAIsA = fol.parse('not α=α');
 
+branchContainsASimpleContradiction = function(line) {
+  var lines, test, test2;
+  lines = line.findAllAbove(function(item) {
+    return item.type === 'line';
+  });
+  test = linesContainPatterns(lines, [notPhi, phi], {});
+  if (test !== false) {
+    return true;
+  }
+  test2 = linesContainPatterns(lines, [notAIsA], {});
+  if (test2 !== false) {
+    return true;
+  }
+  return false;
+};
+
 closeBranch = function() {
   return {
     check: function(line, priorMatches) {
-      var lines, test, test2;
       if (line.next != null) {
         line.status.addMessage("You can only close on the final line of a branch.");
         return false;
       }
-      lines = line.findAllAbove(function(item) {
-        return item.type === 'line';
-      });
-      test = linesContainPatterns(lines, [notPhi, phi], {});
-      if (test !== false) {
-        return priorMatches;
-      }
-      test2 = linesContainPatterns(lines, [notAIsA], {});
-      if (test2 !== false) {
+      if (branchContainsASimpleContradiction(line)) {
         return priorMatches;
       }
       line.status.addMessage("you can only close a branch if it contains either a sentence like ‘¬α=α’, or two sentences like ‘φ’ and ‘¬φ’.");
@@ -21998,26 +22111,25 @@ sentenceIsSelfIdentity = function(s) {
   return (s != null) && s.findMatches(_selfIdenticalPattern) !== false;
 };
 
-openBranch = function() {
+openBranch = function(theRules) {
   return {
     check: function(line, priorMatches) {
-      var aLineAbove, allSentencesDoAppearAbove, allSubstitutionInstancesDoAppearAbove, containsLeftName, containsRightName, getAllSubstitutionInstances, identityLine, identityLineNames, identityLinesAbove, item, k, l, leftName, leftTargetSentences, len, len1, len2, linesAbove, m, n, rightName, rightTargetSentences, sentenceStringsInLinesAbove, substitutionsLeft, substitutionsRight, t, targetsForIdentityLines, targetsForThisIdentity, test, test2;
+      var aLineAbove, allSentencesDoAppearAbove, allSubstitutionInstancesDoAppearAbove, containsLeftName, containsRightName, getAllSubstitutionInstances, identityLine, identityLineNames, identityLinesAbove, item, k, l, leftName, leftTargetSentences, len, len1, len2, linesAbove, m, n, rightName, rightTargetSentences, sentenceStringsInLinesAbove, substitutionsLeft, substitutionsRight, t, targetsForIdentityLines, targetsForThisIdentity, tickChecker;
       if (line.next != null) {
         line.status.addMessage("You can only put a ‘branch open’ marker on the final line of a branch.");
+        return false;
+      }
+      if (branchContainsASimpleContradiction(line)) {
+        line.status.addMessage("You can only mark a branch open if it contains neither a sentence like ‘¬α=α’, nor two sentences like ‘φ’ and ¬‘φ’.");
         return false;
       }
       linesAbove = line.findAllAbove(function(item) {
         return item.type === 'line';
       });
-      test = linesContainPatterns(linesAbove, [phi, notPhi], {});
-      test2 = linesContainPatterns(linesAbove, [notAIsA], {});
-      if (!((test === false) && (test2 === false))) {
-        line.status.addMessage("You can only mark a branch open if it contains neither a sentence like ‘¬α=α’, nor two sentences like ‘φ’ and ¬‘φ’.");
-        return false;
-      }
       for (k = 0, len = linesAbove.length; k < len; k++) {
         aLineAbove = linesAbove[k];
-        if (!aLineAbove.canLineBeTicked()) {
+        tickChecker = theRules.getTickChecker(aLineAbove.sentence);
+        if (!tickChecker.checkIsDecomposedInTheseLines(aLineAbove, linesAbove)) {
           line.status.addMessage("You can only mark a branch open if you have exhaustively decomposed every sentence on it, but line " + aLineAbove.number + " has not been exhaustively decomposed.");
           return false;
         }
@@ -25186,6 +25298,9 @@ decorateTreeProof = function(treeProof, _parent) {
   treeProof.areAllBranchesClosedOrOpen = function() {
     return this.toProofObject().areAllBranchesClosedOrOpen();
   };
+  treeProof.hasOpenBranch = function() {
+    return this.toProofObject().hasOpenBranch();
+  };
   treeProof.getPremises = function() {
     return this.toProofObject().getPremises();
   };
@@ -25288,21 +25403,24 @@ displayEditable = function(treeProof, container, onChange, callback, restore) {
       return function(e) {
         node = _getNode($(e.target), nodeLocator);
         node.addChild('').addSib('');
-        return treeProof.displayEditable(container);
+        treeProof.displayEditable(container);
+        return typeof onChange === "function" ? onChange(node) : void 0;
       };
     })(treeProof, container, nodeLocator));
     $('.treeAddSib').click((function(treeProof, container, nodeLocator) {
       return function(e) {
         node = _getNode($(e.target), nodeLocator);
         node.addSib('');
-        return treeProof.displayEditable(container);
+        treeProof.displayEditable(container);
+        return typeof onChange === "function" ? onChange(node) : void 0;
       };
     })(treeProof, container, nodeLocator));
     $('.treeRemoveNode').click((function(treeProof, container, nodeLocator) {
       return function(e) {
         node = _getNode($(e.target), nodeLocator);
         node.remove();
-        return treeProof.displayEditable(container);
+        treeProof.displayEditable(container);
+        return typeof onChange === "function" ? onChange(node) : void 0;
       };
     })(treeProof, container, nodeLocator));
     return typeof callback === "function" ? callback() : void 0;
