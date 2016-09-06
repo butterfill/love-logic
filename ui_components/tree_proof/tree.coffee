@@ -231,7 +231,7 @@ displayEditable = (treeProof, container, onChange, callback) ->
       editor.on 'keyHandled', ((node, treeProof, container) -> (instance, name, event) ->
         if name is 'Enter'
           # console.log "#treeAddChild#{node.id.replace('.','-')}"
-          $("#treeAddChild#{node.id.replace('.','-')}").parent().animate({marginTop:"+=1.1em"})
+          $("#treeAddChild#{node.id.replace('.','-')}").parent().animate({marginTop:"+=1.5em"})
           # Don’t do this because it messes up cursor position
           #treeProof.displayEditable(container)
       )(node, treeProof, container)
@@ -284,12 +284,12 @@ nodeToTextarea = (node) ->
   isLeaf = (not node.children?) or node.children.length is 0
   siblings = node.parent?.children
   isRightmostBranch = node is siblings?[siblings?.length-1]
-  res = "<div style='white-space:pre;margin-left:3em;width:250px;height:#{20*(proofText.split('\n').length)}px;'><textarea data-proofId='#{node.id}'>#{proofText}</textarea></div>"
+  res = "<div style='white-space:pre;margin-left:3em;width:325px;height:#{23*(proofText.split('\n').length)}px;'><textarea data-proofId='#{node.id}'>#{proofText}</textarea></div>"
   if isLeaf
-    res += "<div class='center' style='margin-left:3em;margin-top:2em;'><a id='treeAddChild#{node.id.replace('.','-')}' class='treeAddChild hint--bottom' data-hint='branch' data-proofId='#{node.id}' href='#'><i class='material-icons branch'>add_circle_outline</i></a></div>"
+    res += "<div class='center' style='margin-left:3em;margin-top:2em;'><a id='treeAddChild#{node.id.replace('.','-')}' class='treeAddChild hint--bottom' data-hint='branch' data-proofId='#{node.id}'><i class='material-icons branch'>add_circle_outline</i></a></div>"
     if isRightmostBranch 
-      linkRemoveSib = "<a class='treeRemoveNode hint--bottom' data-hint='remove rightmost node' data-proofId='#{node.id}' href='#'><i class='material-icons'>remove_circle_outline</i></a>"
-      linkAddSib = "<a class='treeAddSib hint--bottom' data-hint='add a node' data-proofId='#{node.id}' href='#'><i class='material-icons'>add_circle_outline</i></a>"
+      linkRemoveSib = "<a class='treeRemoveNode hint--bottom' data-hint='remove rightmost node' data-proofId='#{node.id}' ><i class='material-icons'>remove_circle_outline</i></a>"
+      linkAddSib = "<a class='treeAddSib hint--bottom' data-hint='add a node' data-proofId='#{node.id}' ><i class='material-icons'>add_circle_outline</i></a>"
       res = "<div style='width:300px;'><div style='float:right;'>#{linkRemoveSib}#{linkAddSib}</div>#{res}</div>"
   return res
 

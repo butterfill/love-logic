@@ -1102,7 +1102,20 @@ describe "logicbook tree rules", ->
         4 || O
       '''
       testProof(text, false)
-    it "can identify a mistake in not fully decompsing all D (only old constant decomposed)", ->
+    it "can identify a mistake in not fully decompsing all D (no decomposition)", ->
+      text = '''
+        1 | (∀x) Fx    SM
+        5 | O
+      '''
+      testProof(text, false)
+    it "can confirm fully decompsing all D (simple case)", ->
+      text = '''
+        1 | (∀x) Fx    SM
+        2 | Fa      all D 1
+        5 | O
+      '''
+      testProof(text, true)
+    it "can confirm fully decompsing all D (old constants used only)", ->
       text = '''
         1 | (∀x) Fx    SM
         2 | (∃x) ¬Gx    SM
@@ -1110,7 +1123,7 @@ describe "logicbook tree rules", ->
         4 || Fa       all D 1
         5 || O
       '''
-      testProof(text, false)
+      testProof(text, true)
     it "can identify a mistake in not fully decompsing all D (only new constant decomposed)", ->
       text = '''
         1 | (∀x) Fx    SM
@@ -1161,3 +1174,23 @@ describe "logicbook tree rules", ->
       '''
       testProof(text, false)
 
+    it "can verify an open proof with a single universal quantifier premise", ->
+      text = '''
+        1 | (∀x)(Fx ⊃ Gx)    Assumption
+        2 | Ga               Assumption
+        3 | ~~Fa             Assumption
+        4 | Fa ⊃ Ga          ∀D 1
+        5 || ~Fa     ⊃D 4
+        6 || X
+          | 
+        5 || Ga          ⊃D 4
+        6 || Fa          ~ ~ D 3
+        7 || Fb ⊃ Gb     ∀D 1
+        8 ||| ~Fb      ⊃D 7
+        9 ||| O
+          || 
+        8 ||| Gb      ⊃D 7
+        9 ||| O
+      '''
+      testProof(text, true)
+      

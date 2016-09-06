@@ -337,6 +337,10 @@ global.proof = proof;
 
 global.tree = tree;
 
+if (typeof _ !== "undefined" && _ !== null) {
+  _.noConflict();
+}
+
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"../../ui_components/tree_proof/tree":35,"../fol":7,"../proofs/proof":28}],5:[function(require,module,exports){
@@ -21336,6 +21340,7 @@ tickIf.ruleAppliedAtLeastOnceAndAppliedToEveryExistingConstant = function(rule) 
           }
         }
       }
+      console.log("namesUsed " + (namesUsed.join(', ')));
       namesToWhichTheRuleIsApplied = [];
       findNameWhichIsUsedInApplyingTheRule = makeFnToFindNameWhichIsUsedInApplyingTheRule(line);
       for (o = 0, len2 = linesInBlock.length; o < len2; o++) {
@@ -21352,10 +21357,10 @@ tickIf.ruleAppliedAtLeastOnceAndAppliedToEveryExistingConstant = function(rule) 
         };
       }
       namesYouAppliedTheRuleToThatDontOtherwiseAppearInTheBranch = _.difference(namesToWhichTheRuleIsApplied, namesUsed);
-      if (!(namesYouAppliedTheRuleToThatDontOtherwiseAppearInTheBranch.length > 0)) {
+      if (!(namesToWhichTheRuleIsApplied.length > 0)) {
         return {
           success: false,
-          errorMessage: "this rule was not applied to at least one constant not otherwise occurring in the branch"
+          errorMessage: "this rule was not applied to at least one constant in the branch"
         };
       }
       return {
@@ -21385,6 +21390,10 @@ tickIf.ruleAppliedAtLeastOnceAndAppliedToEveryExistingConstant = function(rule) 
       var errorMessage, ref, requirement, success;
       requirement = getRequirement(line);
       ref = requirement(lines), success = ref.success, errorMessage = ref.errorMessage;
+      if (!success) {
+        console.log(success);
+        console.log(errorMessage);
+      }
       return success;
     }
   };
@@ -25472,7 +25481,7 @@ displayEditable = function(treeProof, container, onChange, callback) {
         return function(instance, name, event) {
           if (name === 'Enter') {
             return $("#treeAddChild" + (node.id.replace('.', '-'))).parent().animate({
-              marginTop: "+=1.1em"
+              marginTop: "+=1.5em"
             });
           }
         };
@@ -25544,12 +25553,12 @@ nodeToTextarea = function(node) {
   isLeaf = (node.children == null) || node.children.length === 0;
   siblings = (ref = node.parent) != null ? ref.children : void 0;
   isRightmostBranch = node === (siblings != null ? siblings[(siblings != null ? siblings.length : void 0) - 1] : void 0);
-  res = "<div style='white-space:pre;margin-left:3em;width:250px;height:" + (20 * (proofText.split('\n').length)) + "px;'><textarea data-proofId='" + node.id + "'>" + proofText + "</textarea></div>";
+  res = "<div style='white-space:pre;margin-left:3em;width:325px;height:" + (23 * (proofText.split('\n').length)) + "px;'><textarea data-proofId='" + node.id + "'>" + proofText + "</textarea></div>";
   if (isLeaf) {
-    res += "<div class='center' style='margin-left:3em;margin-top:2em;'><a id='treeAddChild" + (node.id.replace('.', '-')) + "' class='treeAddChild hint--bottom' data-hint='branch' data-proofId='" + node.id + "' href='#'><i class='material-icons branch'>add_circle_outline</i></a></div>";
+    res += "<div class='center' style='margin-left:3em;margin-top:2em;'><a id='treeAddChild" + (node.id.replace('.', '-')) + "' class='treeAddChild hint--bottom' data-hint='branch' data-proofId='" + node.id + "'><i class='material-icons branch'>add_circle_outline</i></a></div>";
     if (isRightmostBranch) {
-      linkRemoveSib = "<a class='treeRemoveNode hint--bottom' data-hint='remove rightmost node' data-proofId='" + node.id + "' href='#'><i class='material-icons'>remove_circle_outline</i></a>";
-      linkAddSib = "<a class='treeAddSib hint--bottom' data-hint='add a node' data-proofId='" + node.id + "' href='#'><i class='material-icons'>add_circle_outline</i></a>";
+      linkRemoveSib = "<a class='treeRemoveNode hint--bottom' data-hint='remove rightmost node' data-proofId='" + node.id + "' ><i class='material-icons'>remove_circle_outline</i></a>";
+      linkAddSib = "<a class='treeAddSib hint--bottom' data-hint='add a node' data-proofId='" + node.id + "' ><i class='material-icons'>add_circle_outline</i></a>";
       res = "<div style='width:300px;'><div style='float:right;'>" + linkRemoveSib + linkAddSib + "</div>" + res + "</div>";
     }
   }

@@ -200,6 +200,7 @@ tickIf.ruleAppliedAtLeastOnceAndAppliedToEveryExistingConstant = ( rule ) ->
             for n in l.sentence.getNames()
               namesUsed.push(n) unless n in namesUsed
       # What constants is the rule applied to?
+      console.log "namesUsed #{namesUsed.join(', ')}"
       namesToWhichTheRuleIsApplied = []
       findNameWhichIsUsedInApplyingTheRule = makeFnToFindNameWhichIsUsedInApplyingTheRule(line)
       for l in linesInBlock
@@ -209,8 +210,8 @@ tickIf.ruleAppliedAtLeastOnceAndAppliedToEveryExistingConstant = ( rule ) ->
       unless namesYouShouldHaveAppliedTheRuleToButDidnt.length is 0
         return {success:false, errorMessage: "this rule was not applied to constants occurring in the branch (#{namesYouShouldHaveAppliedTheRuleToButDidnt.join(', ')})"}
       namesYouAppliedTheRuleToThatDontOtherwiseAppearInTheBranch = _.difference(namesToWhichTheRuleIsApplied, namesUsed)
-      unless namesYouAppliedTheRuleToThatDontOtherwiseAppearInTheBranch.length > 0 
-        return {success:false, errorMessage: "this rule was not applied to at least one constant not otherwise occurring in the branch"}
+      unless namesToWhichTheRuleIsApplied.length > 0 
+        return {success:false, errorMessage: "this rule was not applied to at least one constant in the branch"}
       return {success:true}
       
   return {
@@ -229,7 +230,9 @@ tickIf.ruleAppliedAtLeastOnceAndAppliedToEveryExistingConstant = ( rule ) ->
       # This involves marking a partially decomposed line incorrect;
       # we should probably not do that since it’s not the line but the claim
       # that the branch is open which is at fault!
-      # unless success
+      unless success
+        console.log success
+        console.log errorMessage
       #   line.status.addMessage errorMessage
       #   line.status.verified = false
       return success
