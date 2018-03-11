@@ -57,7 +57,7 @@ rules =
     elim : rule.from('all τ φ').to('φ[τ-->α]')
     # for Magnus and Button:
     # intro: rule.from('φ[τ-->null]').isNotInUndischargedPremises('α').to('all τ φ[α-->τ]')
-    intro: rule.from( rule.matches('φ[τ-->α]').and.isNotInAnyUndischargedPremise('α') ).to('all τ φ')
+    intro: rule.from( rule.matches('φ[τ-->α]').and.isNotInAnyUndischargedPremise('α').and.doesNotContainName('α') ).to('all τ φ')
   
   dilemma : rule.from('φ or ψ').and('φ arrow χ').and('ψ arrow χ').to('χ')
   

@@ -433,7 +433,15 @@ describe 'substitute', ->
         result = substitute.applySubstitutions expression
         post = expression
         expect(pre).to.deep.equal(post)
-        
+      
+      it "applying `[α-->τ][α-->null]` works as expected", ->
+        expression = fol.parse "x=x[α-->τ][α-->null]"
+        util.delExtraneousProperties expression
+        pre = _.cloneDeep expression
+        result = substitute.applySubstitutions expression
+        post = expression
+        expect(pre).to.deep.equal(post)
+      
       it "applying `[a-->null]` to `(b=c and A)` makes no difference", ->
         expression = fol.parse "(b=c and A)[a-->null]"
         util.delExtraneousProperties expression

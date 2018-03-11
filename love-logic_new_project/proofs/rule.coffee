@@ -443,6 +443,34 @@ matches = (sentence) ->
       checkFunctions.push newCheck
       return @
     
+    # HINT : use this at the point where most substitutions are established
+    # (ie. prefer using it in premises to conclusions.)
+    doesNotContainName : (name) ->
+      nameThatCantBeHere = _parseNameIfNecessaryAndDecorate(name)
+      newCheck = (line, priorMatches) ->
+        nameClone = nameThatCantBeHere.clone()
+        nameClone = nameClone.applyMatches(priorMatches).applySubstitutions()
+        nameTxt = nameClone.name
+        aSentenceClone = pattern.clone().applyMatches(priorMatches)
+        delete aSentenceClone.substitutions
+        delete aSentenceClone.box
+        return false if (nameTxt in aSentenceClone.getNames())
+        return priorMatches
+      checkFunctions.push newCheck
+      return @
+    
+    isName : (name) ->
+      thingThatShouldBeAName = _parseNameIfNecessaryAndDecorate(name)
+      newCheck = (line, priorMatches) ->
+        nameClone = thingThatShouldBeAName.clone()
+        nameClone = nameClone.applyMatches(priorMatches).applySubstitutions()
+        if nameClone.getNames().length is 0
+          return false
+        return priorMatches
+      checkFunctions.push newCheck
+      return @
+    
+    
     # Use like `matches('phi').and.branches()
     branches : () ->
       @isBranchingRule = true

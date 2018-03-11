@@ -1226,6 +1226,13 @@ describe "match (module)", ->
       expect(util.areIdenticalExpressions(result, expectedResult)).to.be.true
 
 
+    it "finds matches requiring partially applying a substitution involving a term", ->
+      pattern = fol.parse 'x=x[x-->α]'
+      expression = fol.parse 'a=a'
+      matches = match.find expression, pattern
+      expect(matches).not.to.be.false
+
+
   describe '`.apply` to expressions with boxes', ->
     it "applies a match to a term_metavariable in a box", ->
       pattern = fol.parse '[α] Loves(α,b)'

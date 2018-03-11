@@ -263,5 +263,3 @@ describe "forallx_rules", ->
       | (all x not Fx)  and (not all x Gx)     qn 1
     '''
     testProof(text, false)
-
-

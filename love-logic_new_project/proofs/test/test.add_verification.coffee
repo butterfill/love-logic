@@ -1065,16 +1065,6 @@ describe "the verify module:", ->
       '''
       result = verify._line 4, proof
       expect(result).to.be.false
-    it "allows you use universal intro when you make only partial replacements", ->
-      # test id A7774B7C-57DA-11E5-B920-720262EA09BE
-      proof = '''
-        1. 
-        2.    [a]                   // assumption
-        3.    F(a) and G(a)          
-        4. all x (F(x) and G(a))    // universal intro 2-3
-      '''
-      result = verify._line 4, proof
-      expect(result).to.be.true
 
   describe "verifying premises and assumptions", ->
     # Here we just need to test that the rule is implemented;

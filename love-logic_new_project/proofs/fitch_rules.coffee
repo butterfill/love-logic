@@ -58,9 +58,10 @@ rules =
     elim : rule.from('all τ φ').to('φ[τ-->α]')
     intro : 
       # This is the standard rule (not really `left`):
-      left : rule.from( rule.subproof('[α]', 'φ[τ-->α]') ).to('all τ φ')
+      left : rule.from( rule.subproof( rule.matches('[α]').and.isName('α'), rule.matches('φ[τ-->α]').and.doesNotContainName('α') ) ).to( rule.matches('all τ φ') )
+      #
       # This is what LPL calls `general conditional proof`: 
-      right : rule.from( rule.subproof('[α]φ', 'ψ') ).to('all τ (φ arrow ψ)[α-->τ]')
+      right : rule.from( rule.subproof( rule.matches('[α]φ[τ-->α]').and.doesNotContainName('α').and.isName('α'), rule.matches('ψ[τ-->α]').and.doesNotContainName('α') ) ).to('all τ (φ arrow ψ)')
 
 exports.rules = rules
 dialectManager.registerRuleSet('fitch', rules)

@@ -77,6 +77,7 @@ rules =
 
   universal :
     elim : rule.from('(all τ) φ').to('φ[τ-->α]')
+    # todo .and.doesNotContainName('α^')?
     intro : rule.from('φ[τ-->α^]').to('(all τ) φ')
   
   # derived rules (some derived rules appear above where
