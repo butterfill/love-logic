@@ -9,6 +9,11 @@ rules =
     there is no possible situation with an empty domain.
   '''
   
+  generalRequirements : 
+    noFreeVariables : true
+    boxAllowedInPremiseOnly : true
+    boxMustBeNewName : true
+  
   premise : rule.from().to( rule.premise() )
 
   reit : rule.from('φ').to('φ')

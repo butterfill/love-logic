@@ -32,6 +32,8 @@ addJustification = require './add_justification'
 addSentences = require './add_sentences'
 addStatus = require './add_status'
 
+rule = require './rule'
+
 # theRules = (require './fitch_rules').rules
 # IMPORT TO MAKE SURE THAT THE RULES ARE REGISTERED
 require './fitch_rules'
@@ -280,9 +282,38 @@ verifyLine = (lineOrLineNumber, proofText, theRules) ->
     theLine.status.verified = false
     return false 
   
-  # From here on, we have a sentence and justification.
+  # From here on, we have a justification and no sentence errors.
   
-  # First, check that the lines cited are legit.
+  # do general requirements
+  if theLine.sentence? and theRules.generalRequirements?
+    if theRules.generalRequirements.noFreeVariables 
+      fv = theLine.sentence.getFreeVariableNames()
+      if fv.length isnt 0
+        theLine.status.addMessage "the sentence ‘#{theLine.sentence}’ contains free variables (#{fv.join(' and ')}). All variables must be bound by a quantifier."
+        theLine.status.verified = false
+        return false
+    
+    sentence = theLine.sentence
+    aBox = (sentence if sentence.type is 'box') or (sentence.box if sentence.box?)
+    
+    if theRules.generalRequirements.boxAllowedInPremiseOnly
+      if aBox?
+        unless theLine.isPremise()
+          theLine.status.addMessage "you can only use the box (‘#{aBox}’) in the premise of a subproof."
+          theLine.status.verified = false
+          return false 
+
+    if theRules.generalRequirements.boxMustBeNewName
+      if aBox?
+        theName = aBox.term.name
+        test = rule.doesALineAboveContainThisName(theName, theLine)
+        if test isnt false
+          theLine.status.addMessage("'#{theName}' must be a new name (although it may appear below, and within a closed subproof above)")
+          theLine.status.verified = false
+          return false
+      
+    
+  # check that the lines cited are legit.
   areLinesCitedOk = _linesCitedAreOk(theLine)
   if areLinesCitedOk isnt true
     errorMessage = areLinesCitedOk

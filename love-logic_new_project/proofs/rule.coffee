@@ -643,6 +643,7 @@ doesALineAboveContainThisName = (theName, aLine) ->
     return true if (theName in lineOrBlock.sentence.getNames())
     return false
   return aLine.findAbove( test )
+exports.doesALineAboveContainThisName = doesALineAboveContainThisName
 
 doesAPremiseHereOrAboveContainThisName = (theName, aLine) ->
   if aLine.isPremise()

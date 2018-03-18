@@ -55,6 +55,7 @@ dialects =
 # default settings!
 dialectName = 'lpl'
 dialectVersion = "0.1"
+# version is optional
 set = (name, version) ->
   # convenience: also accept an object
   if name.version?

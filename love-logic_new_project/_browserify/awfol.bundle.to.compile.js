@@ -18622,7 +18622,7 @@ LineStatus = (function() {
 
 
 },{"../fol":7,"../substitute":31,"../util":33,"lodash":9}],21:[function(require,module,exports){
-var _, _linesCitedAreOk, _parseProof, addJustification, addLineNumbers, addSentences, addStatus, anythingOtherThanABranchOccursAfterABranch, blockParser, canLineBeTicked, checkBranchingRules, checkItAccordsWithTheRules, checkLineAccordsWithOneOfTheseRules, checkTicksAreCorrect, dialectManager, lineNeedsToBeTicked, to, util, verifyLine,
+var _, _linesCitedAreOk, _parseProof, addJustification, addLineNumbers, addSentences, addStatus, anythingOtherThanABranchOccursAfterABranch, blockParser, canLineBeTicked, checkBranchingRules, checkItAccordsWithTheRules, checkLineAccordsWithOneOfTheseRules, checkTicksAreCorrect, dialectManager, lineNeedsToBeTicked, rule, to, util, verifyLine,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 _ = require('lodash');
@@ -18638,6 +18638,8 @@ addJustification = require('./add_justification');
 addSentences = require('./add_sentences');
 
 addStatus = require('./add_status');
+
+rule = require('./rule');
 
 require('./fitch_rules');
 
@@ -18787,7 +18789,7 @@ checkTicksAreCorrect = function(proof) {
 };
 
 checkBranchingRules = function(theProof) {
-  var b, branches, i, itIsOkToUseTheSameRuleTwiceHere, j, k, len, len1, len2, line, nofBranchingRules, r, ref, ref1, ref2, ref3, ref4, rule, ruleSet, rulesUsed, test;
+  var b, branches, i, itIsOkToUseTheSameRuleTwiceHere, j, k, len, len1, len2, line, nofBranchingRules, r, ref, ref1, ref2, ref3, ref4, ruleSet, rulesUsed, test;
   branches = theProof.getChildren();
   if (!((branches != null ? branches.length : void 0) > 0)) {
     return true;
@@ -18891,7 +18893,7 @@ canLineBeTicked = function(line) {
 exports.canLineBeTicked = canLineBeTicked;
 
 verifyLine = function(lineOrLineNumber, proofText, theRules) {
-  var areLinesCitedOk, errorMessage, lineNumber, proof, ref, result, theLine;
+  var aBox, areLinesCitedOk, errorMessage, fv, lineNumber, proof, ref, result, sentence, test, theLine, theName;
   if (theRules == null) {
     theRules = dialectManager.getCurrentRules();
   }
@@ -18917,6 +18919,38 @@ verifyLine = function(lineOrLineNumber, proofText, theRules) {
   if ((theLine.sentenceErrors != null) || (theLine.justificationErrors != null) || (theLine.justification == null)) {
     theLine.status.verified = false;
     return false;
+  }
+  if ((theLine.sentence != null) && (theRules.generalRequirements != null)) {
+    if (theRules.generalRequirements.noFreeVariables) {
+      fv = theLine.sentence.getFreeVariableNames();
+      if (fv.length !== 0) {
+        theLine.status.addMessage("the sentence ‘" + theLine.sentence + "’ contains free variables (" + (fv.join(' and ')) + "). All variables must be bound by a quantifier.");
+        theLine.status.verified = false;
+        return false;
+      }
+    }
+    sentence = theLine.sentence;
+    aBox = (sentence.type === 'box' ? sentence : void 0) || (sentence.box != null ? sentence.box : void 0);
+    if (theRules.generalRequirements.boxAllowedInPremiseOnly) {
+      if (aBox != null) {
+        if (!theLine.isPremise()) {
+          theLine.status.addMessage("you can only use the box (‘" + aBox + "’) in the premise of a subproof.");
+          theLine.status.verified = false;
+          return false;
+        }
+      }
+    }
+    if (theRules.generalRequirements.boxMustBeNewName) {
+      if (aBox != null) {
+        theName = aBox.term.name;
+        test = rule.doesALineAboveContainThisName(theName, theLine);
+        if (test !== false) {
+          theLine.status.addMessage("'" + theName + "' must be a new name (although it may appear below, and within a closed subproof above)");
+          theLine.status.verified = false;
+          return false;
+        }
+      }
+    }
   }
   areLinesCitedOk = _linesCitedAreOk(theLine);
   if (areLinesCitedOk !== true) {
@@ -19082,7 +19116,7 @@ checkItAccordsWithTheRules = function(line, theRules) {
 };
 
 
-},{"../dialect_manager/dialectManager":5,"../util":33,"./add_justification":17,"./add_line_numbers":18,"./add_sentences":19,"./add_status":20,"./block_parser":22,"./fitch_rules":23,"./forallx_rules":24,"./logicbook_rules":26,"./logicbook_tree_rules":27,"./teller_rules":30,"lodash":9}],22:[function(require,module,exports){
+},{"../dialect_manager/dialectManager":5,"../util":33,"./add_justification":17,"./add_line_numbers":18,"./add_sentences":19,"./add_status":20,"./block_parser":22,"./fitch_rules":23,"./forallx_rules":24,"./logicbook_rules":26,"./logicbook_tree_rules":27,"./rule":29,"./teller_rules":30,"lodash":9}],22:[function(require,module,exports){
 var Block, _, _INDENTATION_AT_START_OF_LINE, _SPLIT_LINE_WHEN_INDENTATION_FIRST, _SPLIT_LINE_WHEN_NUMBER_FIRST, areLinesFormattedIndentationFirst, clean, extractIndentationAndContentFrom, isBlank, isClosedBranchMarker, isDivider, isOpenBranchMarker, parse, removeIndentationFrom, removeNumberFrom, split, util,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -19588,6 +19622,11 @@ rule.setParser(dialectManager.getParser('awFOL'));
 
 rules = {
   _description: 'Rules of proof for classical first-order logic.  The rules assume that\nthere is no possible situation with an empty domain.',
+  generalRequirements: {
+    noFreeVariables: true,
+    boxAllowedInPremiseOnly: true,
+    boxMustBeNewName: true
+  },
   premise: rule.from().to(rule.premise()),
   reit: rule.from('φ').to('φ'),
   'and': {
@@ -19631,7 +19670,7 @@ rules = {
     }
   },
   existential: {
-    elim: rule.from('exists τ φ').and(rule.subproof('[α]φ[τ-->α][τ-->null]', 'ψ')).to('ψ[α-->null]'),
+    elim: rule.from('exists τ φ').and(rule.subproof('[α]φ[τ-->α]', 'ψ')).to('ψ[α-->null]'),
     intro: rule.from('φ[τ-->α]').to('exists τ φ')
   },
   universal: {
@@ -21931,6 +21970,8 @@ doesALineAboveContainThisName = function(theName, aLine) {
   };
   return aLine.findAbove(test);
 };
+
+exports.doesALineAboveContainThisName = doesALineAboveContainThisName;
 
 doesAPremiseHereOrAboveContainThisName = function(theName, aLine) {
   var test;
