@@ -415,17 +415,25 @@ matches = (sentence) ->
         currentMatches = test
       return currentMatches
     
+    # TODO : couldn’t make this work!
+    # additionalRequirementsMsg : []
+    
     toString : () ->
-      return pattern.toString()
+      s = pattern.toString()
+      # if @additionalRequirementsMsg? and @additionalRequirementsMsg.length isnt 0
+      #   s += 'where ' + additionalRequirementsMsg.join('; and ')
+      return s
     
     # Add a requirement to the match: `name` must not occur on
     # any line above in the proof (except in a closed subproof).
     isNewName : (name) ->
       nameThatMustBeNew = _parseNameIfNecessaryAndDecorate(name)
+      # msgs = @additionalRequirementsMsg
       newNameCheck = (line, priorMatches) ->
         nameThatMustBeNewClone = nameThatMustBeNew.clone()
         nameThatMustBeNewClone = nameThatMustBeNewClone.applyMatches(priorMatches).applySubstitutions()
         theNameTxt = nameThatMustBeNewClone.name
+        # msgs.push "#{name} (i.e. #{theNameTxt} in this case) must be a new name"
         # console.log "checking #{theNameTxt} is new from line #{line.number}"
         return false if doesALineAboveContainThisName(theNameTxt, line)
         return priorMatches
@@ -434,10 +442,12 @@ matches = (sentence) ->
       
     isNotInAnyUndischargedPremise : (name) ->
       nameThatCantBeInAnyUndischargedPremise = _parseNameIfNecessaryAndDecorate(name)
+      # msgs = @additionalRequirementsMsg
       newCheck = (line, priorMatches) ->
         nameClone = nameThatCantBeInAnyUndischargedPremise.clone()
         nameClone = nameClone.applyMatches(priorMatches).applySubstitutions()
         nameTxt = nameClone.name
+        # msgs.push "#{name} (i.e. #{NameTxt} in this case) must not appear in any undischarged premise"
         return false if doesAPremiseHereOrAboveContainThisName(nameTxt, line)
         return priorMatches
       checkFunctions.push newCheck
@@ -447,11 +457,13 @@ matches = (sentence) ->
     # (ie. prefer using it in premises to conclusions.)
     doesNotContainName : (name) ->
       nameThatCantBeHere = _parseNameIfNecessaryAndDecorate(name)
+      # msgs = @additionalRequirementsMsg
       newCheck = (line, priorMatches) ->
         nameClone = nameThatCantBeHere.clone()
         nameClone = nameClone.applyMatches(priorMatches).applySubstitutions()
         nameTxt = nameClone.name
         aSentenceClone = pattern.clone().applyMatches(priorMatches)
+        # msgs.push "#{name} (i.e. #{NameTxt} in this case) must not appear in #{pattern}"
         delete aSentenceClone.substitutions
         delete aSentenceClone.box
         return false if (nameTxt in aSentenceClone.getNames())
@@ -611,7 +623,10 @@ doesLineMatchPattern = (line, pattern, priorMatches) ->
     # nameInBoxIsAlreadyUsedInProof = @_isALineContainingTheName(theName, aLine)
     test = doesALineAboveContainThisName(theName, line)
     # console.log "    checked #{theName} does not appear above line #{line.number}: #{test}"
-    return false if (test isnt false)
+    if test isnt false
+      # TODO : not working because `line` is the box rather than line where it’s used.
+      # line.status.addMessage("'#{theName}' must be a new name (although it may appear within a closed subproof)")
+      return false
 
   return newMatches  
 
@@ -624,6 +639,7 @@ doesALineAboveContainThisName = (theName, aLine) ->
     # as long as it doesn't occur in any line above this one.
     return false if lineOrBlock.type isnt 'line'
     # console.log "#{lineOrBlock.number} : #{lineOrBlock.sentence} contains #{theName}? #{(theName in lineOrBlock.sentence.getNames())}"
+    return false unless lineOrBlock?.sentence?
     return true if (theName in lineOrBlock.sentence.getNames())
     return false
   return aLine.findAbove( test )
@@ -819,12 +835,12 @@ checkRequirementsMet = (line, theReqs) ->
   ruleName = line.getRuleName()
   msg = []
   if theReqs.to?
-    msg.push "on a line with the form #{theReqs.to}"
+    msg.push "on a line with the form #{theReqs.to.toString().replace(/-->/g,'/')}"
   for r in theReqs.from
     if r.type is 'subproof'
-      msg.push " citing a subproof of the form #{r}"
+      msg.push " citing a subproof of the form #{r.toString().replace(/-->/g,'/')}"
     else
-      msg.push " citing a line of the form #{r}"
+      msg.push " citing a line of the form #{r.toString().replace(/-->/g,'/')}"
   line.status.addMessageIfNoneAlready "you can only use #{ruleName} #{msg.join('; ')}."
   return false
 

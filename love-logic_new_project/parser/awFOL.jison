@@ -210,6 +210,13 @@ variable_or_metavariable
         { $$ = {type:'term_metavariable', name:$1, location:@1}; }
     ;
 
+name_or_metavariable
+    : name
+        { $$ = {type:'name', name:$1, location:@1}; }
+    | term_metavariable
+        { $$ = {type:'term_metavariable', name:$1, location:@1}; }
+    ;
+
 quantifier_variable
     : variable_or_metavariable
         { $$ = $1; }
@@ -269,6 +276,6 @@ substitution
     The box before an expression (e.g. '[a] F(a)'.)
 */
 box 
-    : '[' term ']'
+    : '[' name_or_metavariable ']'
       { $$ = {type:'box', term:$2}; }
     ;

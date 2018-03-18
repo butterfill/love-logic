@@ -340,7 +340,9 @@ checkLineAccordsWithOneOfTheseRules = (line, rules) ->
     # The rule does not match.  Remove any error message
     # in case a later rule does match.
     msg = line.status.popMessage()
-    errorMessages.push(msg) if msg?
+    while msg? and msg isnt ''
+      errorMessages.push(msg) 
+      msg = line.status.popMessage()
     
   # None of the rules matched.
   line.status.verified = false
@@ -348,9 +350,9 @@ checkLineAccordsWithOneOfTheseRules = (line, rules) ->
   if errorMessages.length is 1
     line.status.addMessage(errorMessages[0])
   if errorMessages.length > 1
-    msg = "This rule has multiple forms and none of them matched.  "
+    msg = "this rule has multiple forms and none of them matched:  "
     for m, idx in errorMessages
-      msg += "(#{idx}) #{m}  "
+      msg += "(#{idx+1}) "+"#{m} ".replace('you can only','you can')
     line.status.addMessage msg
   return false
     

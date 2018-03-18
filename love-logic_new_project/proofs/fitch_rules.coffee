@@ -55,7 +55,7 @@ rules =
     intro : rule.from('φ[τ-->α]').to('exists τ φ')
 
   universal :
-    elim : rule.from('all τ φ').to('φ[τ-->α]')
+    elim : rule.from('all τ φ').to( rule.matches('φ[τ-->α]').and.isName('α') )
     intro : 
       # This is the standard rule (not really `left`):
       left : rule.from( rule.subproof( rule.matches('[α]').and.isName('α'), rule.matches('φ[τ-->α]').and.doesNotContainName('α') ) ).to( rule.matches('all τ φ') )

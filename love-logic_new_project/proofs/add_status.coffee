@@ -56,6 +56,8 @@ class LineStatus
       
   
   addMessage : (text) -> 
+    # console.log "adding #{text}"
+    # console.log @line
     @messages.push text
   addMessageIfNoneAlready : (text) -> 
     if @messages.length is 0
@@ -76,7 +78,7 @@ class LineStatus
       @_addedAlthough = true
   getMessage : () ->
     return "" if @messages.length is 0
-    @messages = _.uniq(@messages)
+    # @messages = _.uniq(@messages)
     isCorrectText = ("not correct because" unless @verified) or ("correct but")
     msg = "This line is #{isCorrectText} #{@messages[0]}"
     if @messages.length > 1
