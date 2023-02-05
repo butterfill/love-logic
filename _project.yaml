@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=http://localhost:8080/schema-project.json
+
+id: leqPA8DoNutmQ0hczSozI
+title: "zoxiy (love logic) parser, proof checker etc core part"
+url:
+  - 
+git-remote:
+  - git@github.com:butterfill/love-logic
+type: programming
+location: 
+authors: 
+  - Stephen A. Butterfill
+status: complete
+
