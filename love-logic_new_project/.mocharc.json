@@ -1,0 +1,10 @@
+{
+  "require": ["coffeescript/register"],
+  "extension": ["coffee"],
+  "recursive": true,
+  "spec": [
+    "test/**/*.coffee",
+    "parser/test/**/*.coffee",
+    "proofs/test/**/*.coffee"
+  ]
+}

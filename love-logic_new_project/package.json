@@ -8,10 +8,15 @@
   },
   "author": "",
   "license": "ISC",
+  "scripts": {
+    "test": "mocha",
+    "test:watch": "mocha --watch"
+  },
   "dependencies": {
     "chai": "^3.2.0",
-    "coffee-script": "^1.9.3",
+    "coffeescript": "^2.7.0",
     "jison": "^0.4.15",
-    "lodash": "^3.10.1"
+    "lodash": "^3.10.1",
+    "mocha": "^11.7.4"
   }
 }
