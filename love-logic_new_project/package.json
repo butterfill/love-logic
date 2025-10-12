@@ -10,7 +10,9 @@
   "license": "ISC",
   "scripts": {
     "test": "mocha",
-    "test:watch": "mocha --watch"
+    "test:watch": "mocha --watch",
+  "examples": "node -r coffeescript/register scripts/run-examples.js",
+  "docs:test": "node scripts/validate-docs.js"
   },
   "dependencies": {
     "chai": "^3.2.0",
