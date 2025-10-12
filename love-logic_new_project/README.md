@@ -44,6 +44,7 @@ Browser bundle (optional)
 - Example (from that folder): `bash browserify_do.sh` (may require Java and browserify installed globally or via npx).
 
 Documentation and examples
+- Entry point: `docs/README.md` (documentation index)
 - Docs live in `docs/` and include runnable doctest blocks (coffeescript). Current pages: overview, evaluation, normal_form, proofs, parsers, substitutions, testing.
 - Validate docs: `npm run docs:test` (executes `coffee doctest` blocks and checks `#=>` expectations)
 - Run examples: `npm run examples` (runs `examples/*.coffee`)
