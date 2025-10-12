@@ -43,28 +43,23 @@ Browser bundle (optional)
 - See `_browserify/` for scripts and artifacts to generate a browser bundle.
 - Example (from that folder): `bash browserify_do.sh` (may require Java and browserify installed globally or via npx).
 
+Documentation and examples
+- Docs live in `docs/` and include runnable doctest blocks (coffeescript). Current pages: overview, evaluation, normal_form, proofs, parsers, substitutions, testing.
+- Validate docs: `npm run docs:test` (executes `coffee doctest` blocks and checks `#=>` expectations)
+- Run examples: `npm run examples` (runs `examples/*.coffee`)
+
 Project status and license
 - (c) Stephen A. Butterfill 2015.
 - Historically shared for teaching; license headers exist in various files. If you plan to publish/redistribute, confirm licensing terms or update to an explicit OSS license.
 
-Next steps proposal (minimal code changes, better docs/tests)
-1) Documentation
-   - Write high-level module docs for: `evaluate.coffee`, `substitute.coffee`, `normal_form.coffee`, `proofs/*` pipeline, and parser dialects.
-   - Add an architecture overview (parsers, dialect manager, proof engine, evaluation) with examples.
-   - Document the proof syntax and rule dialects (forallx, logicbook, teller, etc.) with short working examples linked to tests.
-2) Testing and CI
-   - Keep the existing CoffeeScript tests; add a few end-to-end scenarios showcasing typical student workflows.
-   - Add GitHub Actions CI against Node 20 and 22 to ensure longevity.
-   - Add `c8` (or `nyc`) for coverage and publish a brief coverage summary (no gate initially).
-3) Developer experience
-   - Add `CONTRIBUTING.md` with guidance on modifying grammars and running parser regeneration.
-   - Add comments in complex functions where intent isn’t obvious; avoid refactors unless correctness issues arise.
-   - Replace the legacy `test.sh` invocation with `npm test` (already updated); keep the script for convenience.
-4) Dependency hygiene (conservative)
-   - We’ve switched from `coffee-script` to `coffeescript@^2`. Keep lodash@3 for now if tests pass; plan a separate pass to upgrade to lodash@4 with tests.
-   - Pin other dev-only tooling (mocha, chai) once CI is green; upgrade chai if Node 22 issues appear.
-5) Release and examples
-   - Add a small `examples/` folder showing parsing, evaluation, and a simple proof verification.
-   - Prepare a changelog highlighting the tooling refresh and docs/testing improvements.
-
-If you’d like, I can follow this proposal by setting up CI and coverage, drafting CONTRIBUTING, and adding example scripts.
+Status of docs and what’s next
+- Implemented: a Markdown doc set in `docs/` with runnable CoffeeScript doctests, an examples/ folder, and a validator (`npm run docs:test`) that executes doctests and checks `#=>` output.
+- Added: pages for overview, evaluation, normal_form, proofs (with subproofs, dialect example, and quantified rules), parsers, substitutions, and testing.
+- Near-term tasks:
+  - Expand proofs coverage (∀-elim/∃-elim with subproofs; more dialects: forallx, teller).
+  - Add more end-to-end examples mirroring typical student workflows.
+  - Add CONTRIBUTING.md (grammar regeneration, dialects, testing conventions) and CHANGELOG.md.
+  - Consider CI (Node 20/22) to run unit tests and doctests; optionally add coverage via c8.
+- Longer-term (optional):
+  - Upgrade lodash to v4 with test coverage.
+  - Consider a generated docs site (Docsify or Docusaurus) if the doc set grows or needs versioning.
