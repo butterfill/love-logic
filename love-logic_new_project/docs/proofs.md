@@ -87,9 +87,9 @@ fol = require './fol'
 fol.setDialect 'lpl'
 proof = require './proofs/proof'
 text = '''
-  | Fa        premise
+  | F(a)      premise
   |---
-  | ∃x Fx     exists intro 1
+  | ∃x F(x)   exists intro 1
 '''
 pr = proof.parse text
 console.log pr.verify()  #=> true

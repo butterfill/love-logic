@@ -59,9 +59,7 @@ function runBlock(code, idx, contextLabel) {
   const adjustedCode = actualLines.join('\n');
 
   const tmpFile = path.join(__dirname, '..', `${TMP_PREFIX}${idx}.coffee`);
-  // Adjust relative requires inside doctests to resolve from project root
-  const adjusted = adjustedCode.replace(/require\(['\"]\.\/fol['\"]\)/g, "require('../fol')");
-  fs.writeFileSync(tmpFile, adjusted, 'utf8');
+  fs.writeFileSync(tmpFile, adjustedCode, 'utf8');
   const result = spawnSync(process.execPath, ['-r', 'coffeescript/register', tmpFile], {
     stdio: ['ignore', 'pipe', 'pipe'],
     env: process.env,
