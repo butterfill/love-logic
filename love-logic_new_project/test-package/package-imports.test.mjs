@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 test('root package self-reference exposes the ESM API', async () => {
-  const pkg = await import('love-logic');
+  const pkg = await import('@butterfill/awfol');
   assert.equal(typeof pkg.fol.parse, 'function');
   assert.equal(typeof pkg.proof.parse, 'function');
   assert.equal(typeof pkg.parse, 'function');
@@ -11,15 +11,15 @@ test('root package self-reference exposes the ESM API', async () => {
 });
 
 test('proof and browser subpath self-references resolve', async () => {
-  const proofsPkg = await import('love-logic/proofs');
-  const browserPkg = await import('love-logic/browser');
+  const proofsPkg = await import('@butterfill/awfol/proofs');
+  const browserPkg = await import('@butterfill/awfol/browser');
   assert.equal(typeof proofsPkg.proof.parse, 'function');
   assert.equal(typeof proofsPkg.parseProof, 'function');
   assert.equal(typeof browserPkg.fol.parse, 'function');
 });
 
 test('built package keeps the main fol and proof behavior', async () => {
-  const pkg = await import('love-logic');
+  const pkg = await import('@butterfill/awfol');
   pkg.setDialect('lpl');
 
   const expr = pkg.parse('A and B');

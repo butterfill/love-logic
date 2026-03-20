@@ -23,6 +23,12 @@ This code has been used for more than 10 years by thousands of students in over 
 - `npm ci`
 - or `npm install`
 
+## Package name
+
+The package is published as:
+
+- `@butterfill/awfol`
+
 ## Build outputs
 
 Build the package and browser artifacts:
@@ -38,12 +44,14 @@ This produces:
 - `dist/browser/love-logic.global.min.js`
 - bundled `.d.ts` files in `dist/`
 
+For local testing without publishing, you can continue to work directly from `dist/`.
+
 ## ESM usage
 
 Node or browser-bundler usage:
 
 ```js
-import { fol, proof } from 'love-logic';
+import { fol, proof } from '@butterfill/awfol';
 
 fol.setDialect('lpl');
 
@@ -56,8 +64,76 @@ const parsedProof = proof.parse('1. A\n2. A and A');
 Subpath imports:
 
 ```js
-import { proof, parseProof } from 'love-logic/proofs';
-import { fol } from 'love-logic/browser';
+import { proof, parseProof } from '@butterfill/awfol/proofs';
+import { fol } from '@butterfill/awfol/browser';
+```
+
+Local `dist/` testing remains available:
+
+```js
+import { fol, proof } from './dist/index.mjs';
+```
+
+## Publishing to GitHub Packages
+
+This package is configured for the GitHub npm registry:
+
+- registry: `https://npm.pkg.github.com`
+- scope: `@butterfill`
+
+The `package.json` includes:
+
+- scoped package name: `@butterfill/awfol`
+- `publishConfig.registry`
+- a `repository` field pointing at the GitHub repository
+
+### Authentication
+
+GitHub’s npm registry currently requires a personal access token (classic) for CLI authentication, and private package access requires package permissions appropriate to the operation.
+
+For local CLI use, add this to `~/.npmrc`:
+
+```ini
+//npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT
+@butterfill:registry=https://npm.pkg.github.com
+```
+
+Or log in with npm:
+
+```bash
+npm login --scope=@butterfill --auth-type=legacy --registry=https://npm.pkg.github.com
+```
+
+### Publish
+
+From `love-logic_new_project/`:
+
+```bash
+npm run test:all
+npm publish
+```
+
+`prepack` already runs `npm run build`, so publishing will include fresh `dist/` artifacts.
+
+### Install from the private registry
+
+In a consuming project, add the same scope mapping to `.npmrc`:
+
+```ini
+@butterfill:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT
+```
+
+Then install:
+
+```bash
+npm install @butterfill/awfol
+```
+
+Example:
+
+```js
+import { fol } from '@butterfill/awfol';
 ```
 
 ## Standalone browser bundle

@@ -1,9 +1,13 @@
 {
-  "name": "love-logic",
+  "name": "@butterfill/awfol",
   "version": "1.0.0",
   "description": "Parsers and proof tools for first-order logic and Fitch-style proofs",
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "repository": "https://github.com/butterfill/love-logic.git",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
