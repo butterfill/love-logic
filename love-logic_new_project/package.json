@@ -1,24 +1,50 @@
 {
   "name": "love-logic",
   "version": "1.0.0",
-  "description": "some notes about how fol exercises might be constructed using javascript",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "description": "Parsers and proof tools for first-order logic and Fitch-style proofs",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs"
+    },
+    "./proofs": {
+      "types": "./dist/proofs.d.ts",
+      "import": "./dist/proofs.mjs"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.mjs"
+    },
+    "./browser/love-logic.global.js": "./dist/browser/love-logic.global.js",
+    "./browser/love-logic.global.min.js": "./dist/browser/love-logic.global.min.js",
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist"
+  ],
   "author": "",
   "license": "ISC",
   "scripts": {
     "test": "mocha",
     "test:watch": "mocha --watch",
-  "examples": "node -r coffeescript/register scripts/run-examples.js",
-  "docs:test": "node scripts/validate-docs.js"
+    "examples": "node -r coffeescript/register scripts/run-examples.js",
+    "docs:test": "node scripts/validate-docs.js",
+    "clean": "node scripts/clean-build.js",
+    "build": "node scripts/build-package.js",
+    "test:package": "npm run build && node --test test-package/*.test.mjs",
+    "test:all": "npm test && npm run docs:test && npm run examples && npm run test:package",
+    "prepack": "npm run build"
   },
   "dependencies": {
+    "lodash": "^3.10.1"
+  },
+  "devDependencies": {
     "chai": "^3.2.0",
     "coffeescript": "^2.7.0",
+    "esbuild": "^0.25.1",
     "jison": "^0.4.15",
-    "lodash": "^3.10.1",
     "mocha": "^11.7.4"
   }
 }
